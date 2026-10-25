@@ -10,7 +10,7 @@ jobs:
     runs-on: [self-hosted, windows]
     defaults:
       run:
-        shell: powershell
+        shell: cmd
     steps:
       - uses: actions/checkout@v4
 
@@ -35,13 +35,8 @@ jobs:
 
       - name: Scaffold all stack combos
         run: |
-          if (Test-Path smoke-out) { Remove-Item -Recurse -Force smoke-out }
+          if exist smoke-out rmdir /s /q smoke-out
           npx tsx packages/cli/scripts/smoke-e2e.ts smoke-out
 
       - name: E2E - install and typecheck generated express+drizzle project
-        run: |
-          cd smoke-out/smoke-express-drizzle
-          npm install --no-audit --no-fund
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npx tsc --noEmit -p client
-          npx tsc --noEmit -p server
+        run: cd smoke-out\smoke-express-drizzle && npm install --no-audit --no-fund && npx tsc --noEmit -p client && npx tsc --noEmit -p server
