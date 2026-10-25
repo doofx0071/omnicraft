@@ -10,8 +10,13 @@
 npm create omnicraft@latest
 ```
 
-<!-- TODO(demo): record an asciinema/GIF of the full flow and embed here before announcing:
-     asciinema rec demo.cast  →  https://asciinema.org  →  embed the player or a GIF export. -->
+![OmniCraft scaffolding a full-stack React app — the full interactive flow from app name to installed dependencies](docs/demo.gif)
+
+<details>
+<summary>Prefer an interactive demo?</summary>
+Open <a href="docs/demo.html">docs/demo.html</a> in a browser — the same flow as a replayable terminal player.
+</details>
+
 
 
 ## The flow
