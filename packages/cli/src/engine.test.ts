@@ -67,6 +67,12 @@ describe('full-stack combos', () => {
       expect(existsSync(join(dir, '.gitignore'))).toBe(true)
       expect(readFileSync(join(dir, 'docker-compose.yml'), 'utf8')).toContain('demo_app')
 
+      // Generated projects ship their own CI workflow
+      expect(existsSync(join(dir, '.github', 'workflows', 'ci.yml'))).toBe(true)
+      const generatedCi = readFileSync(join(dir, '.github', 'workflows', 'ci.yml'), 'utf8')
+      expect(generatedCi).toContain('tsc --noEmit -p client')
+      expect(readFileSync(join(dir, 'README.md'), 'utf8')).toContain('## Troubleshooting')
+
       // Client layer
       const clientPkg = readJson(join(dir, 'client', 'package.json'))
       expect(clientPkg.name).toBe('demo-app-client')
@@ -129,6 +135,7 @@ describe('frontend-only', () => {
     expect(existsSync(join(dir, 'client'))).toBe(false)
     expect(existsSync(join(dir, 'server'))).toBe(false)
     expect(existsSync(join(dir, '.gitignore'))).toBe(true)
+    expect(existsSync(join(dir, '.github', 'workflows', 'ci.yml'))).toBe(true)
   })
 })
 

@@ -1,11 +1,12 @@
 import * as p from '@clack/prompts'
 import type { Option } from '@clack/prompts'
-import { CancelledError, unwrap } from '../cancel.js'
+import { CancelledError, unwrap, unwrapMany } from '../cancel.js'
 import {
   BACKEND_FRAMEWORK_LABELS,
   BACKEND_RUNTIME_LABELS,
   FRONTEND_LABELS,
   PROJECT_TYPE_LABELS,
+  type Answers,
   type BackendFramework,
   type BackendRuntime,
   type Frontend,
@@ -13,7 +14,8 @@ import {
 } from '../types.js'
 import { checkRawProjectName, isNonEmptyDirectory, resolveTargetDir } from '../validators.js'
 import { CLIENT_PORT, SERVER_PORT } from '../config.js'
-import type { Answers } from '../types.js'
+import { AVAILABLE, parseEnumChoice } from '../prefill.js'
+import type { ParsedArgs } from '../args.js'
 
 interface Choice<T extends string> {
   value: T
@@ -56,7 +58,15 @@ async function selectWithSoonLoop(message: string, choices: Choice<string>[]): P
   }
 }
 
-export async function runPrompts(argName?: string): Promise<Answers> {
+/**
+ * Runs the interactive flow. Flags from the command line answer their prompt
+ * directly; `--yes` answers everything with the defaults and skips the final
+ * confirmation (CI-friendly, also what makes non-TTY runs possible).
+ */
+export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<Answers> {
+  const flags: ParsedArgs = args ?? ({} as ParsedArgs)
+  const forced = flags.yes === true
+
   // ── App name ────────────────────────────────────────────────────────────
   let projectName: string
   if (argName) {
@@ -68,6 +78,9 @@ export async function runPrompts(argName?: string): Promise<Answers> {
     }
     projectName = slug
     p.log.step(`App name: ${projectName}`)
+  } else if (forced) {
+    projectName = 'my-app'
+    p.log.step(`App name: ${projectName} (default — pass a name to override)`)
   } else {
     for (;;) {
       const raw = unwrap<string>(
@@ -95,7 +108,12 @@ export async function runPrompts(argName?: string): Promise<Answers> {
 
   const targetDir = resolveTargetDir(projectName)
   if (isNonEmptyDirectory(targetDir)) {
-    const proceed = unwrap(
+    if (forced) {
+      throw new CancelledError(
+        `Directory "${projectName}" exists and is not empty — refusing to scaffold over it in non-interactive mode.`,
+      )
+    }
+    const proceed = unwrap<boolean>(
       await p.confirm({
         message: `Directory "${projectName}" already exists and is not empty. Scaffold into it anyway?`,
         initialValue: false,
@@ -105,69 +123,99 @@ export async function runPrompts(argName?: string): Promise<Answers> {
   }
 
   // ── What for? ───────────────────────────────────────────────────────────
-  const projectType = await selectWithSoon<ProjectType>('What are you building?', [
-    { value: 'web', label: PROJECT_TYPE_LABELS.web, available: true, hint: 'v1 focus' },
-    { value: 'mobile', label: PROJECT_TYPE_LABELS.mobile, available: false },
-    { value: 'desktop', label: PROJECT_TYPE_LABELS.desktop, available: false },
-  ])
+  let projectType: ProjectType = 'web'
+  if (!forced) {
+    projectType = await selectWithSoon<ProjectType>('What are you building?', [
+      { value: 'web', label: PROJECT_TYPE_LABELS.web, available: true, hint: 'v1 focus' },
+      { value: 'mobile', label: PROJECT_TYPE_LABELS.mobile, available: false },
+      { value: 'desktop', label: PROJECT_TYPE_LABELS.desktop, available: false },
+    ])
+  }
 
   // ── Frontend ────────────────────────────────────────────────────────────
-  const frontend = await selectWithSoon<Frontend>('Select a frontend framework:', [
-    { value: 'react', label: FRONTEND_LABELS.react, available: true, hint: 'Vite + TypeScript' },
-    { value: 'nextjs', label: FRONTEND_LABELS.nextjs, available: false },
-    { value: 'vue', label: FRONTEND_LABELS.vue, available: false },
-    { value: 'svelte', label: FRONTEND_LABELS.svelte, available: false },
-  ])
+  const frontend: Frontend = flags.frontend
+    ? parseEnumChoice('--frontend', flags.frontend, AVAILABLE.frontend)
+    : forced
+      ? 'react'
+      : await selectWithSoon<Frontend>('Select a frontend framework:', [
+          { value: 'react', label: FRONTEND_LABELS.react, available: true, hint: 'Vite + TypeScript' },
+          { value: 'nextjs', label: FRONTEND_LABELS.nextjs, available: false },
+          { value: 'vue', label: FRONTEND_LABELS.vue, available: false },
+          { value: 'svelte', label: FRONTEND_LABELS.svelte, available: false },
+        ])
 
   p.log.info('Language: TypeScript (JavaScript support is coming)')
 
   // ── Full stack? ─────────────────────────────────────────────────────────
-  const fullStack = unwrap<boolean>(
-    await p.confirm({
-      message: 'Full-stack? Adds a backend API, database and ready-made boilerplate.',
-      initialValue: true,
-    }),
-  )
+  let fullStack = flags.fullStack ?? (forced ? true : false)
+  if (flags.fullStack === undefined && !forced) {
+    fullStack = unwrap<boolean>(
+      await p.confirm({
+        message: 'Full-stack? Adds a backend API, database and ready-made boilerplate.',
+        initialValue: true,
+      }),
+    )
+  }
 
   let backendRuntime: BackendRuntime = 'node'
   let backendFramework: BackendFramework = 'express'
   let orm: 'drizzle' | 'prisma' = 'drizzle'
 
   if (fullStack) {
-    backendRuntime = await selectWithSoon<BackendRuntime>('Select a backend runtime:', [
-      { value: 'node', label: BACKEND_RUNTIME_LABELS.node, available: true, hint: 'v1 focus' },
-      { value: 'python', label: BACKEND_RUNTIME_LABELS.python, available: false },
-      { value: 'php', label: BACKEND_RUNTIME_LABELS.php, available: false },
-    ])
+    if (!forced) {
+      backendRuntime = await selectWithSoon<BackendRuntime>('Select a backend runtime:', [
+        { value: 'node', label: BACKEND_RUNTIME_LABELS.node, available: true, hint: 'v1 focus' },
+        { value: 'python', label: BACKEND_RUNTIME_LABELS.python, available: false },
+        { value: 'php', label: BACKEND_RUNTIME_LABELS.php, available: false },
+      ])
+    }
 
-    backendFramework = await selectWithSoon<BackendFramework>('Select a backend framework:', [
-      { value: 'express', label: BACKEND_FRAMEWORK_LABELS.express, available: true, hint: 'The classic, huge ecosystem' },
-      { value: 'fastify', label: BACKEND_FRAMEWORK_LABELS.fastify, available: true, hint: 'Fast, schema-first' },
-      { value: 'hono', label: BACKEND_FRAMEWORK_LABELS.hono, available: false },
-      { value: 'nestjs', label: BACKEND_FRAMEWORK_LABELS.nestjs, available: false },
-    ])
+    backendFramework = flags.backend
+      ? parseEnumChoice('--backend', flags.backend, AVAILABLE.backend)
+      : forced
+        ? 'express'
+        : await selectWithSoon<BackendFramework>('Select a backend framework:', [
+            { value: 'express', label: BACKEND_FRAMEWORK_LABELS.express, available: true, hint: 'The classic, huge ecosystem' },
+            { value: 'fastify', label: BACKEND_FRAMEWORK_LABELS.fastify, available: true, hint: 'Fast, schema-first' },
+            { value: 'hono', label: BACKEND_FRAMEWORK_LABELS.hono, available: false },
+            { value: 'nestjs', label: BACKEND_FRAMEWORK_LABELS.nestjs, available: false },
+          ])
 
-    orm = await selectWithSoon<'drizzle' | 'prisma'>('Select an ORM:', [
-      { value: 'drizzle', label: 'Drizzle', available: true, hint: 'SQL-like, lightweight' },
-      { value: 'prisma', label: 'Prisma', available: true, hint: 'Schema-first, great DX' },
-    ])
+    orm = flags.orm
+      ? parseEnumChoice('--orm', flags.orm, AVAILABLE.orm)
+      : forced
+        ? 'drizzle'
+        : await selectWithSoon<'drizzle' | 'prisma'>('Select an ORM:', [
+            { value: 'drizzle', label: 'Drizzle', available: true, hint: 'SQL-like, lightweight' },
+            { value: 'prisma', label: 'Prisma', available: true, hint: 'Schema-first, great DX' },
+          ])
 
     p.log.info('Database: PostgreSQL (MySQL, SQLite and MongoDB are coming)')
   }
 
   // ── Extras ──────────────────────────────────────────────────────────────
-  type Extra = 'tailwind' | 'eslintPrettier'
-  const extras = unwrap<Extra[]>(
-    await p.multiselect<Extra>({
-      message: 'Pick extras:',
-      required: false,
-      initialValues: ['tailwind', 'eslintPrettier'],
-      options: [
-        { value: 'tailwind', label: 'Tailwind CSS', hint: 'Utility-first styling' },
-        { value: 'eslintPrettier', label: 'ESLint + Prettier', hint: 'Linting + formatting' },
-      ],
-    }),
-  )
+  let extras: { tailwind: boolean; eslintPrettier: boolean }
+  if (flags.extras) {
+    extras = {
+      tailwind: flags.extras.includes('tailwind'),
+      eslintPrettier: flags.extras.includes('eslint'),
+    }
+  } else if (forced) {
+    extras = { tailwind: true, eslintPrettier: true }
+  } else {
+    const picked = unwrapMany(
+      await p.multiselect<'tailwind' | 'eslint'>({
+        message: 'Pick extras:',
+        required: false,
+        initialValues: ['tailwind', 'eslint'],
+        options: [
+          { value: 'tailwind', label: 'Tailwind CSS', hint: 'Utility-first styling' },
+          { value: 'eslint', label: 'ESLint + Prettier', hint: 'Linting + formatting' },
+        ],
+      }),
+    )
+    extras = { tailwind: picked.includes('tailwind'), eslintPrettier: picked.includes('eslint') }
+  }
 
   // ── Summary ─────────────────────────────────────────────────────────────
   const summary: string[] = [`App:        ${projectName}`]
@@ -179,8 +227,8 @@ export async function runPrompts(argName?: string): Promise<Answers> {
   }
   summary.push(
     `Extras:     ${[
-      extras.includes('tailwind') ? 'Tailwind CSS' : null,
-      extras.includes('eslintPrettier') ? 'ESLint + Prettier' : null,
+      extras.tailwind ? 'Tailwind CSS' : null,
+      extras.eslintPrettier ? 'ESLint + Prettier' : null,
     ]
       .filter(Boolean)
       .join(', ') || 'none'}`,
@@ -189,13 +237,15 @@ export async function runPrompts(argName?: string): Promise<Answers> {
   summary.push(`Ports:      client ${CLIENT_PORT} · server ${SERVER_PORT}`)
   p.note(summary.join('\n'), 'Here is what will be generated')
 
-  const ready = unwrap<boolean>(
-    await p.confirm({
-      message: 'Craft it?',
-      initialValue: true,
-    }),
-  )
-  if (!ready) throw new CancelledError('Nothing was created.')
+  if (!forced) {
+    const ready = unwrap<boolean>(
+      await p.confirm({
+        message: 'Craft it?',
+        initialValue: true,
+      }),
+    )
+    if (!ready) throw new CancelledError('Nothing was created.')
+  }
 
   return {
     projectName,
@@ -204,13 +254,10 @@ export async function runPrompts(argName?: string): Promise<Answers> {
     frontend,
     language: 'typescript',
     fullStack,
-    backendRuntime,
-    backendFramework,
-    orm,
+    backendRuntime: fullStack ? backendRuntime : null,
+    backendFramework: fullStack ? backendFramework : null,
+    orm: fullStack ? orm : null,
     database: fullStack ? 'postgres' : null,
-    extras: {
-      tailwind: extras.includes('tailwind'),
-      eslintPrettier: extras.includes('eslintPrettier'),
-    },
+    extras,
   }
 }

@@ -77,10 +77,24 @@ npm run dev              # client :5173 + server :3000 together
 ```
 npm create omnicraft@latest [project-name] [options]
 
---latest          pull the newest templates from GitHub instead of the
-                  ones pinned to this CLI version
---skip-install    generate without installing dependencies
---debug           print stack traces on errors
+--yes                accept all defaults, skip every prompt (CI-friendly)
+--full-stack         force the full-stack flow (default: yes)
+--no-full-stack      frontend only
+--frontend <name>    skip the frontend prompt (react)
+--backend <name>     skip the backend prompt (express, fastify)
+--orm <name>         skip the ORM prompt (drizzle, prisma)
+--extras <list>      comma list: tailwind,eslint — or "none" (default: both)
+--latest             pull the newest templates from GitHub instead of the
+                     ones pinned to this CLI version
+--skip-install       generate without installing dependencies
+--debug              print stack traces on errors
+```
+
+Scripted use in CI:
+
+```bash
+npm create omnicraft@latest my-app -- --yes --skip-install
+npm create omnicraft@latest api -- --no-full-stack --extras none
 ```
 
 ## How it works

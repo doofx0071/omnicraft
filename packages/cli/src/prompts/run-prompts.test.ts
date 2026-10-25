@@ -82,7 +82,7 @@ describe('runPrompts flow', () => {
 
     const answers = await runPrompts()
     expect(answers.fullStack).toBe(false)
-    expect(answers.backendFramework).toBe('express') // unused default
+    expect(answers.backendFramework).toBeNull() // no backend on frontend-only
     expect(answers.database).toBeNull()
     expect(calls.filter((c) => c === 'select')).toHaveLength(2) // no runtime/framework/orm prompts
   })
@@ -97,7 +97,7 @@ describe('runPrompts flow', () => {
       { prompt: 'select', answer: 'node' },
       { prompt: 'select', answer: 'express' },
       { prompt: 'select', answer: 'drizzle' },
-      { prompt: 'multiselect', answer: ['tailwind', 'eslintPrettier'] },
+      { prompt: 'multiselect', answer: ['tailwind', 'eslint'] },
       { prompt: 'confirm', answer: true },
     )
 

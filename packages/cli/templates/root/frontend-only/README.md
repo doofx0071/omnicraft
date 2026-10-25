@@ -13,11 +13,11 @@ Open http://localhost:5173.
 
 ## Scripts
 
-| Command            | What it does          |
-| ------------------ | --------------------- |
-| `npm run dev`      | Start the dev server  |
-| `npm run build`    | Type-check and build  |
-| `npm run preview`  | Preview the build     |
+| Command           | What it does         |
+| ----------------- | -------------------- |
+| `npm run dev`     | Start the dev server |
+| `npm run build`   | Type-check and build |
+| `npm run preview` | Preview the build    |
 
 ## Next steps with OmniCraft
 

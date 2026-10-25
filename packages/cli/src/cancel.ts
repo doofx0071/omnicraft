@@ -16,3 +16,9 @@ export function unwrap<T>(value: T | symbol): T {
   if (isCancel(value)) throw new CancelledError()
   return value as T
 }
+
+/** Same as {@link unwrap} for multi-select results. */
+export function unwrapMany<T>(value: T[] | symbol): T[] {
+  if (isCancel(value)) throw new CancelledError()
+  return value as T[]
+}

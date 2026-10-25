@@ -2,11 +2,11 @@
 
 Full-stack app scaffolded by [OmniCraft](https://github.com/doofx0071/omnicraft) ⚡
 
-| Layer   | Tech                          |
-| ------- | ----------------------------- |
-| Client  | React + Vite + TypeScript     |
-| Server  | {{backendFramework}} + TypeScript |
-| Database| PostgreSQL + {{orm}}           |
+| Layer    | Tech                              |
+| -------- | --------------------------------- |
+| Client   | React + Vite + TypeScript         |
+| Server   | {{backendFramework}} + TypeScript |
+| Database | PostgreSQL + {{orm}}              |
 
 ## Getting started
 
@@ -49,22 +49,31 @@ DATABASE_URL=postgres://omnicraft:omnicraft@localhost:5432/{{databaseName}}
 
 ## API
 
-| Method | Path               | Description            |
-| ------ | ------------------ | ---------------------- |
-| GET    | /api/health        | Liveness check         |
-| GET    | /api/users         | List users             |
-| POST   | /api/users         | Create a user          |
-| DELETE | /api/users/:id     | Delete a user          |
+| Method | Path           | Description    |
+| ------ | -------------- | -------------- |
+| GET    | /api/health    | Liveness check |
+| GET    | /api/users     | List users     |
+| POST   | /api/users     | Create a user  |
+| DELETE | /api/users/:id | Delete a user  |
+
+## Troubleshooting
+
+| Symptom                                            | Fix                                                                                                   |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| API returns `Database unavailable`                 | PostgreSQL isn't running — start it with `docker compose up -d`                                       |
+| `ECONNREFUSED` in the server logs                  | Wrong `DATABASE_URL` in `server/.env`, or the database container is down                              |
+| `port 5432 is already in use` when starting Docker | Another PostgreSQL owns the port — change the host port in `docker-compose.yml` **and** `server/.env` |
+| Prisma error `P1001` / Drizzle `ECONNREFUSED`      | Same as above — the server cannot reach PostgreSQL                                                    |
 
 ## Useful commands
 
-| Command            | What it does                              |
-| ------------------ | ----------------------------------------- |
-| `npm run dev`      | Run client and server together            |
-| `npm run build`    | Build client and server                   |
-| `npm run db:push`  | Push schema changes to the database       |
-| `npm run db:migrate` | Create/apply a migration                |
-| `npm run db:seed`  | Insert sample data                        |
-| `npm run db:studio`| Open the database GUI                     |
+| Command              | What it does                        |
+| -------------------- | ----------------------------------- |
+| `npm run dev`        | Run client and server together      |
+| `npm run build`      | Build client and server             |
+| `npm run db:push`    | Push schema changes to the database |
+| `npm run db:migrate` | Create/apply a migration            |
+| `npm run db:seed`    | Insert sample data                  |
+| `npm run db:studio`  | Open the database GUI               |
 
 Crafted with OmniCraft — add more routes in `server/src/routes`, register them in `routes/index.ts`, and extend the schema in `server/src/db/schema.ts` (or `prisma/schema.prisma`).

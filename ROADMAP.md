@@ -8,8 +8,8 @@
 
 | Version | Theme                             | Progress | Issues     |
 | ------- | --------------------------------- | -------- | ---------- |
-| v0.1.0  | Public launch                     | 🚧 5/6   | #1–#6      |
-| v0.2.0  | Scaffolder hardening              | ⬜ 0/5   | #7–#11     |
+| v0.1.0  | Public launch                     | ✅ 6/6   | #1–#6      |
+| v0.2.0  | Scaffolder hardening              | 🚧 0/5   | #7–#11     |
 | v0.3.0  | Backend & database expansion      | ⬜ 0/5   | #12–#16    |
 | v0.4.0  | Frontend expansion                | ⬜ 0/4   | #17–#20    |
 | v0.5.0  | Platform expansion (mobile, desktop) | ⬜ 0/2 | #21–#22    |
@@ -26,7 +26,7 @@ Ship what works today, start the feedback loop. CI runs on a **self-hosted runne
 - [x] #3 — Publish `create-omnicraft` v0.1.0 to npm
 - [x] #4 — README launch polish: badges, install section, demo placeholder
 - [x] #5 — Verify published package end-to-end (`npx create-omnicraft@latest`)
-- [ ] #6 — Decide repo visibility for `--latest` template fetching
+- [x] #6 — Decide repo visibility for `--latest` template fetching *(repo is public)*
 
 ## v0.2.0 — Scaffolder hardening
 

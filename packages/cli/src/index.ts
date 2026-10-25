@@ -10,6 +10,8 @@ import { applyLayers } from './scaffold/engine.js'
 import { gitInit } from './scaffold/git.js'
 import { detectPackageManager, installDependencies } from './scaffold/pkg-manager.js'
 import { fetchRemoteTemplates } from './scaffold/remote.js'
+import { validateStackFlags } from './prefill.js'
+import { checkForUpdate } from './update-check.js'
 import { mkdirSync } from 'node:fs'
 
 /**
@@ -59,16 +61,31 @@ async function main(): Promise<void> {
 
   p.intro(`⚡ OmniCraft v${CLI_VERSION} — craft any stack`)
 
-  if (!process.stdin.isTTY) {
+  if (!process.stdin.isTTY && !args.yes) {
     p.log.error('OmniCraft is interactive and needs a real terminal to run its prompts.')
     p.log.message(
-      'Open a terminal, cd to where you want the project, and run:\n  npm create omnicraft@latest',
+      'For CI and scripted use, pass --yes (and any stack flags):\n  npm create omnicraft@latest my-app -- --yes --skip-install',
     )
     process.exitCode = 1
     return
   }
 
-  const answers = await runPrompts(args.projectName)
+  try {
+    validateStackFlags(args)
+  } catch (err) {
+    p.log.error((err as Error).message)
+    process.exitCode = 1
+    return
+  }
+
+  if (!process.env.NO_UPDATE_NOTIFIER && !process.env.CI) {
+    const latest = await checkForUpdate(CLI_VERSION)
+    if (latest) {
+      p.log.info(`Update available: v${latest} — you are on v${CLI_VERSION}. Run: npm create omnicraft@latest`)
+    }
+  }
+
+  const answers = await runPrompts(args.projectName, args)
 
   let templatesRoot = TEMPLATES_ROOT
   if (args.latest) {

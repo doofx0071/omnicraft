@@ -8,11 +8,11 @@ services:
       POSTGRES_PASSWORD: omnicraft
       POSTGRES_DB: {{databaseName}}
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U omnicraft -d {{databaseName}}']
+      test: ["CMD-SHELL", "pg_isready -U omnicraft -d {{databaseName}}"]
       interval: 5s
       timeout: 5s
       retries: 10

@@ -5,9 +5,46 @@ export interface ParsedArgs {
   debug: boolean
   help: boolean
   version: boolean
+  /** Accept all defaults — skip every prompt (CI-friendly, also enables non-TTY runs). */
+  yes: boolean
+  /** Stack overrides; when present the matching prompt is skipped. */
+  fullStack?: boolean
+  frontend?: string
+  backend?: string
+  orm?: string
+  extras?: string[]
 }
 
-const FLAGS = new Set(['--latest', '--skip-install', '--debug', '--help', '-h', '--version', '-v'])
+export const HELP_TEXT = `Usage: npm create omnicraft@latest [project-name] [options]
+
+Interactive scaffolding for full-stack apps — answer a few prompts and
+OmniCraft generates a ready-to-run project.
+
+Options:
+  --yes                Accept all defaults, skip every prompt (CI-friendly;
+                       also allows running without a TTY)
+  --full-stack         Force the full-stack flow (default: yes)
+  --no-full-stack      Frontend only
+  --frontend <name>    Skip the frontend prompt (available: react)
+  --backend <name>     Skip the backend prompt (available: express, fastify)
+  --orm <name>         Skip the ORM prompt (available: drizzle, prisma)
+  --extras <list>      Comma-separated extras (available: tailwind, eslint;
+                       default: both). Use --extras none to skip all.
+  --latest             Pull the newest templates from GitHub instead of the
+                       ones embedded in this CLI version
+  --skip-install       Generate the project without installing dependencies
+  --debug              Print stack traces on errors
+  -h, --help           Show this help
+  -v, --version        Show version
+
+Examples:
+  npm create omnicraft@latest
+  npm create omnicraft@latest my-app
+  npm create omnicraft@latest my-app -- --yes --skip-install
+  npm create omnicraft@latest my-app -- --no-full-stack --extras tailwind
+`
+
+const VALUE_FLAGS = new Set(['--frontend', '--backend', '--orm', '--extras'])
 
 export function parseArgs(argv: string[]): ParsedArgs {
   const args: ParsedArgs = {
@@ -16,21 +53,45 @@ export function parseArgs(argv: string[]): ParsedArgs {
     debug: false,
     help: false,
     version: false,
+    yes: false,
   }
   const positional: string[] = []
 
-  for (const arg of argv) {
-    if (FLAGS.has(arg)) {
-      if (arg === '--latest') args.latest = true
-      else if (arg === '--skip-install') args.skipInstall = true
-      else if (arg === '--debug') args.debug = true
-      else if (arg === '--help' || arg === '-h') args.help = true
-      else args.version = true
-    } else if (arg.startsWith('-')) {
+  let i = 0
+  while (i < argv.length) {
+    const arg = argv[i]
+    const valueFlag = VALUE_FLAGS.has(arg.split('=')[0]) ? arg.split('=')[0] : null
+
+    if (valueFlag) {
+      let value: string
+      if (arg.startsWith(valueFlag + '=')) {
+        value = arg.slice(valueFlag.length + 1)
+      } else {
+        const next = argv[i + 1]
+        if (next === undefined || next.startsWith('-')) {
+          throw new Error(`Missing value for ${valueFlag}. Example: ${valueFlag} react`)
+        }
+        value = next
+        i++
+      }
+      if (valueFlag === '--frontend') args.frontend = value
+      else if (valueFlag === '--backend') args.backend = value
+      else if (valueFlag === '--orm') args.orm = value
+      else args.extras = splitList(value)
+    } else if (arg === '--latest') args.latest = true
+    else if (arg === '--skip-install') args.skipInstall = true
+    else if (arg === '--debug') args.debug = true
+    else if (arg === '--help' || arg === '-h') args.help = true
+    else if (arg === '--version' || arg === '-v') args.version = true
+    else if (arg === '--yes') args.yes = true
+    else if (arg === '--full-stack') args.fullStack = true
+    else if (arg === '--no-full-stack') args.fullStack = false
+    else if (arg.startsWith('-')) {
       throw new Error(`Unknown option: ${arg}. Run with --help to see usage.`)
     } else {
       positional.push(arg)
     }
+    i++
   }
 
   if (positional.length > 1) {
@@ -40,21 +101,14 @@ export function parseArgs(argv: string[]): ParsedArgs {
   return args
 }
 
-export const HELP_TEXT = `Usage: npm create omnicraft@latest [project-name] [options]
-
-Interactive scaffolding for full-stack apps — answer a few prompts and
-OmniCraft generates a ready-to-run project.
-
-Options:
-  --latest        Pull the newest templates from GitHub instead of the
-                  ones embedded in this CLI version
-  --skip-install  Generate the project without installing dependencies
-  --debug         Print stack traces on errors
-  -h, --help      Show this help
-  -v, --version   Show version
-
-Examples:
-  npm create omnicraft@latest
-  npm create omnicraft@latest my-app
-  npm create omnicraft@latest my-app -- --latest
-`
+function splitList(value: string): string[] {
+  const items = value
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
+  if (items.length === 0) {
+    throw new Error('Empty list. Available extras: tailwind, eslint (or "none")')
+  }
+  if (items.length === 1 && items[0] === 'none') return []
+  return items
+}
