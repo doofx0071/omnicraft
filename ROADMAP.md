@@ -9,11 +9,11 @@
 | Version | Theme                             | Progress | Issues     |
 | ------- | --------------------------------- | -------- | ---------- |
 | v0.1.0  | Public launch                     | ✅ 6/6   | #1–#6      |
-| v0.2.0  | Scaffolder hardening              | 🚧 0/5   | #7–#11     |
+| v0.2.0  | Scaffolder hardening              | ✅ 5/5   | #7–#11     |
 | v0.3.0  | Backend & database expansion      | ⬜ 0/5   | #12–#16    |
 | v0.4.0  | Frontend expansion                | ⬜ 0/4   | #17–#20    |
 | v0.5.0  | Platform expansion (mobile, desktop) | ⬜ 0/2 | #21–#22    |
-| v1.0.0  | Maturity milestone                | ⬜ 0/5   | #23–#27    |
+| v1.0.0  | Maturity milestone                | 🚧 1/5   | #23–#27    |
 
 ---
 
@@ -32,11 +32,11 @@ Ship what works today, start the feedback loop. CI runs on a **self-hosted runne
 
 Make the CLI pleasant to script and the generated projects trustworthy.
 
-- [ ] #7 — Non-interactive mode: `--yes` and stack flags
-- [ ] #8 — Update check: notify when a newer `create-omnicraft` exists
-- [ ] #9 — Generated projects ship their own CI workflow
-- [ ] #10 — Friendlier DB connection errors + troubleshooting in generated README
-- [ ] #11 — Lint generated project output in CI
+- [x] #7 — Non-interactive mode: `--yes` and stack flags
+- [x] #8 — Update check: notify when a newer `create-omnicraft` exists
+- [x] #9 — Generated projects ship their own CI workflow
+- [x] #10 — Friendlier DB connection errors + troubleshooting in generated README
+- [x] #11 — Lint generated project output in CI
 
 ## v0.3.0 — Backend & database expansion
 
@@ -69,7 +69,7 @@ The flagship features. When these land (plus everything above), the vision is co
 - [ ] #23 — Auth boilerplate wired to the users table
 - [ ] #24 — `omnicraft add <module>` post-scaffold generator
 - [ ] #25 — JavaScript (non-TypeScript) template variants
-- [ ] #26 — Multi-OS CI once repo is public
+- [x] #26 — Multi-OS CI once repo is public *(done early — repo is public, all 3 OS green)*
 - [ ] #27 — Contributor docs: template composition guide
 
 ## v1.1.x and beyond (unplanned parking lot)
