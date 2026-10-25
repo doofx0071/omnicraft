@@ -1,10 +1,18 @@
 # ⚡ OmniCraft
 
+[![CI](https://github.com/doofx0071/omnicraft/actions/workflows/ci.yml/badge.svg)](https://github.com/doofx0071/omnicraft/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/create-omnicraft)](https://www.npmjs.com/package/create-omnicraft)
+[![roadmap](https://img.shields.io/badge/roadmap-ROADMAP.md-8A2BE2)](./ROADMAP.md)
+
 **Craft any stack** — an interactive CLI that scaffolds full-stack-ready projects. No flags to memorize: answer a few prompts and get a running app with the database wired end-to-end.
 
 ```bash
 npm create omnicraft@latest
 ```
+
+<!-- TODO(demo): record an asciinema/GIF of the full flow and embed here before announcing:
+     asciinema rec demo.cast  →  https://asciinema.org  →  embed the player or a GIF export. -->
+
 
 ## The flow
 
@@ -112,6 +120,10 @@ packages/cli/
 ## Inspiration & credits
 
 OmniCraft stands on the shoulders of: [create-t3-app](https://github.com/t3-oss/create-t3-app) (interactive full-stack modular scaffolding), [create-vite](https://github.com/vitejs/vite) (framework picker UX, giget templates) and [create-next-app](https://github.com/vercel/next.js). Prompts by [@clack/prompts](https://github.com/bombshell-dev/clack).
+
+## Roadmap
+
+Where the project is headed — versions, phases and progress: [ROADMAP.md](ROADMAP.md) (tracked as GitHub issues).
 
 ## License
 

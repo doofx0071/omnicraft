@@ -1,0 +1,81 @@
+# 🗺️ OmniCraft Roadmap
+
+> **Versioning model:** `v0.1.0` = public launch (current state) → `v0.2–v0.5` = feature phases → **`v1.0.0` = "everything implemented"** (the full vision) → `v1.1.x+` = ongoing fixes & upgrades after 1.0.
+>
+> Progress is tracked with GitHub issues — this file is the big picture, the issues are the work. Check off here when the linked issue closes.
+
+## Progress overview
+
+| Version | Theme                             | Progress | Issues     |
+| ------- | --------------------------------- | -------- | ---------- |
+| v0.1.0  | Public launch                     | 🚧 0/6   | #1–#6      |
+| v0.2.0  | Scaffolder hardening              | ⬜ 0/5   | #7–#11     |
+| v0.3.0  | Backend & database expansion      | ⬜ 0/5   | #12–#16    |
+| v0.4.0  | Frontend expansion                | ⬜ 0/4   | #17–#20    |
+| v0.5.0  | Platform expansion (mobile, desktop) | ⬜ 0/2 | #21–#22    |
+| v1.0.0  | Maturity milestone                | ⬜ 0/5   | #23–#27    |
+
+---
+
+## v0.1.0 — Public launch
+
+Ship what works today, start the feedback loop. CI runs on a **self-hosted runner** (unlimited free minutes — no hosted-minutes limits on private repos).
+
+- [ ] #1 — Set up self-hosted Windows runner for this repo
+- [ ] #2 — CI workflow: typecheck, build, test, template e2e smoke
+- [ ] #3 — Publish `create-omnicraft` v0.1.0 to npm
+- [ ] #4 — README launch polish: badges, install section, demo placeholder
+- [ ] #5 — Verify published package end-to-end (`npx create-omnicraft@latest`)
+- [ ] #6 — Decide repo visibility for `--latest` template fetching
+
+## v0.2.0 — Scaffolder hardening
+
+Make the CLI pleasant to script and the generated projects trustworthy.
+
+- [ ] #7 — Non-interactive mode: `--yes` and stack flags
+- [ ] #8 — Update check: notify when a newer `create-omnicraft` exists
+- [ ] #9 — Generated projects ship their own CI workflow
+- [ ] #10 — Friendlier DB connection errors + troubleshooting in generated README
+- [ ] #11 — Lint generated project output in CI
+
+## v0.3.0 — Backend & database expansion
+
+Widen the matrix, deepest-demand first. Order within the phase: SQLite (no Docker needed = fastest first run) → Hono (cheap — framework and ORM layers are already separated) → MySQL → Python (proves the multi-runtime architecture) → Laravel (stretch).
+
+- [ ] #12 — SQLite via Drizzle — zero-docker local dev option
+- [ ] #13 — Hono backend (Node + Drizzle)
+- [ ] #14 — MySQL database option (Drizzle + Prisma)
+- [ ] #15 — Python backend runtime: FastAPI + SQLAlchemy/Alembic
+- [ ] #16 — Laravel backend runtime (stretch)
+
+## v0.4.0 — Frontend expansion
+
+- [ ] #17 — Next.js frontend (fullstack-in-one path — changes the prompt flow)
+- [ ] #18 — Vue + Vite frontend
+- [ ] #19 — Svelte + Vite frontend
+- [ ] #20 — Evaluate TanStack Start / React Router v7 as an option
+
+## v0.5.0 — Platform expansion
+
+The "What are you building?" branches become real.
+
+- [ ] #21 — Mobile app scaffolding: React Native + Expo
+- [ ] #22 — Desktop app scaffolding: Tauri
+
+## v1.0.0 — Maturity milestone
+
+The flagship features. When these land (plus everything above), the vision is complete and we cut **v1.0.0**.
+
+- [ ] #23 — Auth boilerplate wired to the users table
+- [ ] #24 — `omnicraft add <module>` post-scaffold generator
+- [ ] #25 — JavaScript (non-TypeScript) template variants
+- [ ] #26 — Multi-OS CI once repo is public
+- [ ] #27 — Contributor docs: template composition guide
+
+## v1.1.x and beyond (unplanned parking lot)
+
+Community template registry, opt-in telemetry, plugin API for third-party stacks, docs site. Nothing here is committed — revisit after v1.0.0.
+
+---
+
+**How to work a phase:** open the issues for the current version, close them one by one (they auto-tick here via the links when someone updates this file — or edit the checkboxes as part of the closing PR), bump the version in `packages/cli/package.json`, publish, then move the next phase to 🚧.

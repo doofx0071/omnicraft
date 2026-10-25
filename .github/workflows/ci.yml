@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: [self-hosted, windows]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Typecheck CLI
+        run: npx tsc --noEmit
+        working-directory: packages/cli
+
+      - name: Unit tests
+        run: npx vitest run
+        working-directory: packages/cli
+
+      - name: Build CLI
+        run: npx tsup
+        working-directory: packages/cli
+
+      - name: Scaffold all stack combos
+        run: |
+          rm -rf smoke-out
+          npx tsx packages/cli/scripts/smoke-e2e.ts smoke-out
+
+      - name: E2E - install and typecheck generated express+drizzle project
+        run: |
+          cd smoke-out/smoke-express-drizzle
+          npm install --no-audit --no-fund
+          npx tsc --noEmit -p client
+          npx tsc --noEmit -p server
