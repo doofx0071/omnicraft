@@ -1,0 +1,86 @@
+export type ProjectType = 'web' | 'mobile' | 'desktop'
+export type Frontend = 'react' | 'vue' | 'svelte' | 'nextjs'
+export type Language = 'typescript' | 'javascript'
+export type BackendRuntime = 'node' | 'python' | 'php'
+export type BackendFramework = 'express' | 'fastify' | 'hono' | 'nestjs'
+export type Orm = 'drizzle' | 'prisma' | 'mongoose'
+export type Database = 'postgres' | 'mysql' | 'sqlite' | 'mongodb'
+
+export interface Extras {
+  tailwind: boolean
+  eslintPrettier: boolean
+}
+
+export interface Answers {
+  projectName: string
+  targetDir: string
+  projectType: ProjectType
+  frontend: Frontend
+  language: Language
+  fullStack: boolean
+  backendRuntime: BackendRuntime | null
+  backendFramework: BackendFramework | null
+  orm: Orm | null
+  database: Database | null
+  extras: Extras
+}
+
+export const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
+  web: 'Web App',
+  mobile: 'Mobile App',
+  desktop: 'Desktop App',
+}
+
+export const FRONTEND_LABELS: Record<Frontend, string> = {
+  react: 'React',
+  nextjs: 'Next.js',
+  vue: 'Vue',
+  svelte: 'Svelte',
+}
+
+export const BACKEND_RUNTIME_LABELS: Record<BackendRuntime, string> = {
+  node: 'Node.js',
+  python: 'Python',
+  php: 'PHP (Laravel)',
+}
+
+export const BACKEND_FRAMEWORK_LABELS: Record<BackendFramework, string> = {
+  express: 'Express',
+  fastify: 'Fastify',
+  hono: 'Hono',
+  nestjs: 'NestJS',
+}
+
+export const ORM_LABELS: Record<Orm, string> = {
+  drizzle: 'Drizzle',
+  prisma: 'Prisma',
+  mongoose: 'Mongoose',
+}
+
+export const DATABASE_LABELS: Record<Database, string> = {
+  postgres: 'PostgreSQL',
+  mysql: 'MySQL',
+  sqlite: 'SQLite',
+  mongodb: 'MongoDB',
+}
+
+export function describeStack(answers: Answers): string[] {
+  const lines: string[] = []
+  lines.push(`Type:       ${PROJECT_TYPE_LABELS[answers.projectType]}`)
+  lines.push(`Frontend:   ${FRONTEND_LABELS[answers.frontend]} (${answers.language})`)
+  if (answers.fullStack) {
+    lines.push(
+      `Backend:    ${BACKEND_RUNTIME_LABELS[answers.backendRuntime!]} + ${BACKEND_FRAMEWORK_LABELS[answers.backendFramework!]}`,
+    )
+    lines.push(
+      `Database:   ${DATABASE_LABELS[answers.database!]} (${ORM_LABELS[answers.orm!]})`,
+    )
+  } else {
+    lines.push('Backend:    none (frontend only)')
+  }
+  const extras: string[] = []
+  if (answers.extras.tailwind) extras.push('Tailwind CSS')
+  if (answers.extras.eslintPrettier) extras.push('ESLint + Prettier')
+  lines.push(`Extras:     ${extras.length > 0 ? extras.join(', ') : 'none'}`)
+  return lines
+}

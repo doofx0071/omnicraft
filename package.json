@@ -1,0 +1,17 @@
+{
+  "name": "omnicraft",
+  "private": true,
+  "version": "0.1.0",
+  "description": "OmniCraft monorepo — interactive project scaffolding CLI",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w create-omnicraft",
+    "dev": "npm run dev -w create-omnicraft",
+    "test": "npm run test -w create-omnicraft"
+  },
+  "engines": {
+    "node": ">=20.12.0"
+  }
+}

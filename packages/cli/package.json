@@ -1,0 +1,37 @@
+{
+  "name": "create-omnicraft",
+  "version": "0.1.0",
+  "description": "Craft any stack — interactive project scaffolding for full-stack apps. React + Node (Express/Fastify) + PostgreSQL (Drizzle/Prisma) in v1.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "create-omnicraft": "dist/index.js",
+    "omnicraft": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build && npm run test"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.8.1",
+    "giget": "^3.3.1",
+    "validate-npm-package-name": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "tsup": "^9.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.5"
+  },
+  "engines": {
+    "node": ">=20.12.0"
+  }
+}

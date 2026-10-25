@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+/* The app's component classes, expressed with Tailwind utilities.
+   Override the theme via the `@theme` directive (Tailwind v4). */
+@layer components {
+  .app {
+    @apply w-[min(560px,100%)] py-12 px-6 text-slate-900;
+  }
+
+  body {
+    @apply bg-slate-50 min-h-screen flex justify-center antialiased;
+  }
+
+  h1 {
+    @apply text-3xl font-bold mb-1;
+  }
+
+  .subtitle {
+    @apply text-slate-500 mt-0;
+  }
+
+  .muted {
+    @apply text-slate-500;
+  }
+
+  .error-banner {
+    @apply bg-red-50 border border-red-300 text-red-800 rounded-lg px-4 py-3 my-4 text-sm;
+  }
+
+  .form {
+    @apply flex flex-wrap gap-2 my-6;
+  }
+
+  .input {
+    @apply flex-1 min-w-[140px] px-3 py-2.5 border border-slate-300 rounded-lg text-base;
+  }
+
+  .btn {
+    @apply px-4 py-2.5 rounded-lg bg-violet-600 text-white text-base cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-red-700 px-2 py-1;
+  }
+
+  .user-list {
+    @apply list-none p-0 grid gap-2;
+  }
+
+  .user-row {
+    @apply flex justify-between items-center bg-white border border-slate-200 rounded-lg px-4 py-3;
+  }
+}
