@@ -8,7 +8,7 @@
 
 | Version | Theme                             | Progress | Issues     |
 | ------- | --------------------------------- | -------- | ---------- |
-| v0.1.0  | Public launch                     | 🚧 0/6   | #1–#6      |
+| v0.1.0  | Public launch                     | 🚧 2/6   | #1–#6      |
 | v0.2.0  | Scaffolder hardening              | ⬜ 0/5   | #7–#11     |
 | v0.3.0  | Backend & database expansion      | ⬜ 0/5   | #12–#16    |
 | v0.4.0  | Frontend expansion                | ⬜ 0/4   | #17–#20    |
@@ -21,8 +21,8 @@
 
 Ship what works today, start the feedback loop. CI runs on a **self-hosted runner** (unlimited free minutes — no hosted-minutes limits on private repos).
 
-- [ ] #1 — Set up self-hosted Windows runner for this repo
-- [ ] #2 — CI workflow: typecheck, build, test, template e2e smoke
+- [x] #1 — Set up self-hosted Windows runner for this repo
+- [x] #2 — CI workflow: typecheck, build, test, template e2e smoke
 - [ ] #3 — Publish `create-omnicraft` v0.1.0 to npm
 - [ ] #4 — README launch polish: badges, install section, demo placeholder
 - [ ] #5 — Verify published package end-to-end (`npx create-omnicraft@latest`)
