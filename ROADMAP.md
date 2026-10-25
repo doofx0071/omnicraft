@@ -10,7 +10,7 @@
 | ------- | --------------------------------- | -------- | ---------- |
 | v0.1.0  | Public launch                     | ✅ 6/6   | #1–#6      |
 | v0.2.0  | Scaffolder hardening              | ✅ 5/5   | #7–#11     |
-| v0.3.0  | Backend & database expansion      | ⬜ 0/5   | #12–#16    |
+| v0.3.0  | Backend & database expansion      | 🚧 3/5   | #12–#16    |
 | v0.4.0  | Frontend expansion                | ⬜ 0/4   | #17–#20    |
 | v0.5.0  | Platform expansion (mobile, desktop) | ⬜ 0/2 | #21–#22    |
 | v1.0.0  | Maturity milestone                | 🚧 1/5   | #23–#27    |
@@ -42,9 +42,9 @@ Make the CLI pleasant to script and the generated projects trustworthy.
 
 Widen the matrix, deepest-demand first. Order within the phase: SQLite (no Docker needed = fastest first run) → Hono (cheap — framework and ORM layers are already separated) → MySQL → Python (proves the multi-runtime architecture) → Laravel (stretch).
 
-- [ ] #12 — SQLite via Drizzle — zero-docker local dev option
-- [ ] #13 — Hono backend (Node + Drizzle)
-- [ ] #14 — MySQL database option (Drizzle + Prisma)
+- [x] #12 — SQLite via Drizzle — zero-docker local dev option
+- [x] #13 — Hono backend (Node + Drizzle)
+- [x] #14 — MySQL database option (Drizzle + Prisma)
 - [ ] #15 — Python backend runtime: FastAPI + SQLAlchemy/Alembic
 - [ ] #16 — Laravel backend runtime (stretch)
 
