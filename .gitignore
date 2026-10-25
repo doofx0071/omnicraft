@@ -8,3 +8,6 @@ coverage/
 .vite/
 smoke-out/
 .zcode/
+
+# locally generated test projects (own git repos)
+packages/cli/planmo-v3/

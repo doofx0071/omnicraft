@@ -12,6 +12,32 @@ import { detectPackageManager, installDependencies } from './scaffold/pkg-manage
 import { fetchRemoteTemplates } from './scaffold/remote.js'
 import { mkdirSync } from 'node:fs'
 
+/**
+ * The prompt library drives the console in raw mode; if the process exits
+ * hard (Ctrl+C during install, a crash), cmd.exe keeps the raw console state
+ * and every keystroke after the CLI exits garbles — arrows print as ^[[A and
+ * commands get mangled. Restore the console on every way out.
+ */
+function restoreTerminal(): void {
+  try {
+    if (process.stdin.isTTY && process.stdin.isRaw) process.stdin.setRawMode(false)
+    if (process.stdout.isTTY) process.stdout.write('\u001B[?25h') // ensure cursor visible
+  } catch {
+    // stdin/stdout already detached — nothing to restore
+  }
+}
+
+process.on('exit', restoreTerminal)
+process.on('SIGINT', () => {
+  restoreTerminal()
+  process.exit(130)
+})
+process.on('uncaughtException', (err) => {
+  restoreTerminal()
+  console.error(err)
+  process.exit(1)
+})
+
 async function main(): Promise<void> {
   let args
   try {
@@ -84,7 +110,7 @@ async function main(): Promise<void> {
         }),
       )
       if (shouldInstall) {
-        spinner.start(`Installing dependencies with ${pm}...`)
+        spinner.start(`Installing dependencies with ${pm} (this can take a minute)...`)
         const result = installDependencies(answers.targetDir, pm)
         if (result.ok) {
           spinner.stop('Dependencies installed')

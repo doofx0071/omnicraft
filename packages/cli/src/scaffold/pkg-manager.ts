@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process'
+import { runCommand } from '../exec.js'
 
 export type PackageManager = 'npm' | 'pnpm' | 'yarn' | 'bun'
 
@@ -11,26 +11,7 @@ export function detectPackageManager(): PackageManager {
   return 'npm'
 }
 
-const SHELL = process.platform === 'win32'
-
-export interface CommandResult {
-  ok: boolean
-  output: string
-}
-
-function run(cmd: string, args: string[], cwd: string): CommandResult {
-  const result = spawnSync(cmd, args, {
-    cwd,
-    stdio: 'pipe',
-    shell: SHELL,
-    encoding: 'utf8',
-    maxBuffer: 16 * 1024 * 1024,
-  })
-  const output = `${result.stdout ?? ''}${result.stderr ?? ''}`.trim()
-  return { ok: result.status === 0, output }
-}
-
 /** Installs workspace dependencies in the generated project. */
-export function installDependencies(cwd: string, pm: PackageManager): CommandResult {
-  return run(pm, ['install'], cwd)
+export function installDependencies(cwd: string, pm: PackageManager) {
+  return runCommand(pm, ['install'], cwd)
 }
