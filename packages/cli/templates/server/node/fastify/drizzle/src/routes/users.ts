@@ -9,6 +9,15 @@ const createUserSchema = z.object({
   email: z.email(),
 });
 
+// Unique-constraint codes across the supported databases: PostgreSQL,
+// MySQL and SQLite (which may surface wrapped inside `cause`).
+const UNIQUE_VIOLATIONS = new Set(["23505", "ER_DUP_ENTRY", "SQLITE_CONSTRAINT_UNIQUE"]);
+
+function isUniqueViolation(err: unknown): boolean {
+  const e = err as { code?: string; cause?: { code?: string } };
+  return UNIQUE_VIOLATIONS.has(e.code ?? "") || UNIQUE_VIOLATIONS.has(e.cause?.code ?? "");
+}
+
 export async function usersRoutes(app: FastifyInstance) {
   app.get("/", async () => db.select().from(users).orderBy(users.id));
 
@@ -21,8 +30,7 @@ export async function usersRoutes(app: FastifyInstance) {
       const [user] = await db.insert(users).values(parsed.data).returning();
       return reply.status(201).send(user);
     } catch (err) {
-      // 23505: PostgreSQL unique_violation — the users.email unique constraint.
-      if ((err as { code?: string }).code === "23505") {
+      if (isUniqueViolation(err)) {
         return reply.status(409).send({ error: "Email already in use" });
       }
       throw err;

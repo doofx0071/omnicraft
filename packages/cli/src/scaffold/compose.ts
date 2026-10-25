@@ -3,10 +3,14 @@ import type { Layer } from './engine.js'
 
 /**
  * Maps the user's answers to an ordered list of template layers. Templates
- * are composed, not forked: the React client is shared between frontend-only
- * and full-stack projects, and each backend framework/ORM pair contributes a
- * base layer plus an adapter layer. Later layers overwrite earlier files and
- * deep-merge package.json manifests.
+ * are composed, not forked: the React client, each backend framework base,
+ * each database adapter, and each framework×ORM wiring are separate layers.
+ * Later layers overwrite earlier files and deep-merge package.json manifests:
+ *
+ *   client → server base → db adapter → framework×ORM wiring → extras → root
+ *
+ * The database choice selects both the db adapter and the root variant
+ * (docker-compose only ships for containerized databases).
  */
 export function composeLayers(answers: Answers): Layer[] {
   const layers: Layer[] = []
@@ -16,6 +20,7 @@ export function composeLayers(answers: Answers): Layer[] {
 
   if (answers.fullStack) {
     layers.push({ src: `server/node/${answers.backendFramework}/base`, dest: 'server' })
+    layers.push({ src: `db/${answers.orm}/${answers.database}`, dest: 'server' })
     layers.push({ src: `server/node/${answers.backendFramework}/${answers.orm}`, dest: 'server' })
   }
 
@@ -26,7 +31,10 @@ export function composeLayers(answers: Answers): Layer[] {
     layers.push({ src: 'extras/eslint', dest: '.' })
   }
 
-  layers.push({ src: answers.fullStack ? 'root/fullstack' : 'root/frontend-only', dest: '.' })
+  layers.push({
+    src: answers.fullStack ? `root/fullstack/${answers.database}` : 'root/frontend-only',
+    dest: '.',
+  })
 
   return layers
 }

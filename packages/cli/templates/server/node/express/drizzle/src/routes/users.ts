@@ -16,6 +16,15 @@ usersRouter.get("/", async (_req, res) => {
   res.json(allUsers);
 });
 
+// Unique-constraint codes across the supported databases: PostgreSQL,
+// MySQL and SQLite (which may surface wrapped inside `cause`).
+const UNIQUE_VIOLATIONS = new Set(["23505", "ER_DUP_ENTRY", "SQLITE_CONSTRAINT_UNIQUE"]);
+
+function isUniqueViolation(err: unknown): boolean {
+  const e = err as { code?: string; cause?: { code?: string } };
+  return UNIQUE_VIOLATIONS.has(e.code ?? "") || UNIQUE_VIOLATIONS.has(e.cause?.code ?? "");
+}
+
 usersRouter.post("/", async (req, res) => {
   const parsed = createUserSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -25,8 +34,7 @@ usersRouter.post("/", async (req, res) => {
     const [user] = await db.insert(users).values(parsed.data).returning();
     res.status(201).json(user);
   } catch (err) {
-    // 23505: PostgreSQL unique_violation — the users.email unique constraint.
-    if ((err as { code?: string }).code === "23505") {
+    if (isUniqueViolation(err)) {
       return res.status(409).json({ error: "Email already in use" });
     }
     throw err;

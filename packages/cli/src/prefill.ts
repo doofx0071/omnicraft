@@ -4,7 +4,8 @@ import type { ParsedArgs } from './args.js'
 /** Stack choices that exist in the current release — the prompts show more options as "(soon)". */
 export const AVAILABLE = {
   frontend: ['react'] as const,
-  backend: ['express', 'fastify'] as const,
+  backend: ['express', 'fastify', 'hono'] as const,
+  db: ['postgres', 'sqlite', 'mysql'] as const,
   orm: ['drizzle', 'prisma'] as const,
   extras: ['tailwind', 'eslint'] as const,
 }
@@ -28,9 +29,17 @@ export function parseEnumChoice<T extends string>(
 export function validateStackFlags(args: ParsedArgs): void {
   if (args.frontend) parseEnumChoice('--frontend', args.frontend, AVAILABLE.frontend)
   if (args.backend) parseEnumChoice('--backend', args.backend, AVAILABLE.backend)
+  if (args.db) parseEnumChoice('--db', args.db, AVAILABLE.db)
   if (args.orm) parseEnumChoice('--orm', args.orm, AVAILABLE.orm)
   if (args.extras) {
     for (const extra of args.extras) parseEnumChoice('--extras', extra, AVAILABLE.extras)
+  }
+  // Prisma 7 driver adapters are wired for PostgreSQL only right now —
+  // SQLite/MySQL ship with Drizzle.
+  const db = args.db?.trim().toLowerCase() ?? 'postgres'
+  const orm = args.orm?.trim().toLowerCase()
+  if (db !== 'postgres' && orm === 'prisma') {
+    throw new Error(`Invalid combination: --orm prisma currently supports --db postgres only (got ${db})`)
   }
 }
 
@@ -40,6 +49,7 @@ export function hasStackFlags(args: ParsedArgs): boolean {
     args.fullStack !== undefined ||
     args.frontend !== undefined ||
     args.backend !== undefined ||
+    args.db !== undefined ||
     args.orm !== undefined ||
     args.extras !== undefined
   )
@@ -54,6 +64,9 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
   const frontend: Frontend = args.frontend
     ? parseEnumChoice('--frontend', args.frontend, AVAILABLE.frontend)
     : 'react'
+  const database = args.db
+    ? parseEnumChoice('--db', args.db, AVAILABLE.db)
+    : 'postgres'
   const backendFramework: BackendFramework = fullStack
     ? args.backend
       ? parseEnumChoice('--backend', args.backend, AVAILABLE.backend)
@@ -76,7 +89,7 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
     backendRuntime: fullStack ? 'node' : null,
     backendFramework: fullStack ? backendFramework : null,
     orm: fullStack ? orm : null,
-    database: fullStack ? 'postgres' : null,
+    database: fullStack ? database : null,
     extras: {
       tailwind: extrasList.includes('tailwind'),
       eslintPrettier: extrasList.includes('eslint'),

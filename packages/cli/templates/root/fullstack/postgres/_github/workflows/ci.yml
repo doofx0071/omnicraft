@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # DATABASE_URL is only needed so `prisma generate` can run during
+      # postinstall — it does not connect to the database.
+      - name: Install dependencies
+        run: npm ci
+        env:
+          DATABASE_URL: postgres://ci:ci@localhost:5432/ci
+
+      - name: Typecheck client
+        run: npx tsc --noEmit -p client
+
+      - name: Typecheck server
+        run: npx tsc --noEmit -p server
+
+      - name: Build
+        run: npm run build

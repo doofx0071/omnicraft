@@ -43,6 +43,7 @@ describe('runPrompts flow', () => {
       { prompt: 'confirm', answer: true },
       { prompt: 'select', answer: 'node' },
       { prompt: 'select', answer: 'fastify' },
+      { prompt: 'select', answer: 'postgres' },
       { prompt: 'select', answer: 'prisma' },
       { prompt: 'multiselect', answer: ['tailwind'] },
       { prompt: 'confirm', answer: true },
@@ -57,6 +58,7 @@ describe('runPrompts flow', () => {
       'confirm', // full-stack?
       'select', // runtime
       'select', // framework
+      'select', // database
       'select', // orm
       'multiselect', // extras
       'confirm', // craft it?
@@ -96,6 +98,7 @@ describe('runPrompts flow', () => {
       { prompt: 'confirm', answer: true },
       { prompt: 'select', answer: 'node' },
       { prompt: 'select', answer: 'express' },
+      { prompt: 'select', answer: 'postgres' },
       { prompt: 'select', answer: 'drizzle' },
       { prompt: 'multiselect', answer: ['tailwind', 'eslint'] },
       { prompt: 'confirm', answer: true },
@@ -115,6 +118,7 @@ describe('runPrompts flow', () => {
       { prompt: 'confirm', answer: true },
       { prompt: 'select', answer: 'node' },
       { prompt: 'select', answer: 'express' },
+      { prompt: 'select', answer: 'postgres' },
       { prompt: 'select', answer: 'drizzle' },
       { prompt: 'multiselect', answer: [] },
       { prompt: 'confirm', answer: false },

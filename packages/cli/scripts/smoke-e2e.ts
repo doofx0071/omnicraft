@@ -14,15 +14,29 @@ import type { Answers } from '../src/types.js'
 
 const outRoot = resolve(process.argv[2] ?? 'smoke-out')
 const combos = [
-  { framework: 'express', orm: 'drizzle' },
-  { framework: 'express', orm: 'prisma' },
-  { framework: 'fastify', orm: 'drizzle' },
-  { framework: 'fastify', orm: 'prisma' },
+  { framework: 'express', orm: 'drizzle', db: 'postgres' },
+  { framework: 'express', orm: 'prisma', db: 'postgres' },
+  { framework: 'express', orm: 'drizzle', db: 'sqlite' },
+  { framework: 'express', orm: 'drizzle', db: 'mysql' },
+  { framework: 'fastify', orm: 'drizzle', db: 'sqlite' },
+  { framework: 'fastify', orm: 'prisma', db: 'postgres' },
+  { framework: 'hono', orm: 'drizzle', db: 'postgres' },
+  { framework: 'hono', orm: 'drizzle', db: 'sqlite' },
 ] as const
 
-for (const { framework, orm } of combos) {
-  const answers: Answers = {
-    projectName: `smoke-${framework}-${orm}`,
+function scaffold(answers: Answers): string {
+  const dir = resolve(outRoot, answers.projectName)
+  rmSync(dir, { recursive: true, force: true })
+  mkdirSync(dir, { recursive: true })
+  applyLayers(TEMPLATES_ROOT, composeLayers(answers), templateVariables(answers), dir)
+  createEnvFiles(dir)
+  console.log(`scaffolded ${dir}`)
+  return dir
+}
+
+for (const { framework, orm, db } of combos) {
+  scaffold({
+    projectName: `smoke-${framework}-${orm}-${db}`,
     targetDir: '.',
     projectType: 'web',
     frontend: 'react',
@@ -31,36 +45,22 @@ for (const { framework, orm } of combos) {
     backendRuntime: 'node',
     backendFramework: framework,
     orm,
-    database: 'postgres',
+    database: db,
     extras: { tailwind: true, eslintPrettier: true },
-  }
-  const dir = resolve(outRoot, answers.projectName)
-  rmSync(dir, { recursive: true, force: true })
-  mkdirSync(dir, { recursive: true })
-  applyLayers(TEMPLATES_ROOT, composeLayers(answers), templateVariables(answers), dir)
-  createEnvFiles(dir)
-  console.log(`scaffolded ${dir}`)
+  })
 }
 
 // Also one frontend-only project
-{
-  const answers: Answers = {
-    projectName: 'smoke-frontend-only',
-    targetDir: '.',
-    projectType: 'web',
-    frontend: 'react',
-    language: 'typescript',
-    fullStack: false,
-    backendRuntime: null,
-    backendFramework: null,
-    orm: null,
-    database: null,
-    extras: { tailwind: true, eslintPrettier: true },
-  }
-  const dir = resolve(outRoot, answers.projectName)
-  rmSync(dir, { recursive: true, force: true })
-  mkdirSync(dir, { recursive: true })
-  applyLayers(TEMPLATES_ROOT, composeLayers(answers), templateVariables(answers), dir)
-  createEnvFiles(dir)
-  console.log(`scaffolded ${dir}`)
-}
+scaffold({
+  projectName: 'smoke-frontend-only',
+  targetDir: '.',
+  projectType: 'web',
+  frontend: 'react',
+  language: 'typescript',
+  fullStack: false,
+  backendRuntime: null,
+  backendFramework: null,
+  orm: null,
+  database: null,
+  extras: { tailwind: true, eslintPrettier: true },
+})

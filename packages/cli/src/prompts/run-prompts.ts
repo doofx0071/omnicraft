@@ -4,6 +4,7 @@ import { CancelledError, unwrap, unwrapMany } from '../cancel.js'
 import {
   BACKEND_FRAMEWORK_LABELS,
   BACKEND_RUNTIME_LABELS,
+  DATABASE_LABELS,
   FRONTEND_LABELS,
   PROJECT_TYPE_LABELS,
   type Answers,
@@ -159,6 +160,7 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
 
   let backendRuntime: BackendRuntime = 'node'
   let backendFramework: BackendFramework = 'express'
+  let database: 'postgres' | 'sqlite' | 'mysql' = 'postgres'
   let orm: 'drizzle' | 'prisma' = 'drizzle'
 
   if (fullStack) {
@@ -181,16 +183,27 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
             { value: 'nestjs', label: BACKEND_FRAMEWORK_LABELS.nestjs, available: false },
           ])
 
+    database = flags.db
+      ? parseEnumChoice('--db', flags.db, AVAILABLE.db)
+      : forced
+        ? 'postgres'
+        : ((await selectWithSoon<'postgres' | 'sqlite' | 'mysql' | 'mongodb'>('Select a database:', [
+            { value: 'postgres', label: DATABASE_LABELS.postgres, available: true, hint: 'Drizzle or Prisma' },
+            { value: 'sqlite', label: DATABASE_LABELS.sqlite, available: true, hint: 'Zero setup — file-based (Drizzle)' },
+            { value: 'mysql', label: DATABASE_LABELS.mysql, available: true, hint: 'Drizzle' },
+            { value: 'mongodb', label: DATABASE_LABELS.mongodb, available: false },
+          ])) as 'postgres' | 'sqlite' | 'mysql')
+
     orm = flags.orm
       ? parseEnumChoice('--orm', flags.orm, AVAILABLE.orm)
       : forced
         ? 'drizzle'
         : await selectWithSoon<'drizzle' | 'prisma'>('Select an ORM:', [
             { value: 'drizzle', label: 'Drizzle', available: true, hint: 'SQL-like, lightweight' },
-            { value: 'prisma', label: 'Prisma', available: true, hint: 'Schema-first, great DX' },
+            { value: 'prisma', label: 'Prisma', available: database === 'postgres', hint: database === 'postgres' ? 'Schema-first, great DX' : 'PostgreSQL only for now' },
           ])
 
-    p.log.info('Database: PostgreSQL (MySQL, SQLite and MongoDB are coming)')
+    p.log.info(`Database: ${DATABASE_LABELS[database]}`)
   }
 
   // ── Extras ──────────────────────────────────────────────────────────────
@@ -221,7 +234,9 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
   const summary: string[] = [`App:        ${projectName}`]
   summary.push(`Stack:      ${FRONTEND_LABELS[frontend]} (web)`)
   if (fullStack) {
-    summary.push(`Backend:    ${BACKEND_FRAMEWORK_LABELS[backendFramework]} + PostgreSQL (${orm === 'drizzle' ? 'Drizzle' : 'Prisma'})`)
+    summary.push(
+    `Backend:    ${BACKEND_FRAMEWORK_LABELS[backendFramework]} + ${DATABASE_LABELS[database!]} (${orm === 'drizzle' ? 'Drizzle' : 'Prisma'})`,
+  )
   } else {
     summary.push('Backend:    none (frontend only)')
   }
@@ -257,7 +272,7 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
     backendRuntime: fullStack ? backendRuntime : null,
     backendFramework: fullStack ? backendFramework : null,
     orm: fullStack ? orm : null,
-    database: fullStack ? 'postgres' : null,
+    database: fullStack ? database : null,
     extras,
   }
 }

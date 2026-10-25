@@ -39,10 +39,10 @@ jobs:
           npx tsx packages/cli/scripts/smoke-e2e.ts smoke-out
 
       - name: E2E - install and typecheck generated express+drizzle project
-        run: cd smoke-out\smoke-express-drizzle && npm install --no-audit --no-fund && npx tsc --noEmit -p client && npx tsc --noEmit -p server
+        run: cd smoke-out\smoke-express-drizzle-postgres && npm install --no-audit --no-fund && npx tsc --noEmit -p client && npx tsc --noEmit -p server
 
       - name: Lint generated project output
-        run: cd smoke-out\smoke-express-drizzle && npx eslint . && npx prettier --check .
+        run: cd smoke-out\smoke-express-drizzle-postgres && npx eslint . && npx prettier --check .
 
   unix:
     strategy:
@@ -78,4 +78,4 @@ jobs:
           npx tsx packages/cli/scripts/smoke-e2e.ts smoke-out
 
       - name: E2E - install and typecheck generated express+prisma project
-        run: cd smoke-out/smoke-express-prisma && npm install --no-audit --no-fund && npx tsc --noEmit -p client && npx tsc --noEmit -p server
+        run: cd smoke-out/smoke-express-prisma-postgres && npm install --no-audit --no-fund && npx tsc --noEmit -p client && npx tsc --noEmit -p server

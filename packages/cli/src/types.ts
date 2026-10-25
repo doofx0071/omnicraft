@@ -4,7 +4,7 @@ export type Language = 'typescript' | 'javascript'
 export type BackendRuntime = 'node' | 'python' | 'php'
 export type BackendFramework = 'express' | 'fastify' | 'hono' | 'nestjs'
 export type Orm = 'drizzle' | 'prisma' | 'mongoose'
-export type Database = 'postgres' | 'mysql' | 'sqlite' | 'mongodb'
+export type Database = 'postgres' | 'sqlite' | 'mysql' | 'mongodb'
 
 export interface Extras {
   tailwind: boolean

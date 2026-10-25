@@ -12,6 +12,7 @@ export interface ParsedArgs {
   frontend?: string
   backend?: string
   orm?: string
+  db?: string
   extras?: string[]
 }
 
@@ -26,8 +27,10 @@ Options:
   --full-stack         Force the full-stack flow (default: yes)
   --no-full-stack      Frontend only
   --frontend <name>    Skip the frontend prompt (available: react)
-  --backend <name>     Skip the backend prompt (available: express, fastify)
-  --orm <name>         Skip the ORM prompt (available: drizzle, prisma)
+  --backend <name>     Skip the backend prompt (available: express, fastify, hono)
+  --db <name>          Skip the database prompt (available: postgres, sqlite, mysql)
+  --orm <name>         Skip the ORM prompt (available: drizzle, prisma — prisma is
+                       PostgreSQL-only for now)
   --extras <list>      Comma-separated extras (available: tailwind, eslint;
                        default: both). Use --extras none to skip all.
   --latest             Pull the newest templates from GitHub instead of the
@@ -44,7 +47,7 @@ Examples:
   npm create omnicraft@latest my-app -- --no-full-stack --extras tailwind
 `
 
-const VALUE_FLAGS = new Set(['--frontend', '--backend', '--orm', '--extras'])
+const VALUE_FLAGS = new Set(['--frontend', '--backend', '--orm', '--db', '--extras'])
 
 export function parseArgs(argv: string[]): ParsedArgs {
   const args: ParsedArgs = {
@@ -77,6 +80,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
       if (valueFlag === '--frontend') args.frontend = value
       else if (valueFlag === '--backend') args.backend = value
       else if (valueFlag === '--orm') args.orm = value
+      else if (valueFlag === '--db') args.db = value
       else args.extras = splitList(value)
     } else if (arg === '--latest') args.latest = true
     else if (arg === '--skip-install') args.skipInstall = true

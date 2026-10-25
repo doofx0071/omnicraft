@@ -16,12 +16,8 @@ app.use("/api", apiRouter);
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   const code = dbErrorCode(err);
   if (code === "ECONNREFUSED" || code === "ETIMEDOUT" || code === "P1001") {
-    console.error(
-      "❌ Cannot reach PostgreSQL — is it running? Start it with: docker compose up -d",
-    );
-    res
-      .status(503)
-      .json({ error: "Database unavailable — start PostgreSQL with: docker compose up -d" });
+    console.error("❌ Cannot reach the database — see README → Troubleshooting");
+    res.status(503).json({ error: "Database unavailable — see README → Troubleshooting" });
     return;
   }
   console.error(err);

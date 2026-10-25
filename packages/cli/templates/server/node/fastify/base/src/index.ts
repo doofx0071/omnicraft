@@ -15,12 +15,8 @@ app.setErrorHandler((err, _req, reply) => {
   const e = err as { code?: string; cause?: { code?: string } };
   const code = e.code ?? e.cause?.code;
   if (code === "ECONNREFUSED" || code === "ETIMEDOUT" || code === "P1001") {
-    app.log.error(
-      "❌ Cannot reach PostgreSQL — is it running? Start it with: docker compose up -d",
-    );
-    return reply
-      .status(503)
-      .send({ error: "Database unavailable — start PostgreSQL with: docker compose up -d" });
+    app.log.error("❌ Cannot reach the database — see README → Troubleshooting");
+    return reply.status(503).send({ error: "Database unavailable — see README → Troubleshooting" });
   }
   app.log.error(err);
   return reply.status(err.statusCode ?? 500).send({ error: "Internal server error" });

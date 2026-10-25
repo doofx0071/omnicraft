@@ -47,25 +47,31 @@ afterAll(() => {
 
 describe('full-stack combos', () => {
   const matrix = [
-    { framework: 'express', orm: 'drizzle' },
-    { framework: 'express', orm: 'prisma' },
-    { framework: 'fastify', orm: 'drizzle' },
-    { framework: 'fastify', orm: 'prisma' },
+    { framework: 'express', orm: 'drizzle', db: 'postgres' },
+    { framework: 'express', orm: 'drizzle', db: 'sqlite' },
+    { framework: 'express', orm: 'drizzle', db: 'mysql' },
+    { framework: 'express', orm: 'prisma', db: 'postgres' },
+    { framework: 'fastify', orm: 'drizzle', db: 'postgres' },
+    { framework: 'fastify', orm: 'drizzle', db: 'sqlite' },
+    { framework: 'fastify', orm: 'drizzle', db: 'mysql' },
+    { framework: 'fastify', orm: 'prisma', db: 'postgres' },
   ] as const
 
-  for (const { framework, orm } of matrix) {
-    it(`scaffolds ${framework} + ${orm}`, () => {
+  for (const { framework, orm, db } of matrix) {
+    it(`scaffolds ${framework} + ${orm} + ${db}`, () => {
       const dir = makeTempDir(`${framework}-${orm}`)
-      scaffoldInto(dir, makeAnswers({ backendFramework: framework, orm }))
+      scaffoldInto(dir, makeAnswers({ backendFramework: framework, orm, database: db }))
 
       // Root layer: workspaces manifest, tokens rendered
       const rootPkg = readJson(join(dir, 'package.json'))
       expect(rootPkg.name).toBe('demo-app')
       expect(rootPkg.workspaces).toEqual(['client', 'server'])
       expect(rootPkg.scripts).toHaveProperty('dev')
-      expect(existsSync(join(dir, 'docker-compose.yml'))).toBe(true)
+      expect(existsSync(join(dir, 'docker-compose.yml'))).toBe(db !== 'sqlite')
       expect(existsSync(join(dir, '.gitignore'))).toBe(true)
-      expect(readFileSync(join(dir, 'docker-compose.yml'), 'utf8')).toContain('demo_app')
+      if (db !== 'sqlite') {
+        expect(readFileSync(join(dir, 'docker-compose.yml'), 'utf8')).toContain('demo_app')
+      }
 
       // Generated projects ship their own CI workflow
       expect(existsSync(join(dir, '.github', 'workflows', 'ci.yml'))).toBe(true)
@@ -93,7 +99,12 @@ describe('full-stack combos', () => {
         expect(existsSync(join(dir, 'server', 'drizzle.config.ts'))).toBe(true)
         expect(existsSync(join(dir, 'server', 'src', 'db', 'schema.ts'))).toBe(true)
         expect(existsSync(join(dir, 'server', 'prisma'))).toBe(false)
+        const schema = readFileSync(join(dir, 'server', 'src', 'db', 'schema.ts'), 'utf8')
+        if (db === 'sqlite') expect(schema).toContain('sqliteTable')
+        else if (db === 'mysql') expect(schema).toContain('mysqlTable')
+        else expect(schema).toContain('pgTable')
       } else {
+        expect(db).toBe('postgres')
         expect(existsSync(join(dir, 'server', 'prisma', 'schema.prisma'))).toBe(true)
         expect(existsSync(join(dir, 'server', 'prisma.config.ts'))).toBe(true)
         expect(existsSync(join(dir, 'server', 'drizzle.config.ts'))).toBe(false)
@@ -101,7 +112,15 @@ describe('full-stack combos', () => {
 
       // Env bootstrap: .env created from the (overwritten) .env.example
       const envContent = readFileSync(join(dir, 'server', '.env'), 'utf8')
-      expect(envContent).toContain('DATABASE_URL=postgres://omnicraft:omnicraft@localhost:5432/demo_app')
+      if (db === 'sqlite') {
+        expect(envContent).toContain('DATABASE_URL=file:./data/app.db')
+      } else if (db === 'mysql') {
+        expect(envContent).toContain('DATABASE_URL=mysql://omnicraft:omnicraft@localhost:3306/demo_app')
+      } else {
+        expect(envContent).toContain(
+          'DATABASE_URL=postgres://omnicraft:omnicraft@localhost:5432/demo_app',
+        )
+      }
 
       // Extras merged into the root manifest
       if (framework === 'express') {

@@ -6,12 +6,27 @@ describe('validateStackFlags', () => {
   it('accepts available choices', () => {
     expect(() => validateStackFlags(parseArgs(['--backend', 'fastify', '--orm=prisma']))).not.toThrow()
     expect(() => validateStackFlags(parseArgs(['--frontend', 'react']))).not.toThrow()
+    expect(() => validateStackFlags(parseArgs(['--db', 'sqlite']))).not.toThrow()
   })
 
   it('rejects unavailable choices with the available list', () => {
-    expect(() => validateStackFlags(parseArgs(['--backend', 'hono']))).toThrow(/Available: express, fastify/)
-    expect(() => validateStackFlags(parseArgs(['--orm=mongoose']))).toThrow(/Available: drizzle, prisma/)
+    expect(() => validateStackFlags(parseArgs(['--backend', 'nestjs']))).toThrow(
+      /Available: express, fastify, hono/,
+    )
+    expect(() => validateStackFlags(parseArgs(['--db', 'mongodb']))).toThrow(
+      /Available: postgres, sqlite, mysql/,
+    )
     expect(() => validateStackFlags(parseArgs(['--extras', 'tailwind,prettier']))).toThrow(/Available: tailwind, eslint/)
+  })
+
+  it('rejects prisma with a non-postgres database', () => {
+    expect(() => validateStackFlags(parseArgs(['--db', 'sqlite', '--orm', 'prisma']))).toThrow(
+      /--orm prisma currently supports --db postgres only/,
+    )
+    expect(() => validateStackFlags(parseArgs(['--db', 'mysql', '--orm', 'prisma']))).toThrow(
+      /--orm prisma currently supports --db postgres only/,
+    )
+    expect(() => validateStackFlags(parseArgs(['--db', 'sqlite', '--orm', 'drizzle']))).not.toThrow()
   })
 })
 
@@ -37,6 +52,14 @@ describe('resolveAnswers', () => {
     expect(answers.backendFramework).toBe('fastify')
     expect(answers.orm).toBe('prisma')
     expect(answers.extras).toEqual({ tailwind: true, eslintPrettier: false })
+  })
+
+  it('resolves the database flag', () => {
+    const sqlite = resolveAnswers(parseArgs(['--yes', '--db', 'sqlite']), base.projectName, base.targetDir)
+    expect(sqlite.database).toBe('sqlite')
+    expect(sqlite.orm).toBe('drizzle')
+    const mysql = resolveAnswers(parseArgs(['--yes', '--db=mysql']), base.projectName, base.targetDir)
+    expect(mysql.database).toBe('mysql')
   })
 
   it('frontend-only clears backend fields', () => {
