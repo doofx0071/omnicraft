@@ -10,9 +10,13 @@ jobs:
     runs-on: [self-hosted, windows]
     defaults:
       run:
-        shell: bash
+        shell: powershell
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
 
       - name: Install workspace dependencies
         run: npm ci
@@ -31,12 +35,13 @@ jobs:
 
       - name: Scaffold all stack combos
         run: |
-          rm -rf smoke-out
+          if (Test-Path smoke-out) { Remove-Item -Recurse -Force smoke-out }
           npx tsx packages/cli/scripts/smoke-e2e.ts smoke-out
 
       - name: E2E - install and typecheck generated express+drizzle project
         run: |
           cd smoke-out/smoke-express-drizzle
           npm install --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npx tsc --noEmit -p client
           npx tsc --noEmit -p server
