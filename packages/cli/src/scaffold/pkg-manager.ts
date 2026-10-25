@@ -1,4 +1,4 @@
-import { runCommand } from '../exec.js'
+import { runCommandVisible } from '../exec.js'
 
 export type PackageManager = 'npm' | 'pnpm' | 'yarn' | 'bun'
 
@@ -11,7 +11,10 @@ export function detectPackageManager(): PackageManager {
   return 'npm'
 }
 
-/** Installs workspace dependencies in the generated project. */
-export function installDependencies(cwd: string, pm: PackageManager) {
-  return runCommand(pm, ['install'], cwd)
+/**
+ * Installs workspace dependencies, streaming the package manager's live
+ * output (progress bar, added-packages summary, warnings) to the terminal.
+ */
+export function installDependencies(cwd: string, pm: PackageManager): Promise<boolean> {
+  return runCommandVisible(pm, ['install'], cwd)
 }

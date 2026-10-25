@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 
 const IS_WIN = process.platform === 'win32'
 
@@ -39,4 +39,23 @@ export function runCommand(
     ok: result.status === 0,
     output: `${result.stdout ?? ''}${result.stderr ?? ''}`.trim(),
   }
+}
+
+/**
+ * Runs a fixed command with its output streamed straight to the terminal —
+ * used for dependency installs so the user watches the real progress
+ * (package counts, warnings, the package manager's own progress bar).
+ */
+export function runCommandVisible(
+  command: string,
+  args: string[],
+  cwd: string,
+): Promise<boolean> {
+  return new Promise((resolveResult) => {
+    const child = IS_WIN
+      ? spawn([command, ...args].join(' '), { shell: true, cwd, stdio: 'inherit' })
+      : spawn(command, args, { cwd, stdio: 'inherit' })
+    child.on('error', () => resolveResult(false))
+    child.on('close', (code) => resolveResult(code === 0))
+  })
 }

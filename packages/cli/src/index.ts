@@ -110,13 +110,12 @@ async function main(): Promise<void> {
         }),
       )
       if (shouldInstall) {
-        spinner.start(`Installing dependencies with ${pm} (this can take a minute)...`)
-        const result = installDependencies(answers.targetDir, pm)
-        if (result.ok) {
-          spinner.stop('Dependencies installed')
+        p.log.step(`Installing dependencies with ${pm} — live output below (this can take a minute)`)
+        const ok = await installDependencies(answers.targetDir, pm)
+        if (ok) {
+          p.log.success(`Dependencies installed with ${pm}`)
         } else {
-          spinner.stop(`Install failed — run "${pm} install" manually`)
-          p.log.warn(result.output.split('\n').slice(-5).join('\n'))
+          p.log.warn(`Install failed — check the output above, then run "${pm} install" inside the project`)
         }
       } else {
         p.log.step(`Skipped install — run "${pm} install" when ready`)
