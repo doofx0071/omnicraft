@@ -22,6 +22,8 @@ const combos = [
   { framework: 'fastify', orm: 'prisma', db: 'postgres' },
   { framework: 'hono', orm: 'drizzle', db: 'postgres' },
   { framework: 'hono', orm: 'drizzle', db: 'sqlite' },
+  { framework: 'express', orm: 'none', db: 'sqlite' },
+  { framework: 'express', orm: 'none', db: 'postgres' },
   { framework: 'fastapi', orm: null, db: 'postgres' },
   { framework: 'fastapi', orm: null, db: 'sqlite' },
   { framework: 'laravel', orm: null, db: 'sqlite' },

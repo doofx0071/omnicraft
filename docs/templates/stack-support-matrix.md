@@ -19,16 +19,22 @@ exercises the client; frontend-only builds via `npm run build` in CI and locally
 
 ### Node.js backends — framework × ORM × database
 
-| Framework | ORM     | Database   | Status            | Evidence                                                                                                    |
-| --------- | ------- | ---------- | ----------------- | ----------------------------------------------------------------------------------------------------------- |
-| Express   | Drizzle | PostgreSQL | **Supported**     | CI e2e (windows): install + typecheck; boot + health + CRUD + 409 verified locally; docker compose verified |
-| Express   | Drizzle | SQLite     | **Supported**     | CI smoke; boot + full CRUD + 409 verified locally, zero-docker                                              |
-| Express   | Drizzle | MySQL      | Scaffold-verified | CI smoke; install/build/functional not yet run                                                              |
-| Express   | Prisma  | PostgreSQL | **Supported**     | CI e2e (unix): install (incl. `prisma generate`) + typecheck; boot + DB error handling verified             |
-| Fastify   | Drizzle | PostgreSQL | **Supported**     | CI smoke + typecheck; boot + health + CRUD verified locally                                                 |
-| Fastify   | Drizzle | SQLite     | **Supported**     | CI smoke; typecheck verified locally; boot verified (health)                                                |
-| Fastify   | Drizzle | MySQL      | Scaffold-verified | CI smoke; install/build/functional not yet run                                                              |
-| Fastify   | Prisma  | PostgreSQL | **Supported**     | CI smoke + typecheck; boot + health + Prisma adapter error path verified locally                            |
+| Framework | ORM            | Database   | Status            | Evidence                                                                                                    |
+| --------- | -------------- | ---------- | ----------------- | ----------------------------------------------------------------------------------------------------------- |
+| Express   | Drizzle        | PostgreSQL | **Supported**     | CI e2e (windows): install + typecheck; boot + health + CRUD + 409 verified locally; docker compose verified |
+| Express   | Drizzle        | SQLite     | **Supported**     | CI smoke; boot + full CRUD + 409 verified locally, zero-docker                                              |
+| Express   | Drizzle        | MySQL      | Scaffold-verified | CI smoke; install/build/functional not yet run                                                              |
+| Express   | Prisma         | PostgreSQL | **Supported**     | CI e2e (unix): install (incl. `prisma generate`) + typecheck; boot + DB error handling verified             |
+| Fastify   | Drizzle        | PostgreSQL | **Supported**     | CI smoke + typecheck; boot + health + CRUD verified locally                                                 |
+| Fastify   | Drizzle        | SQLite     | **Supported**     | CI smoke; typecheck verified locally; boot verified (health)                                                |
+| Fastify   | Drizzle        | MySQL      | Scaffold-verified | CI smoke; install/build/functional not yet run                                                              |
+| Fastify   | Prisma         | PostgreSQL | **Supported**     | CI smoke + typecheck; boot + health + Prisma adapter error path verified locally                            |
+| Express   | None (raw SQL) | SQLite     | **Supported**     | verified locally: migrate (sql-file runner), seed, boot, full CRUD, 409/404 paths, zero-docker              |
+| Express   | None (raw SQL) | PostgreSQL | Scaffold-verified | CI smoke; functional run pending                                                                            |
+| Fastify   | None (raw SQL) | SQLite     | Scaffold-verified | CI smoke; wiring shared with the express pattern                                                            |
+| Fastify   | None (raw SQL) | PostgreSQL | Scaffold-verified | CI smoke                                                                                                    |
+| Hono      | None (raw SQL) | SQLite     | Scaffold-verified | CI smoke                                                                                                    |
+| Hono      | None (raw SQL) | PostgreSQL | Scaffold-verified | CI smoke                                                                                                    |
 
 ### Python backend
 

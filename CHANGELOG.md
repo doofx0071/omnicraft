@@ -4,6 +4,17 @@ All notable, user-visible changes to `create-omnicraft` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is semver
 (0.x = rapid iteration, breaking changes allowed).
 
+## [0.3.2] — 2026-10-26
+
+### Added
+
+- **None (raw SQL) option** in the ORM prompt for Node backends: plain pg/mysql2/better-sqlite3
+  drivers with parameterized queries (values bind separately from SQL — the standard injection
+  defense), a uniform `query()` adapter, and a minimal SQL-file migration runner (`_migrations`
+  table, transactional apply, `db:migrate`/`db:push`/`db:seed`). No ORM, no drizzle-kit/prisma
+  dependency. Available for all three node databases; verified end-to-end on SQLite (migrate,
+  seed, boot, CRUD, 409 on duplicate, 404 on missing).
+
 ## [0.3.1] — 2026-10-26
 
 ### Fixed

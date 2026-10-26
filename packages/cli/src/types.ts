@@ -11,7 +11,7 @@ export type BackendFramework =
   | 'laravel'
   | 'django'
   | 'symfony'
-export type Orm = 'drizzle' | 'prisma' | 'mongoose'
+export type Orm = 'drizzle' | 'prisma' | 'none' | 'mongoose'
 export type Database = 'postgres' | 'sqlite' | 'mysql' | 'mongodb'
 
 export interface Extras {
@@ -66,6 +66,7 @@ export const BACKEND_FRAMEWORK_LABELS: Record<BackendFramework, string> = {
 export const ORM_LABELS: Record<Orm, string> = {
   drizzle: 'Drizzle',
   prisma: 'Prisma',
+  none: 'None (raw SQL)',
   mongoose: 'Mongoose',
 }
 

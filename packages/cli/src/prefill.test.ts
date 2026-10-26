@@ -55,6 +55,18 @@ describe('validateStackFlags', () => {
       /Available: node, python, php/,
     )
   })
+
+  it('accepts --orm none with any database', () => {
+    expect(() => validateStackFlags(parseArgs(['--orm', 'none', '--db', 'sqlite']))).not.toThrow()
+    expect(() => validateStackFlags(parseArgs(['--orm=none', '--db=mysql']))).not.toThrow()
+    const answers = resolveAnswers(
+      parseArgs(['--yes', '--orm', 'none', '--db', 'sqlite']),
+      'demo',
+      '/tmp/demo',
+    )
+    expect(answers.orm).toBe('none')
+    expect(answers.database).toBe('sqlite')
+  })
 })
 
 describe('resolveAnswers', () => {

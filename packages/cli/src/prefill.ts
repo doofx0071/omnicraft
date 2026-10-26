@@ -19,7 +19,7 @@ export const AVAILABLE = {
     python: ['postgres', 'sqlite'] as const,
     php: ['postgres', 'sqlite', 'mysql'] as const,
   },
-  orm: { node: ['drizzle', 'prisma'] as const },
+  orm: { node: ['drizzle', 'prisma', 'none'] as const },
   extras: ['tailwind', 'eslint'] as const,
 }
 
@@ -58,7 +58,7 @@ export function validateStackFlags(args: ParsedArgs): void {
     for (const extra of args.extras) parseEnumChoice('--extras', extra, AVAILABLE.extras)
   }
   // Prisma 7 driver adapters are wired for PostgreSQL only right now —
-  // SQLite/MySQL ship with Drizzle.
+  // SQLite/MySQL ship with Drizzle or raw SQL.
   if (runtime === 'node') {
     const db = args.db?.trim().toLowerCase() ?? 'postgres'
     const orm = args.orm?.trim().toLowerCase()

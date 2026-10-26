@@ -174,7 +174,7 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
   let backendRuntime: BackendRuntime = 'node'
   let backendFramework: BackendFramework = 'express'
   let database: 'postgres' | 'sqlite' | 'mysql' = 'postgres'
-  let orm: 'drizzle' | 'prisma' | null = 'drizzle'
+  let orm: 'drizzle' | 'prisma' | 'none' | null = 'drizzle'
 
   if (fullStack) {
     backendRuntime = flags.runtime
@@ -245,13 +245,12 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
         ? parseEnumChoice('--orm', flags.orm, AVAILABLE.orm.node)
         : forced
           ? 'drizzle'
-          : await selectWithSoon<'drizzle' | 'prisma'>('Select an ORM:', [
+          : await selectWithSoon<'drizzle' | 'prisma' | 'none'>('Select an ORM:', [
               { value: 'drizzle', label: 'Drizzle', available: true, hint: 'SQL-like, lightweight' },
               { value: 'prisma', label: 'Prisma', available: database === 'postgres', hint: database === 'postgres' ? 'Schema-first, great DX' : 'PostgreSQL only for now' },
+              { value: 'none', label: 'None — raw SQL', available: true, hint: 'Driver + parameterized queries + SQL-file migrations' },
             ])
-      p.log.info(
-        `ORM: ${orm === 'drizzle' ? 'Drizzle' : 'Prisma'}`,
-      )
+      p.log.info(orm === 'none' ? 'ORM: none — raw SQL via the driver' : `ORM: ${orm === 'drizzle' ? 'Drizzle' : 'Prisma'}`)
     } else if (backendRuntime === 'python') {
       orm = null
       p.log.info('ORM: SQLAlchemy + Alembic migrations')
@@ -293,7 +292,9 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
   if (fullStack) {
     const ormLabel =
       backendRuntime === 'node'
-        ? `(${orm === 'drizzle' ? 'Drizzle' : 'Prisma'})`
+        ? orm === 'none'
+          ? '(none — raw SQL)'
+          : `(${orm === 'drizzle' ? 'Drizzle' : 'Prisma'})`
         : backendRuntime === 'python'
           ? '(SQLAlchemy + Alembic)'
           : '(Eloquent)'
