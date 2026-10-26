@@ -14,7 +14,7 @@ import { fetchRemoteTemplates } from './scaffold/remote.js'
 import { validateStackFlags } from './prefill.js'
 import { checkForUpdate } from './update-check.js'
 import { copyFileSync, existsSync, mkdirSync, renameSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 
 /**
  * The prompt library drives the console in raw mode; if the process exits
@@ -94,9 +94,8 @@ async function main(): Promise<void> {
     const spinner = p.spinner()
     spinner.start(`Fetching templates for ${TEMPLATE_REPO.ref} from GitHub...`)
     try {
-      const remote = await fetchRemoteTemplates()
-      templatesRoot = remote.dir
-      spinner.stop(`Templates fetched (${remote.ref})`)
+      templatesRoot = (await fetchRemoteTemplates()).dir
+      spinner.stop(`Templates fetched (${TEMPLATE_REPO.ref})`)
     } catch {
       spinner.stop('Could not fetch templates from GitHub')
       p.log.warn(
@@ -105,6 +104,83 @@ async function main(): Promise<void> {
       p.outro('Aborted.')
       return
     }
+  }
+
+  // Native platforms (mobile/desktop): the official generator IS the
+  // scaffold; OmniCraft applies its overlay afterwards and returns — no web
+  // flow, no db prompts, no tailwind/shadcn steps.
+  if (answers.architecture.kind === 'native-app') {
+    const mobile = answers.architecture.platform === 'mobile'
+    const layers = composeLayers(answers)
+    const variables = templateVariables(answers)
+    const spinner = p.spinner()
+
+    if (mobile) {
+      spinner.start('Creating the Expo app with create-expo-app (this can take a minute)...')
+      const cea = runCommand(
+        'npx',
+        ['--yes', 'create-expo-app@latest', answers.targetDir, '--template', 'default@sdk-58', '--yes', '--no-install', '--no-agents-md'],
+        dirname(answers.targetDir),
+        64 * 1024 * 1024,
+      )
+      if (!cea.ok) {
+        spinner.stop('create-expo-app failed')
+        throw new Error('create-expo-app failed — see the output above. Check your connection and that Node ≥ 20 is installed.')
+      }
+      applyLayers(templatesRoot, layers, variables, answers.targetDir)
+      spinner.stop('Expo app created and configured')
+    } else {
+      spinner.start('Creating the Tauri app with create-tauri-app (this can take a minute)...')
+      const identifier = `com.omnicraft.${answers.projectName.replace(/[^a-z0-9]/gi, '').toLowerCase() || 'app'}`
+      const cta = runCommand(
+        'npx',
+        ['--yes', 'create-tauri-app@latest', basename(answers.targetDir), '--template', 'react-ts', '--manager', 'npm', '--yes', '--identifier', identifier],
+        dirname(answers.targetDir),
+        64 * 1024 * 1024,
+      )
+      if (!cta.ok) {
+        spinner.stop('create-tauri-app failed')
+        throw new Error('create-tauri-app failed — see the output above. Check your connection.')
+      }
+      applyLayers(templatesRoot, layers, variables, answers.targetDir)
+      spinner.stop('Tauri app created and configured')
+    }
+
+    const envFiles = createEnvFiles(answers.targetDir)
+    for (const file of envFiles) p.log.step(`Created ${file.replace(answers.targetDir + '\\', '').replace(answers.targetDir + '/', '')}`)
+
+    spinner.start('Initializing git repository...')
+    const gitOkNative = gitInit(answers.targetDir)
+    spinner.stop(gitOkNative ? 'Git repository initialized' : 'Git not available — skipped git init')
+
+    if (!args.skipInstall && mobile) {
+      const shouldInstall = unwrap(
+        await p.confirm({
+          message: 'Install Expo dependencies with npm now? (Expo SDK + Expo Router — this can take a couple of minutes)',
+          initialValue: true,
+        }),
+      )
+      if (shouldInstall) {
+        p.log.step('Installing dependencies with npm — live output below')
+        const ok = await installDependencies(answers.targetDir, 'npm')
+        if (ok) p.log.success('Dependencies installed')
+        else p.log.warn('Install failed — run "npm install" inside the project')
+      } else {
+        p.log.step('Skipped — run "npm install" when ready')
+      }
+    }
+    if (!mobile) {
+      p.log.info('Dependencies were installed by create-tauri-app (npm)')
+    }
+
+    p.note(
+      mobile
+        ? `cd ${answers.projectName}\nnpx expo start              # press a (Android) / i (iOS)\n# pair with a backend: see OMNICRAFT.md`
+        : `cd ${answers.projectName}\ncargo --version            # Rust is required to build the shell\nnpm run tauri dev          # desktop app with hot reload\n# pair with a backend: see OMNICRAFT.md`,
+      'Next steps',
+    )
+    p.outro('Crafted! Happy building ⚡')
+    return
   }
 
   try {

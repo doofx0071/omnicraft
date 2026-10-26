@@ -4,6 +4,23 @@ All notable, user-visible changes to `create-omnicraft` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is semver
 (0.x = rapid iteration, breaking changes allowed).
 
+## [0.5.0] — 2026-10-26
+
+### Added
+
+- **Mobile platform: React Native via Expo** (#21) — "What are you building? → Mobile App"
+  now scaffolds Expo SDK 58 (TypeScript, Expo Router) via the pinned `create-expo-app`
+  adapter, plus an OmniCraft overlay: a typed API client with device-aware base URL
+  (`EXPO_PUBLIC_API_URL`, Android-emulator/iOS-simulator/physical-device guidance) and
+  OMNICRAFT.md pairing notes. Verified: scaffold + install + tsc pass.
+- **Desktop platform: Tauri 2 + React** (#22) — "→ Desktop App" scaffolds via the pinned
+  `create-tauri-app` adapter (bundle id `com.omnicraft.<app>`), plus OMNICRAFT.md with
+  Rust prerequisites, CORS/origin pairing guidance, and a typed API client. Verified:
+  scaffold + frontend install + build (Rust toolchain required for the desktop shell).
+- `--platform <web|mobile|desktop>` flag — the "What are you building?" branches are real.
+- Architecture kind `native-app` (mobile/desktop) — the official generator IS the scaffold;
+  no db/ORM prompts (the device app pairs with a separately-run backend, documented).
+
 ## [0.4.0] — 2026-10-26
 
 ### Added

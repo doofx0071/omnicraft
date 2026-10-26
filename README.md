@@ -23,7 +23,7 @@ Open <a href="docs/demo.html">docs/demo.html</a> in a browser — the same flow 
 ┌  ⚡ OmniCraft — craft any stack
 │
 ◆  What is the name of your app?          ▸ becomes the folder name
-◆  What are you building?                 ● Web App · Mobile (soon) · Desktop (soon)
+◆  What are you building?                 ● Web App · Mobile (Expo) · Desktop (Tauri)
 ◆  Select a frontend framework:           ● React · Next.js · Vue · Svelte
 ◆  Full-stack?                            Adds backend + database
 ◆  Select a backend runtime:              ● Node.js · Python · PHP

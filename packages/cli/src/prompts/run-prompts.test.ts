@@ -92,12 +92,12 @@ describe('runPrompts flow', () => {
   it('re-prompts when a roadmap option is picked', async () => {
     script.push(
       { prompt: 'text', answer: 'app' },
-      { prompt: 'select', answer: 'mobile' }, // roadmap -> warned, re-prompt
       { prompt: 'select', answer: 'web' },
       { prompt: 'select', answer: 'react' },
       { prompt: 'confirm', answer: true },
       { prompt: 'select', answer: 'node' },
       { prompt: 'select', answer: 'express' },
+      { prompt: 'select', answer: 'mongodb' }, // db roadmap -> warned, re-prompt
       { prompt: 'select', answer: 'postgres' },
       { prompt: 'select', answer: 'drizzle' },
       { prompt: 'multiselect', answer: ['tailwind', 'eslint'] },

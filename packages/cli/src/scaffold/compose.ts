@@ -17,7 +17,22 @@ import type { Layer } from './engine.js'
 export function composeLayers(answers: Answers): Layer[] {
   const layers: Layer[] = []
   const integrated = answers.architecture.kind === 'integrated-fullstack'
+  const native = answers.architecture.kind === 'native-app'
   const clientDest = answers.fullStack && !integrated ? 'client' : '.'
+
+  // Native platforms: the official generator (create-expo-app /
+  // create-tauri-app) IS the scaffold — OmniCraft applies only a notes +
+  // API-client overlay after it runs (see index.ts).
+  if (native) {
+    layers.push({
+      src:
+        answers.architecture.kind === 'native-app' && answers.architecture.platform === 'mobile'
+          ? 'platform/mobile/expo'
+          : 'platform/desktop/tauri',
+      dest: '.',
+    })
+    return layers
+  }
 
   if (!integrated) {
     layers.push({ src: `web/${answers.frontend}/client`, dest: clientDest })

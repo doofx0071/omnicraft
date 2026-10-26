@@ -21,11 +21,14 @@ export type Database = 'postgres' | 'sqlite' | 'mysql' | 'mongodb'
  *   app router + route handlers); a separate API is optional and not
  *   scaffolded.
  * - `separate-frontend-api`: client/ + server/ workspaces (the original shape).
+ * - `native-app`: Expo (mobile) or Tauri (desktop) — a device app that talks
+ *   to a separately-running backend; no db prompts.
  */
 export type ProjectArchitecture =
   | { kind: 'frontend-only' }
   | { kind: 'integrated-fullstack'; framework: 'nextjs' }
   | { kind: 'separate-frontend-api' }
+  | { kind: 'native-app'; platform: 'mobile' | 'desktop' }
 
 export interface Extras {
   tailwind: boolean

@@ -12,7 +12,14 @@ capability changes (see [documentation standards](../development/documentation-s
 
 Last reconciled: after v0.3.0 (`main`, `create-omnicraft@0.3.0`).
 
-## Architecture: separate frontend + API (the only architecture today)
+## Platforms
+
+| Platform                               | Status            | Evidence                                                                                                                                     |
+| -------------------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mobile — Expo SDK 58 (TS, Expo Router) | **Supported**     | verified locally: create-expo-app pinned scaffold, npm install, tsc pass; device/backend pairing documented (OMNICRAFT.md)                   |
+| Desktop — Tauri 2 + React UI           | Scaffold-verified | scaffold + frontend install/build verified locally; full desktop build requires the Rust toolchain (not present on the verification machine) |
+
+## Architecture: separate frontend + API (web)
 
 **Frontend (all combos):** React 19 + Vite + TypeScript — _Supported_ (every full-stack e2e run also
 exercises the client; frontend-only builds via `npm run build` in CI and locally).
