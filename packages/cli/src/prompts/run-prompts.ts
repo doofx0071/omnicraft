@@ -12,6 +12,7 @@ import {
   type BackendRuntime,
   type Database,
   type Frontend,
+  type Language,
   type ProjectType,
 } from '../types.js'
 import { checkRawProjectName, findCollisions, isNonEmptyDirectory, resolveTargetDir } from '../validators.js'
@@ -180,7 +181,17 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
   // "Full-stack?" / backend prompts collapse into the database questions.
   const integrated = frontend === 'nextjs'
 
-  if (!native) p.log.info('Language: TypeScript (JavaScript support is coming)')
+  const language: Language = flags.lang
+    ? parseEnumChoice('--lang', flags.lang, AVAILABLE.lang)
+    : forced
+      ? 'typescript'
+      : !native
+        ? await selectWithSoon<Language>('Select a language:', [
+            { value: 'typescript', label: 'TypeScript', available: true, hint: 'Recommended' },
+            { value: 'javascript', label: 'JavaScript', available: true, hint: 'React/Vite client ships as JS' },
+          ])
+        : 'typescript'
+  if (!native) p.log.info(`Language: ${language === 'typescript' ? 'TypeScript' : 'JavaScript'}`)
 
   // ── Full stack? ─────────────────────────────────────────────────────────
   let fullStack = integrated ? true : (flags.fullStack ?? (forced ? true : false))
@@ -379,7 +390,7 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
     targetDir,
     projectType,
     frontend,
-    language: 'typescript',
+    language,
     fullStack: fullStack && !native,
     backendRuntime: fullStack && !integrated && !native ? backendRuntime : null,
     backendFramework: fullStack && !integrated && !native ? backendFramework : null,

@@ -4,6 +4,28 @@ All notable, user-visible changes to `create-omnicraft` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is semver
 (0.x = rapid iteration, breaking changes allowed).
 
+## [0.6.0] — 2026-10-27
+
+### Added
+
+- **`.omnicraft/project.json` manifest** — written at scaffold time (stack, architecture,
+  extras, modules, package manager). Foundation for stack-aware commands (master plan §6.3).
+- **`omnicraft add <module>`** (#24) — module injector for existing OmniCraft projects:
+  `docker` (compose for postgres/mysql) and `testing` (vitest + testing-library for the client).
+  Stack-aware via the manifest (rejects incompatible combos with a reason), **idempotent**
+  (repeat adds are no-ops), **never overwrites** existing files, `--dry-run` preview, and
+  `omnicraft` as a second bin. Verified end-to-end: add testing → manifest updated → deps
+  merged → vitest runs the sample test.
+- **JavaScript client variant** (#25, first increment) — "Select a language" prompt +
+  `--lang <typescript|javascript>` flag. `javascript` ships the React/Vite client as
+  `main.jsx`/`App.jsx`/`api.js` (no TypeScript tooling). Verified: frontend-only JS scaffold.
+  Node-server JS overlays and vue/svelte JS are the next increment.
+
+### Notes
+
+- Auth boilerplate (#23) is the remaining v1.0.0 item — tracked for the next release; the
+  module system it will use (this release's `omnicraft add`) is now in place.
+
 ## [0.5.0] — 2026-10-26
 
 ### Added

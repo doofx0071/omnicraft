@@ -64,6 +64,20 @@ exercises the client; frontend-only builds via `npm run build` in CI and locally
 | ------------------------- | ------------- | --------------------------------------------------------------- |
 | React + Vite (no backend) | **Supported** | CI smoke (all OSes); local `npm run build` + typecheck verified |
 
+## Language variants
+
+| Variant                           | Status                                                | Evidence                                                                                                                                   |
+| --------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| JavaScript — React/Vite client    | **Supported** (frontend-only + separate-frontend-api) | verified: frontend-only JS scaffold (main.jsx/App.jsx/api.js, no TS tooling); full-stack JS client + node server TS is the current pairing |
+| JavaScript — node server overlays | Planned                                               | next increment of #25                                                                                                                      |
+
+## Modules (`omnicraft add`)
+
+| Module                          | Status        | Evidence                                                                                                          |
+| ------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------- |
+| docker (postgres/mysql compose) | **Supported** | manifest-driven, incompatible-with-sqlite rejection verified; compose content identical to the fullstack template |
+| testing (vitest for client)     | **Supported** | verified: add testing → deps merged → vitest runs the sample test                                                 |
+
 ## Extras
 
 | Extra             | Status        | Evidence                                                                        |

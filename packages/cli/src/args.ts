@@ -10,6 +10,7 @@ export interface ParsedArgs {
   /** Stack overrides; when present the matching prompt is skipped. */
   fullStack?: boolean
   platform?: string
+  lang?: string
   runtime?: string
   frontend?: string
   backend?: string
@@ -26,6 +27,7 @@ OmniCraft generates a ready-to-run project.
 Options:
   --yes                Accept all defaults, skip every prompt (CI-friendly;
                        also allows running without a TTY)
+  --lang <name>        Skip the language prompt (typescript, javascript)
   --platform <name>    Skip the "What are you building?" prompt (web, mobile, desktop)
   --full-stack         Force the full-stack flow (default: yes)
   --no-full-stack      Frontend only
@@ -53,7 +55,7 @@ Examples:
   npm create omnicraft@latest my-app -- --no-full-stack --extras tailwind
 `
 
-const VALUE_FLAGS = new Set(['--platform', '--runtime', '--frontend', '--backend', '--orm', '--db', '--extras'])
+const VALUE_FLAGS = new Set(['--lang', '--platform', '--runtime', '--frontend', '--backend', '--orm', '--db', '--extras'])
 
 export function parseArgs(argv: string[]): ParsedArgs {
   const args: ParsedArgs = {
@@ -83,7 +85,8 @@ export function parseArgs(argv: string[]): ParsedArgs {
         value = next
         i++
       }
-      if (valueFlag === '--runtime') args.runtime = value
+      if (valueFlag === '--lang') args.lang = value
+      else if (valueFlag === '--runtime') args.runtime = value
       else if (valueFlag === '--platform') args.platform = value
       else if (valueFlag === '--frontend') args.frontend = value
       else if (valueFlag === '--backend') args.backend = value

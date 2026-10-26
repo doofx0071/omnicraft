@@ -9,6 +9,7 @@ import type { ParsedArgs } from './args.js'
 export const AVAILABLE = {
   runtime: ['node', 'python', 'php'] as const,
   frontend: ['react', 'nextjs', 'vue', 'svelte'] as const,
+  lang: ['typescript', 'javascript'] as const,
   backend: {
     node: ['express', 'fastify', 'hono'] as const,
     python: ['fastapi'] as const,
@@ -47,6 +48,7 @@ function resolveRuntime(args: ParsedArgs): Runtime {
 /** Validates every stack flag present on the parsed args; throws on bad values. */
 export function validateStackFlags(args: ParsedArgs): void {
   const runtime = resolveRuntime(args)
+  if (args.lang) parseEnumChoice('--lang', args.lang, AVAILABLE.lang)
   if (args.frontend) parseEnumChoice('--frontend', args.frontend, AVAILABLE.frontend)
   if (args.backend) parseEnumChoice('--backend', args.backend, AVAILABLE.backend[runtime])
   if (args.db) parseEnumChoice('--db', args.db, AVAILABLE.db[runtime])
@@ -124,7 +126,7 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
     targetDir,
     projectType: 'web',
     frontend,
-    language: 'typescript',
+    language: args.lang ? parseEnumChoice('--lang', args.lang, AVAILABLE.lang) : 'typescript',
     fullStack,
     backendRuntime: fullStack && !integrated ? runtime : null,
     backendFramework: fullStack && !integrated ? backendFramework : null,

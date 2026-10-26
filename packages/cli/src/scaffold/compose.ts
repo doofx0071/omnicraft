@@ -35,7 +35,13 @@ export function composeLayers(answers: Answers): Layer[] {
   }
 
   if (!integrated) {
-    layers.push({ src: `web/${answers.frontend}/client`, dest: clientDest })
+    // The JS client exists for the React/Vite path (server-agnostic); the
+    // vue/svelte clients are TS-only for now (#25 scope note).
+    if (answers.frontend === 'react' && answers.language === 'javascript') {
+      layers.push({ src: 'web/react/client-js', dest: clientDest })
+    } else {
+      layers.push({ src: `web/${answers.frontend}/client`, dest: clientDest })
+    }
   }
 
   if (answers.fullStack) {

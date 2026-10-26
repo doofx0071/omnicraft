@@ -50,6 +50,13 @@ describe('validateStackFlags', () => {
     )
   })
 
+  it('validates and resolves the language flag', () => {
+    expect(() => validateStackFlags(parseArgs(['--lang', 'javascript']))).not.toThrow()
+    expect(() => validateStackFlags(parseArgs(['--lang', 'py']))).toThrow(/Available: typescript, javascript/)
+    const js = resolveAnswers(parseArgs(['--yes', '--lang', 'javascript', '--no-full-stack']), 'demo', '/tmp/demo')
+    expect(js.language).toBe('javascript')
+  })
+
   it('validates the runtime itself', () => {
     expect(() => validateStackFlags(parseArgs(['--runtime', 'ruby']))).toThrow(
       /Available: node, python, php/,

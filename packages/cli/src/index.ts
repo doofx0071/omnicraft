@@ -1,6 +1,7 @@
 import * as p from '@clack/prompts'
 import { HELP_TEXT, parseArgs } from './args.js'
 import { CancelledError, unwrap } from './cancel.js'
+import { runAdd } from './add-run.js'
 import { CLI_VERSION, CNA_PACKAGE, SHADCN_COMPONENTS, SHADCN_PRESET, TEMPLATES_ROOT, TEMPLATE_REPO } from './config.js'
 import { printNextSteps } from './next-steps.js'
 import { runPrompts } from './prompts/run-prompts.js'
@@ -43,6 +44,26 @@ process.on('uncaughtException', (err) => {
 })
 
 async function main(): Promise<void> {
+  // Subcommand routing: `omnicraft add <module>` runs the module injector;
+  // everything else (or no args) is the create flow.
+  const argv = process.argv.slice(2)
+  if (argv[0] === 'add') {
+    const [moduleName, targetArg] = argv.slice(1)
+    const dryRun = argv.includes('--dry-run')
+    try {
+      await runAdd(moduleName, targetArg, dryRun)
+    } catch (err) {
+      if (err instanceof CancelledError) {
+        p.cancel(err.message)
+        return
+      }
+      p.cancel('Something went wrong.')
+      p.log.error((err as Error).message)
+      process.exitCode = 1
+    }
+    return
+  }
+
   let args
   try {
     args = parseArgs(process.argv.slice(2))
@@ -149,6 +170,12 @@ async function main(): Promise<void> {
     const envFiles = createEnvFiles(answers.targetDir)
     for (const file of envFiles) p.log.step(`Created ${file.replace(answers.targetDir + '\\', '').replace(answers.targetDir + '/', '')}`)
 
+    // Project manifest — enables omnicraft add stack detection.
+    const { buildManifest } = await import('./manifest.js')
+    const { saveManifest } = await import('./add.js')
+    saveManifest(answers.targetDir, buildManifest(answers, CLI_VERSION, detectPackageManager()))
+    p.log.step('Created .omnicraft/project.json')
+
     spinner.start('Initializing git repository...')
     const gitOkNative = gitInit(answers.targetDir)
     spinner.stop(gitOkNative ? 'Git repository initialized' : 'Git not available — skipped git init')
@@ -254,6 +281,12 @@ async function main(): Promise<void> {
 
     const envFiles = createEnvFiles(answers.targetDir)
     for (const file of envFiles) p.log.step(`Created ${file.replace(answers.targetDir + '\\', '').replace(answers.targetDir + '/', '')}`)
+
+    // Project manifest — enables omnicraft add stack detection.
+    const { buildManifest } = await import('./manifest.js')
+    const { saveManifest } = await import('./add.js')
+    saveManifest(answers.targetDir, buildManifest(answers, CLI_VERSION, detectPackageManager()))
+    p.log.step('Created .omnicraft/project.json')
 
     spinner.start('Initializing git repository...')
     const gitOk = gitInit(answers.targetDir)

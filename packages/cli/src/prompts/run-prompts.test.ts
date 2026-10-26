@@ -40,6 +40,7 @@ describe('runPrompts flow', () => {
       { prompt: 'text', answer: 'My Cool App!' },
       { prompt: 'select', answer: 'web' },
       { prompt: 'select', answer: 'react' },
+      { prompt: 'select', answer: 'typescript' },
       { prompt: 'confirm', answer: true },
       { prompt: 'select', answer: 'node' },
       { prompt: 'select', answer: 'fastify' },
@@ -55,6 +56,7 @@ describe('runPrompts flow', () => {
       'text', // app name
       'select', // what are you building
       'select', // frontend
+      'select', // language
       'confirm', // full-stack?
       'select', // runtime
       'select', // framework
@@ -77,6 +79,7 @@ describe('runPrompts flow', () => {
       { prompt: 'text', answer: 'front-only' },
       { prompt: 'select', answer: 'web' },
       { prompt: 'select', answer: 'react' },
+      { prompt: 'select', answer: 'typescript' },
       { prompt: 'confirm', answer: false },
       { prompt: 'multiselect', answer: [] },
       { prompt: 'confirm', answer: true },
@@ -86,7 +89,7 @@ describe('runPrompts flow', () => {
     expect(answers.fullStack).toBe(false)
     expect(answers.backendFramework).toBeNull() // no backend on frontend-only
     expect(answers.database).toBeNull()
-    expect(calls.filter((c) => c === 'select')).toHaveLength(2) // no runtime/framework/orm prompts
+    expect(calls.filter((c) => c === 'select')).toHaveLength(3) // no runtime/framework/orm prompts
   })
 
   it('re-prompts when a roadmap option is picked', async () => {
@@ -94,6 +97,7 @@ describe('runPrompts flow', () => {
       { prompt: 'text', answer: 'app' },
       { prompt: 'select', answer: 'web' },
       { prompt: 'select', answer: 'react' },
+      { prompt: 'select', answer: 'typescript' },
       { prompt: 'confirm', answer: true },
       { prompt: 'select', answer: 'node' },
       { prompt: 'select', answer: 'express' },
@@ -115,6 +119,7 @@ describe('runPrompts flow', () => {
       { prompt: 'text', answer: 'app' },
       { prompt: 'select', answer: 'web' },
       { prompt: 'select', answer: 'react' },
+      { prompt: 'select', answer: 'typescript' },
       { prompt: 'confirm', answer: true },
       { prompt: 'select', answer: 'node' },
       { prompt: 'select', answer: 'express' },
@@ -133,6 +138,7 @@ describe('runPrompts flow', () => {
       { prompt: 'text', answer: 'valid-app' },
       { prompt: 'select', answer: 'web' },
       { prompt: 'select', answer: 'react' },
+      { prompt: 'select', answer: 'typescript' },
       { prompt: 'confirm', answer: false },
       { prompt: 'multiselect', answer: [] },
       { prompt: 'confirm', answer: true },

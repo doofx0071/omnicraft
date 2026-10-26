@@ -1,0 +1,7 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "checkJs": false
+  },
+  "include": ["src/**/*.js", "src/**/*.jsx", "vite.config.js"]
+}
