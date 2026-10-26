@@ -14,6 +14,19 @@ export type BackendFramework =
 export type Orm = 'drizzle' | 'prisma' | 'none' | 'mongoose'
 export type Database = 'postgres' | 'sqlite' | 'mysql' | 'mongodb'
 
+/**
+ * How the project is architected (master plan §3-B).
+ * - `frontend-only`: browser app, no server.
+ * - `integrated-fullstack`: the frontend framework IS the server (Next.js
+ *   app router + route handlers); a separate API is optional and not
+ *   scaffolded.
+ * - `separate-frontend-api`: client/ + server/ workspaces (the original shape).
+ */
+export type ProjectArchitecture =
+  | { kind: 'frontend-only' }
+  | { kind: 'integrated-fullstack'; framework: 'nextjs' }
+  | { kind: 'separate-frontend-api' }
+
 export interface Extras {
   tailwind: boolean
   eslintPrettier: boolean
@@ -33,6 +46,8 @@ export interface Answers {
   orm: Orm | null
   database: Database | null
   extras: Extras
+  /** Derived from frontend + fullStack; nextjs fullStack = integrated full-stack. */
+  architecture: ProjectArchitecture
 }
 
 export const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {

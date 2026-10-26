@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: {{projectName}}-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: omnicraft
+      POSTGRES_PASSWORD: omnicraft
+      POSTGRES_DB: {{databaseName}}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U omnicraft -d {{databaseName}}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

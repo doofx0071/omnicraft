@@ -8,7 +8,7 @@ import type { ParsedArgs } from './args.js'
  */
 export const AVAILABLE = {
   runtime: ['node', 'python', 'php'] as const,
-  frontend: ['react'] as const,
+  frontend: ['react', 'nextjs', 'vue', 'svelte'] as const,
   backend: {
     node: ['express', 'fastify', 'hono'] as const,
     python: ['fastapi'] as const,
@@ -93,12 +93,15 @@ export function hasStackFlags(args: ParsedArgs): boolean {
  */
 export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir: string): Answers {
   const runtime = resolveRuntime(args)
-  const fullStack = args.fullStack ?? true
   const frontend: Frontend = args.frontend
     ? parseEnumChoice('--frontend', args.frontend, AVAILABLE.frontend)
     : 'react'
+  // Next.js is the integrated-full-stack architecture: it IS the server, so
+  // the separate backend prompts collapse into the framework choice.
+  const integrated = frontend === 'nextjs'
+  const fullStack = integrated ? true : (args.fullStack ?? true)
   const db = args.db ? parseEnumChoice('--db', args.db, AVAILABLE.db[runtime]) : 'postgres'
-  const backendFramework: BackendFramework = fullStack
+  const backendFramework: BackendFramework = fullStack && !integrated
     ? args.backend
       ? parseEnumChoice('--backend', args.backend, AVAILABLE.backend[runtime])
       : runtime === 'node'
@@ -123,8 +126,8 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
     frontend,
     language: 'typescript',
     fullStack,
-    backendRuntime: fullStack ? runtime : null,
-    backendFramework: fullStack ? backendFramework : null,
+    backendRuntime: fullStack && !integrated ? runtime : null,
+    backendFramework: fullStack && !integrated ? backendFramework : null,
     orm,
     database: fullStack ? db : null,
     extras: {
@@ -132,5 +135,10 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
       eslintPrettier: extrasList.includes('eslint'),
       shadcn: extrasList.includes('shadcn'),
     },
+    architecture: integrated
+      ? { kind: 'integrated-fullstack', framework: 'nextjs' }
+      : fullStack
+        ? { kind: 'separate-frontend-api' }
+        : { kind: 'frontend-only' },
   }
 }

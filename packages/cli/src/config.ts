@@ -30,6 +30,9 @@ export const TEMPLATE_REPO = {
  */
 export const TEMPLATES_ROOT = fileURLToPath(new URL('../templates/', import.meta.url))
 
+/** create-next-app pinned major — Next templates are verified against this line. */
+export const CNA_PACKAGE = 'create-next-app@16'
+
 /** Ports the generated projects standardize on. */
 export const SERVER_PORT = 3000
 export const CLIENT_PORT = 5173

@@ -1,0 +1,22 @@
+services:
+  db:
+    image: mysql:8
+    container_name: {{projectName}}-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: omnicraft-root
+      MYSQL_DATABASE: {{databaseName}}
+      MYSQL_USER: omnicraft
+      MYSQL_PASSWORD: omnicraft
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysqldata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pomnicraft-root"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mysqldata:

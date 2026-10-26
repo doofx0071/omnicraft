@@ -1,0 +1,13 @@
+{
+  "dependencies": {
+    "better-sqlite3": "^13.0.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0"
+  },
+  "scripts": {
+    "db:migrate": "tsx app/db/migrate.ts",
+    "db:seed": "tsx app/db/seed.ts",
+    "db:push": "npm run db:migrate"
+  }
+}

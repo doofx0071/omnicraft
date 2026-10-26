@@ -1,7 +1,7 @@
 import * as p from '@clack/prompts'
 import { HELP_TEXT, parseArgs } from './args.js'
 import { CancelledError, unwrap } from './cancel.js'
-import { CLI_VERSION, SHADCN_COMPONENTS, SHADCN_PRESET, TEMPLATES_ROOT, TEMPLATE_REPO } from './config.js'
+import { CLI_VERSION, CNA_PACKAGE, SHADCN_COMPONENTS, SHADCN_PRESET, TEMPLATES_ROOT, TEMPLATE_REPO } from './config.js'
 import { printNextSteps } from './next-steps.js'
 import { runPrompts } from './prompts/run-prompts.js'
 import { composeLayers, isPostComposerLayer, templateVariables } from './scaffold/compose.js'
@@ -13,8 +13,8 @@ import { detectPackageManager, installDependencies } from './scaffold/pkg-manage
 import { fetchRemoteTemplates } from './scaffold/remote.js'
 import { validateStackFlags } from './prefill.js'
 import { checkForUpdate } from './update-check.js'
-import { mkdirSync, copyFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { copyFileSync, existsSync, mkdirSync, renameSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 
 /**
  * The prompt library drives the console in raw mode; if the process exits
@@ -111,13 +111,48 @@ async function main(): Promise<void> {
     const spinner = p.spinner()
     const layers = composeLayers(answers)
     const variables = templateVariables(answers)
-    const pre = layers.filter((layer) => !isPostComposerLayer(layer))
-    const post = layers.filter((layer) => isPostComposerLayer(layer))
+    const integrated = answers.architecture.kind === 'integrated-fullstack'
+    const isNextOverlay = (layer: { src: string }) => layer.src.startsWith('web/nextjs/')
+    const pre = layers.filter((layer) => !isPostComposerLayer(layer) && !(integrated && isNextOverlay(layer)))
+    const post = layers.filter((layer) => isPostComposerLayer(layer) || (integrated && isNextOverlay(layer)))
 
-    spinner.start('Crafting your project...')
-    mkdirSync(answers.targetDir, { recursive: true })
-    applyLayers(templatesRoot, pre, variables, answers.targetDir)
-    spinner.stop('Project generated')
+    if (integrated) {
+      // Next.js is created by the pinned create-next-app (the overlay can
+      // only be applied onto an existing skeleton). Non-interactive flags
+      // mirror our defaults: TS, App Router, Tailwind, @/ alias, npm, no install.
+      spinner.start('Creating the Next.js application with create-next-app (this can take a couple of minutes)...')
+      const cna = runCommand(
+        'npx',
+        [
+          '--yes', CNA_PACKAGE, answers.projectName,
+          '--ts', '--app', '--tailwind', '--no-src-dir', '--eslint',
+          '--import-alias', '@/*', '--use-npm', '--skip-install', '--yes',
+        ],
+        // create-next-app refuses to write into an existing non-empty dir —
+        // scaffold into the (fresh) target and move the app up.
+        dirname(answers.targetDir),
+        64 * 1024 * 1024,
+      )
+      if (!cna.ok) {
+        spinner.stop('create-next-app failed')
+        throw new Error(
+          `create-next-app failed — see the output above. You can retry manually:\n  npx ${CNA_PACKAGE} ${answers.projectName} --ts --app --tailwind --no-src-dir --import-alias @/\\* --use-npm --skip-install --yes`,
+        )
+      }
+      const created = join(dirname(answers.targetDir), answers.projectName)
+      if (created !== answers.targetDir && !existsSync(answers.targetDir)) {
+        // cna created <parent>/<name>; move it to the requested target when
+        // they differ (nested/renamed target paths).
+        renameSync(created, answers.targetDir)
+      }
+      applyLayers(templatesRoot, post, variables, answers.targetDir)
+      spinner.stop('Next.js application created and configured')
+    } else {
+      spinner.start('Crafting your project...')
+      mkdirSync(answers.targetDir, { recursive: true })
+      applyLayers(templatesRoot, pre, variables, answers.targetDir)
+      spinner.stop('Project generated')
+    }
 
     // Laravel is created by Composer itself (the overlay can only be applied
     // onto an existing skeleton), then configured by OmniCraft.

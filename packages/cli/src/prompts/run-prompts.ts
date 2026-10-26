@@ -153,16 +153,20 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
       ? 'react'
       : await selectWithSoon<Frontend>('Select a frontend framework:', [
           { value: 'react', label: FRONTEND_LABELS.react, available: true, hint: 'Vite + TypeScript' },
-          { value: 'nextjs', label: FRONTEND_LABELS.nextjs, available: false },
-          { value: 'vue', label: FRONTEND_LABELS.vue, available: false },
-          { value: 'svelte', label: FRONTEND_LABELS.svelte, available: false },
+          { value: 'nextjs', label: FRONTEND_LABELS.nextjs, available: true, hint: 'Integrated full-stack — Next.js IS the server' },
+          { value: 'vue', label: FRONTEND_LABELS.vue, available: true, hint: 'Vite + TypeScript' },
+          { value: 'svelte', label: FRONTEND_LABELS.svelte, available: true, hint: 'Vite + TypeScript' },
         ])
+
+  // Next.js = integrated full-stack: the framework is the server. The separate
+  // "Full-stack?" / backend prompts collapse into the database questions.
+  const integrated = frontend === 'nextjs'
 
   p.log.info('Language: TypeScript (JavaScript support is coming)')
 
   // ── Full stack? ─────────────────────────────────────────────────────────
-  let fullStack = flags.fullStack ?? (forced ? true : false)
-  if (flags.fullStack === undefined && !forced) {
+  let fullStack = integrated ? true : (flags.fullStack ?? (forced ? true : false))
+  if (!integrated && flags.fullStack === undefined && !forced) {
     fullStack = unwrap<boolean>(
       await p.confirm({
         message: 'Full-stack? Adds a backend API, database and ready-made boilerplate.',
@@ -177,42 +181,50 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
   let orm: 'drizzle' | 'prisma' | 'none' | null = 'drizzle'
 
   if (fullStack) {
-    backendRuntime = flags.runtime
-      ? parseEnumChoice('--runtime', flags.runtime, AVAILABLE.runtime)
-      : forced
-        ? 'node'
-        : await selectWithSoon<BackendRuntime>('Select a backend runtime:', [
-            { value: 'node', label: BACKEND_RUNTIME_LABELS.node, available: true, hint: 'Express, Fastify, Hono' },
-            { value: 'python', label: BACKEND_RUNTIME_LABELS.python, available: true, hint: 'FastAPI + SQLAlchemy' },
-            { value: 'php', label: BACKEND_RUNTIME_LABELS.php, available: true, hint: 'Laravel + Eloquent' },
-          ])
+    // Integrated full-stack (Next.js) runs on Node and skips the separate
+    // runtime/framework prompts — the framework IS the server.
+    if (!integrated) {
+      backendRuntime = flags.runtime
+        ? parseEnumChoice('--runtime', flags.runtime, AVAILABLE.runtime)
+        : forced
+          ? 'node'
+          : await selectWithSoon<BackendRuntime>('Select a backend runtime:', [
+              { value: 'node', label: BACKEND_RUNTIME_LABELS.node, available: true, hint: 'Express, Fastify, Hono' },
+              { value: 'python', label: BACKEND_RUNTIME_LABELS.python, available: true, hint: 'FastAPI + SQLAlchemy' },
+              { value: 'php', label: BACKEND_RUNTIME_LABELS.php, available: true, hint: 'Laravel + Eloquent' },
+            ])
 
-    const frameworkChoices: Record<BackendRuntime, Choice<BackendFramework>[]> = {
-      node: [
-        { value: 'express', label: BACKEND_FRAMEWORK_LABELS.express, available: true, hint: 'The classic, huge ecosystem' },
-        { value: 'fastify', label: BACKEND_FRAMEWORK_LABELS.fastify, available: true, hint: 'Fast, schema-first' },
-        { value: 'hono', label: BACKEND_FRAMEWORK_LABELS.hono, available: true, hint: 'Ultra-light' },
-        { value: 'nestjs', label: BACKEND_FRAMEWORK_LABELS.nestjs, available: false },
-      ],
-      python: [
-        { value: 'fastapi', label: BACKEND_FRAMEWORK_LABELS.fastapi, available: true, hint: 'SQLAlchemy + Alembic' },
-        { value: 'django', label: BACKEND_FRAMEWORK_LABELS.django, available: false },
-      ],
-      php: [
-        { value: 'laravel', label: BACKEND_FRAMEWORK_LABELS.laravel, available: true, hint: 'Laravel 12 + Eloquent' },
-        { value: 'symfony', label: BACKEND_FRAMEWORK_LABELS.symfony, available: false },
-      ],
+      const frameworkChoices: Record<BackendRuntime, Choice<BackendFramework>[]> = {
+        node: [
+          { value: 'express', label: BACKEND_FRAMEWORK_LABELS.express, available: true, hint: 'The classic, huge ecosystem' },
+          { value: 'fastify', label: BACKEND_FRAMEWORK_LABELS.fastify, available: true, hint: 'Fast, schema-first' },
+          { value: 'hono', label: BACKEND_FRAMEWORK_LABELS.hono, available: true, hint: 'Ultra-light' },
+          { value: 'nestjs', label: BACKEND_FRAMEWORK_LABELS.nestjs, available: false },
+        ],
+        python: [
+          { value: 'fastapi', label: BACKEND_FRAMEWORK_LABELS.fastapi, available: true, hint: 'SQLAlchemy + Alembic' },
+          { value: 'django', label: BACKEND_FRAMEWORK_LABELS.django, available: false },
+        ],
+        php: [
+          { value: 'laravel', label: BACKEND_FRAMEWORK_LABELS.laravel, available: true, hint: 'Laravel 12 + Eloquent' },
+          { value: 'symfony', label: BACKEND_FRAMEWORK_LABELS.symfony, available: false },
+        ],
+      }
+
+      backendFramework = flags.backend
+        ? parseEnumChoice('--backend', flags.backend, AVAILABLE.backend[backendRuntime])
+        : forced
+          ? AVAILABLE.backend[backendRuntime][0]
+          : await selectWithSoon<BackendFramework>(
+              'Select a backend framework:',
+              frameworkChoices[backendRuntime],
+            )
+    } else {
+      backendRuntime = 'node'
+      backendFramework = 'nextjs' as BackendFramework
     }
 
-    backendFramework = flags.backend
-      ? parseEnumChoice('--backend', flags.backend, AVAILABLE.backend[backendRuntime])
-      : forced
-        ? AVAILABLE.backend[backendRuntime][0]
-        : await selectWithSoon<BackendFramework>(
-            'Select a backend framework:',
-            frameworkChoices[backendRuntime],
-          )
-
+    // Shared across runtimes (Next.js reuses the node choices — it runs on Node).
     const dbChoices: Record<BackendRuntime, Choice<Database>[]> = {
       node: [
         { value: 'postgres', label: DATABASE_LABELS.postgres, available: true, hint: 'Drizzle or Prisma' },
@@ -295,7 +307,9 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
   // ── Summary ─────────────────────────────────────────────────────────────
   const summary: string[] = [`App:        ${projectName}`]
   summary.push(`Stack:      ${FRONTEND_LABELS[frontend]} (web)`)
-  if (fullStack) {
+  if (integrated) {
+    summary.push(`Server:     Next.js route handlers + ${DATABASE_LABELS[database]} (${orm === 'drizzle' ? 'Drizzle' : orm === 'prisma' ? 'Prisma' : 'raw SQL'})`)
+  } else if (fullStack) {
     const ormLabel =
       backendRuntime === 'node'
         ? orm === 'none'
@@ -340,10 +354,15 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
     frontend,
     language: 'typescript',
     fullStack,
-    backendRuntime: fullStack ? backendRuntime : null,
-    backendFramework: fullStack ? backendFramework : null,
+    backendRuntime: fullStack && !integrated ? backendRuntime : null,
+    backendFramework: fullStack && !integrated ? backendFramework : null,
     orm: fullStack ? orm : null,
     database: fullStack ? database : null,
     extras,
+    architecture: integrated
+      ? { kind: 'integrated-fullstack', framework: 'nextjs' }
+      : fullStack
+        ? { kind: 'separate-frontend-api' }
+        : { kind: 'frontend-only' },
   }
 }

@@ -24,7 +24,7 @@ Open <a href="docs/demo.html">docs/demo.html</a> in a browser — the same flow 
 │
 ◆  What is the name of your app?          ▸ becomes the folder name
 ◆  What are you building?                 ● Web App · Mobile (soon) · Desktop (soon)
-◆  Select a frontend framework:           ● React · Vue (soon) · Svelte (soon) …
+◆  Select a frontend framework:           ● React · Next.js · Vue · Svelte
 ◆  Full-stack?                            Adds backend + database
 ◆  Select a backend runtime:              ● Node.js · Python · PHP
 ◆  Select a backend framework:            ● Express · Fastify · Hono / FastAPI / Laravel

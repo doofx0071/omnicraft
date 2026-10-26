@@ -21,6 +21,7 @@ function makeAnswers(overrides: Partial<Answers> = {}): Answers {
     orm: 'drizzle',
     database: 'postgres',
     extras: { tailwind: true, eslintPrettier: true, shadcn: false },
+    architecture: { kind: 'separate-frontend-api' },
     ...overrides,
   }
 }
@@ -252,8 +253,10 @@ describe('shadcn extra layer', () => {
     expect(tsconfig.compilerOptions.paths).toEqual({ '@/*': ['./src/*'] })
     expect(tsconfig.compilerOptions.baseUrl).toBeUndefined()
 
-    // vite alias + types/node dep for path resolution
-    expect(readFileSync(join(dir, 'client', 'vite.config.ts'), 'utf8')).toContain("'@'")
+    // vite alias + types/node dep for path resolution (quote style may be
+    // normalized by prettier — assert the alias path, not the quotes)
+    expect(readFileSync(join(dir, 'client', 'vite.config.ts'), 'utf8')).toMatch(/alias/i)
+    expect(readFileSync(join(dir, 'client', 'vite.config.ts'), 'utf8')).toContain('./src')
     expect(readJson(join(dir, 'client', 'package.json')).devDependencies).toHaveProperty('@types/node')
 
     // shadcn-based App imports via the alias; token lives in a JS string (TSX-safe)
@@ -261,6 +264,77 @@ describe('shadcn extra layer', () => {
     expect(app).toContain('@/components/ui/button')
     expect(app).toContain('const APP_TITLE = "demo-app"')
     expect(app).not.toContain('{{projectName}}')
+  })
+})
+describe('frontend expansion (v0.4)', () => {
+  it('scaffolds a vue client with the vue tailwind variant', () => {
+    const dir = makeTempDir('vue-client')
+    scaffoldInto(dir, makeAnswers({ frontend: 'vue', fullStack: false }))
+    expect(readJson(join(dir, 'package.json')).dependencies).toHaveProperty('vue')
+    expect(existsSync(join(dir, 'src', 'App.vue'))).toBe(true)
+    expect(readFileSync(join(dir, 'vite.config.ts'), 'utf8')).toContain('@vitejs/plugin-vue')
+  })
+
+  it('scaffolds a svelte client with the svelte tailwind variant', () => {
+    const dir = makeTempDir('svelte-client')
+    scaffoldInto(dir, makeAnswers({ frontend: 'svelte', fullStack: false }))
+    expect(readJson(join(dir, 'package.json')).dependencies).toHaveProperty('svelte')
+    expect(existsSync(join(dir, 'src', 'App.svelte'))).toBe(true)
+    expect(readFileSync(join(dir, 'vite.config.ts'), 'utf8')).toContain('@sveltejs/vite-plugin-svelte')
+  })
+
+  it('scaffolds the next overlay + sqlite db layer for integrated fullstack', () => {
+    const dir = makeTempDir('next-overlay')
+
+    // Simulate the create-next-app skeleton: the real flow generates the app
+    // BEFORE the overlay applies — the root manifest must exist so the db
+    // layer's fragment merges into it (applyLayers inline: scaffoldInto would
+    // wipe the simulated skeleton).
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'demo-app', dependencies: { next: '16.4.3' } }))
+
+    const nextAnswers = makeAnswers({
+      frontend: 'nextjs',
+      orm: 'none',
+      database: 'sqlite',
+      extras: { tailwind: true, eslintPrettier: true, shadcn: false },
+      architecture: { kind: 'integrated-fullstack', framework: 'nextjs' },
+    })
+    nextAnswers.targetDir = dir
+    applyLayers(TEMPLATES_ROOT, composeLayers(nextAnswers), templateVariables(nextAnswers), dir)
+    createEnvFiles(dir)
+
+    // overlay: route handlers + users page (create-next-app generates the rest)
+    expect(existsSync(join(dir, 'app', 'api', 'users', 'route.ts'))).toBe(true)
+    expect(existsSync(join(dir, 'app', 'api', 'users', '[id]', 'route.ts'))).toBe(true)
+    expect(existsSync(join(dir, 'app', 'users', 'page.tsx'))).toBe(true)
+
+    // db layer at app/db with the driver dep merged into the ROOT manifest
+    expect(existsSync(join(dir, 'app', 'db', 'index.ts'))).toBe(true)
+    expect(existsSync(join(dir, 'app', 'db', 'migrations', '001_create_users.sql'))).toBe(true)
+    expect(readJson(join(dir, 'package.json')).dependencies).toHaveProperty('better-sqlite3')
+
+    // no vite artifacts (cna wires tailwind via turbopack)
+    expect(existsSync(join(dir, 'vite.config.ts'))).toBe(false)
+    expect(existsSync(join(dir, 'docker-compose.yml'))).toBe(false) // sqlite
+  })
+
+  it('scaffolds the next postgres variant with compose file', () => {
+    const dir = makeTempDir('next-pg')
+    scaffoldInto(
+      dir,
+      makeAnswers({
+        frontend: 'nextjs',
+        orm: 'none',
+        database: 'postgres',
+        extras: { tailwind: true, eslintPrettier: true, shadcn: false },
+        architecture: { kind: 'integrated-fullstack', framework: 'nextjs' },
+      }),
+    )
+    expect(existsSync(join(dir, 'docker-compose.yml'))).toBe(true)
+    expect(readFileSync(join(dir, '.env'), 'utf8')).toContain(
+      'DATABASE_URL=postgres://omnicraft:omnicraft@localhost:5432/demo_app',
+    )
   })
 })
 describe('layer composition edge cases', () => {

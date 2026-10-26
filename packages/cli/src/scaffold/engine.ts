@@ -8,6 +8,13 @@ import { assertNoUnresolvedTokens, isBinaryFile, renderString, restoreDotfileNam
 export interface Layer {
   src: string
   dest: string
+  /**
+   * Merge the layer's package.json fragment into the TARGET-ROOT manifest
+   * instead of the file at its own destination. For single-manifest projects
+   * (Next.js integrated apps) whose db layer lives in a nested dir but whose
+   * dependencies belong to the one root package.json.
+   */
+  mergeManifestAtRoot?: boolean
 }
 
 export class MissingLayerError extends Error {
@@ -51,12 +58,23 @@ export function applyLayer(
     }
 
     const content = renderString(readFileSync(srcPath, 'utf8'), variables)
-    assertNoUnresolvedTokens(content, destRelToTarget)
+    // Vue templates legitimately use {{ }} mustache interpolation for their
+    // own state — the unresolved-token scan only applies to non-Vue files.
+    if (!basename(destPath).endsWith('.vue')) {
+      assertNoUnresolvedTokens(content, destRelToTarget)
+    }
 
-    if (basename(destPath) === 'package.json' && existsAndIsFile(destPath)) {
-      const existing = JSON.parse(readFileSync(destPath, 'utf8'))
+    const manifestTarget =
+      basename(destPath) === 'package.json'
+        ? layer.mergeManifestAtRoot
+          ? join(targetDir, 'package.json')
+          : destPath
+        : null
+
+    if (manifestTarget && existsAndIsFile(manifestTarget)) {
+      const existing = JSON.parse(readFileSync(manifestTarget, 'utf8'))
       const incoming = JSON.parse(content)
-      writeFileSync(destPath, `${JSON.stringify(deepMergePackageJson(existing, incoming), null, 2)}\n`)
+      writeFileSync(manifestTarget, `${JSON.stringify(deepMergePackageJson(existing, incoming), null, 2)}\n`)
     } else {
       writeFileSync(destPath, content)
     }

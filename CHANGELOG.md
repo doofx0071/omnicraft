@@ -4,6 +4,31 @@ All notable, user-visible changes to `create-omnicraft` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is semver
 (0.x = rapid iteration, breaking changes allowed).
 
+## [0.4.0] — 2026-10-26
+
+### Added
+
+- **Next.js frontend (integrated full-stack)** (#17) — Next.js 16 via the pinned
+  `create-next-app` (App Router, Tailwind, `@/*` alias), then an OmniCraft overlay:
+  users API route handlers + demo page + a `query()` db adapter (raw SQL, all three
+  databases) + SQL-file migrations (`app/db`), root scripts and CI. One app serves the
+  page and the API — the separate-backend prompts collapse. Verified: build, typecheck,
+  page 200, CRUD 201/409/404.
+- **Vue + Vite frontend** (#18) — Vue 3.5 + vue-tsc, same /api proxy + demo CRUD page,
+  tailwind/eslint extras wired. Verified: typecheck + build + server CRUD.
+- **Svelte + Vite frontend** (#19) — Svelte 5 (runes) + svelte-check, same shape.
+  Verified: 0 errors/0 warnings, build, server CRUD.
+- Explicit architecture model (`frontend-only` / `integrated-fullstack` /
+  `separate-frontend-api`) — master plan §3-B.
+- ADR 0001: frontend framework strategy (Next via official-generator adapter;
+  TanStack Start / React Router deferred; Vue/Svelte owned templates). (#20)
+
+### Changed
+
+- The Tailwind extra ships a per-frontend `vite.config.ts` (react/vue/svelte plugins)
+  — it previously overwrote the vue/svelte configs with the react plugin.
+- shadcn/ui is React+Vite-only (offered for other frontends later).
+
 ## [0.3.3] — 2026-10-26
 
 ### Added

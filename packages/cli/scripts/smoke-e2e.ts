@@ -52,6 +52,7 @@ for (const { framework, orm, db } of combos) {
     orm,
     database: db,
     extras: { tailwind: true, eslintPrettier: true, shadcn: false },
+    architecture: { kind: 'separate-frontend-api' },
   })
 }
 
@@ -68,4 +69,61 @@ scaffold({
   orm: null,
   database: null,
   extras: { tailwind: true, eslintPrettier: true, shadcn: false },
+  architecture: { kind: 'frontend-only' },
 })
+
+// Frontend variants (full-stack separate-API, sqlite = zero-docker verification)
+for (const fe of ['vue', 'svelte'] as const) {
+  scaffold({
+    projectName: `smoke-${fe}-fullstack`,
+    targetDir: '.',
+    projectType: 'web',
+    frontend: fe,
+    language: 'typescript',
+    fullStack: true,
+    backendRuntime: 'node',
+    backendFramework: 'express',
+    orm: 'drizzle',
+    database: 'sqlite',
+    extras: { tailwind: true, eslintPrettier: true, shadcn: false },
+    architecture: { kind: 'separate-frontend-api' },
+  })
+}
+
+// Next.js integrated full-stack: NOTE this only scaffolds the overlay + db
+// adapter onto a target dir. A complete project needs `create-next-app` run
+// first (the CLI does this; see src/index.ts). For smoke purposes we run CNA
+// when network+node are available, else record the overlay-only output.
+{
+  const name = 'smoke-nextjs-fullstack'
+  const dir = resolve(outRoot, name)
+  rmSync(dir, { recursive: true, force: true })
+  mkdirSync(dir, { recursive: true })
+  console.log(`running create-next-app for ${name}...`)
+  const { spawnSync } = await import('node:child_process')
+  const cna = spawnSync(
+    ['npx', '--yes', 'create-next-app@16', name, '--ts', '--app', '--tailwind', '--no-src-dir', '--eslint', '--import-alias', '@/*', '--use-npm', '--skip-install', '--yes'].join(' '),
+    { cwd: outRoot, stdio: 'inherit', shell: process.platform === 'win32' },
+  )
+  if (cna.status !== 0) {
+    console.error(`create-next-app failed for ${name} — skipping overlay (run manually to verify)`)
+  } else {
+    const answers: Answers = {
+      projectName: name,
+      targetDir: dir,
+      projectType: 'web',
+      frontend: 'nextjs',
+      language: 'typescript',
+      fullStack: true,
+      backendRuntime: null,
+      backendFramework: null,
+      orm: 'drizzle',
+      database: 'sqlite',
+      extras: { tailwind: true, eslintPrettier: true, shadcn: false },
+      architecture: { kind: 'integrated-fullstack', framework: 'nextjs' },
+    }
+    applyLayers(TEMPLATES_ROOT, composeLayers(answers), templateVariables(answers), dir)
+    createEnvFiles(dir)
+    console.log(`scaffolded (next overlay) ${dir}`)
+  }
+}

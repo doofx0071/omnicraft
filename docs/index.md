@@ -43,6 +43,8 @@ the database wired end-to-end.
 - **Scaffold-verified** — generates and passes CI smoke; install/build or functional behavior not yet verified. Honest status for newer combinations.
 - **Planned** — appears in prompts as "(soon)" but has no template yet. Tracked in [ROADMAP.md](../ROADMAP.md).
 
+- [Decision records](decisions/) — durable architecture decisions (starting with [ADR 0001: frontend framework strategy](decisions/0001-frontend-framework-strategy.md)).
+
 ## Plans
 
 - [Active: master engineering plan](plans/active/omnicraft-master-plan.md) — the combined hardening/expansion plan; §20 is the authoritative PR checklist.
