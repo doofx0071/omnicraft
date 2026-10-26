@@ -1,6 +1,26 @@
 # AGENTS.md — OmniCraft
 
-Interactive project-scaffolding CLI. npm package **`create-omnicraft`** → users run `npm create omnicraft@latest`. Monorepo-lite: private root workspace + `packages/cli` (all source). GitHub: `doofx0071/omnicraft` (private, branch `main`).
+Interactive project-scaffolding CLI. npm package **`create-omnicraft`** → users run `npm create omnicraft@latest`. Monorepo-lite: private root workspace + `packages/cli` (all source). GitHub: `doofx0071/omnicraft` (public, branch `main`).
+
+## Documentation map — read what your task needs
+
+| Task                                          | Read first                                                                                                                                        |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Any change                                    | everything below in this file, plus [docs/development/feature-development-workflow.md](docs/development/feature-development-workflow.md)          |
+| How the CLI works                             | [docs/architecture/system-overview.md](docs/architecture/system-overview.md)                                                                      |
+| Where files belong                            | [docs/architecture/repository-structure.md](docs/architecture/repository-structure.md)                                                            |
+| Engine/composition/token/merge details        | [docs/architecture/template-engine.md](docs/architecture/template-engine.md)                                                                      |
+| New runtime/framework/stack                   | [docs/templates/adding-a-stack.md](docs/templates/adding-a-stack.md) + [docs/templates/template-contract.md](docs/templates/template-contract.md) |
+| New database/ORM/extra                        | [docs/templates/adding-an-integration.md](docs/templates/adding-an-integration.md)                                                                |
+| What is actually supported (and its evidence) | [docs/templates/stack-support-matrix.md](docs/templates/stack-support-matrix.md)                                                                  |
+| Test requirements per change type             | [docs/development/testing-strategy.md](docs/development/testing-strategy.md)                                                                      |
+| Which docs change with which code             | [docs/development/documentation-standards.md](docs/development/documentation-standards.md)                                                        |
+| Coding rules (incl. Windows subprocess law)   | [docs/development/coding-standards.md](docs/development/coding-standards.md)                                                                      |
+| Contributing + release process                | [CONTRIBUTING.md](CONTRIBUTING.md)                                                                                                                |
+| Active engineering plan                       | [docs/plans/active/omnicraft-master-plan.md](docs/plans/active/omnicraft-master-plan.md)                                                          |
+
+Docs index: [docs/index.md](docs/index.md). Status vocabulary: Supported / Scaffold-verified / Planned —
+never describe a combination as supported without the matrix's evidence.
 
 ## Commands
 
@@ -40,6 +60,6 @@ All from `packages/cli/` unless noted:
 
 - Cancel handling: wrap clack prompt results in `unwrap<T>()` / `unwrapMany<T>()` (`src/cancel.ts`) which throw `CancelledError`; `main()` is the single catch site. clack 1.x gotchas: prompt results are typed `T | symbol` (always pass explicit generics to `unwrap`), and `Option<Value>` can't be satisfied by an unresolved generic — constrain to `string` (see `selectWithSoon`).
 - Non-interactive mode: `--yes` + stack flags (`src/prefill.ts`) answer prompts; flags are validated by `validateStackFlags` before any prompt. Non-TTY runs require `--yes`.
-- Engine tests (`src/engine.test.ts`) scaffold all 5 supported combos (express/fastify × drizzle/prisma + frontend-only) into temp dirs — keep them passing when touching templates or the engine.
-- Publish checklist lives in the root README (bump `packages/cli/package.json` version; templates version-lock to the CLI).
+- Engine tests (`src/engine.test.ts`) scaffold all supported combos (express/fastify × drizzle/prisma × postgres/sqlite/mysql, fastapi × postgres/sqlite, laravel overlay + frontend-only) into temp dirs — keep them passing when touching templates or the engine.
+- Publish checklist lives in [CONTRIBUTING.md](CONTRIBUTING.md) (bump `packages/cli/package.json` version; templates version-lock to the CLI).
 - `packages/cli/planmo-v3/` is the user's locally generated test project (own git repo) — gitignored, leave it alone.

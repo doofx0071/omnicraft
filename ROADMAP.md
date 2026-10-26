@@ -6,14 +6,14 @@
 
 ## Progress overview
 
-| Version | Theme                             | Progress | Issues     |
-| ------- | --------------------------------- | -------- | ---------- |
-| v0.1.0  | Public launch                     | ✅ 6/6   | #1–#6      |
-| v0.2.0  | Scaffolder hardening              | ✅ 5/5   | #7–#11     |
-| v0.3.0  | Backend & database expansion      | ✅ 5/5   | #12–#16    |
-| v0.4.0  | Frontend expansion                | ⬜ 0/4   | #17–#20    |
-| v0.5.0  | Platform expansion (mobile, desktop) | ⬜ 0/2 | #21–#22    |
-| v1.0.0  | Maturity milestone                | 🚧 1/5   | #23–#27    |
+| Version | Theme                                | Progress | Issues  |
+| ------- | ------------------------------------ | -------- | ------- |
+| v0.1.0  | Public launch                        | ✅ 6/6   | #1–#6   |
+| v0.2.0  | Scaffolder hardening                 | ✅ 5/5   | #7–#11  |
+| v0.3.0  | Backend & database expansion         | ✅ 5/5   | #12–#16 |
+| v0.4.0  | Frontend expansion                   | ⬜ 0/4   | #17–#20 |
+| v0.5.0  | Platform expansion (mobile, desktop) | ⬜ 0/2   | #21–#22 |
+| v1.0.0  | Maturity milestone                   | 🚧 1/5   | #23–#27 |
 
 ---
 
@@ -26,7 +26,7 @@ Ship what works today, start the feedback loop. CI runs on a **self-hosted runne
 - [x] #3 — Publish `create-omnicraft` v0.1.0 to npm
 - [x] #4 — README launch polish: badges, install section, demo placeholder
 - [x] #5 — Verify published package end-to-end (`npx create-omnicraft@latest`)
-- [x] #6 — Decide repo visibility for `--latest` template fetching *(repo is public)*
+- [x] #6 — Decide repo visibility for `--latest` template fetching _(repo is public)_
 
 ## v0.2.0 — Scaffolder hardening
 
@@ -69,7 +69,7 @@ The flagship features. When these land (plus everything above), the vision is co
 - [ ] #23 — Auth boilerplate wired to the users table
 - [ ] #24 — `omnicraft add <module>` post-scaffold generator
 - [ ] #25 — JavaScript (non-TypeScript) template variants
-- [x] #26 — Multi-OS CI once repo is public *(done early — repo is public, all 3 OS green)*
+- [x] #26 — Multi-OS CI once repo is public _(done early — repo is public, all 3 OS green)_
 - [ ] #27 — Contributor docs: template composition guide
 
 ## v1.1.x and beyond (unplanned parking lot)

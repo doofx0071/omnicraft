@@ -28,10 +28,10 @@ Open <a href="docs/demo.html">docs/demo.html</a> in a browser — the same flow 
 ◆  What are you building?                 ● Web App · Mobile (soon) · Desktop (soon)
 ◆  Select a frontend framework:           ● React · Vue (soon) · Svelte (soon) …
 ◆  Full-stack?                            Adds backend + database
-◆  Select a backend runtime:              ● Node.js · Python (soon) · Laravel (soon)
-◆  Select a backend framework:            ● Express · Fastify · Hono (soon) …
-◆  Select an ORM:                         ● Drizzle · Prisma
-◆  Database: PostgreSQL                   (MySQL / SQLite / MongoDB coming)
+◆  Select a backend runtime:              ● Node.js · Python · PHP
+◆  Select a backend framework:            ● Express · Fastify · Hono / FastAPI / Laravel
+◆  Select a database:                     ● PostgreSQL · SQLite (zero setup) · MySQL
+◆  Select an ORM:                         ● Drizzle · Prisma  (node only)
 ◆  Pick extras:                           ◉ Tailwind CSS  ◉ ESLint + Prettier
 └  Scaffolds → git init → installs deps → prints next steps
 ```
@@ -61,7 +61,7 @@ npm run db:push          # create tables from the schema
 npm run dev              # client :5173 + server :3000 together
 ```
 
-## Supported stacks (v1)
+## Supported stacks (v1 — per-combo status: [docs/templates/stack-support-matrix.md](docs/templates/stack-support-matrix.md))
 
 | Layer     | Available                        | On the roadmap                            |
 | --------- | -------------------------------- | ----------------------------------------- |
@@ -81,8 +81,10 @@ npm create omnicraft@latest [project-name] [options]
 --full-stack         force the full-stack flow (default: yes)
 --no-full-stack      frontend only
 --frontend <name>    skip the frontend prompt (react)
---backend <name>     skip the backend prompt (express, fastify)
---orm <name>         skip the ORM prompt (drizzle, prisma)
+--runtime <name>     skip the runtime prompt (node, python, php)
+--backend <name>     skip the framework prompt (node: express, fastify, hono · python: fastapi · php: laravel)
+--db <name>          skip the database prompt (node: postgres, sqlite, mysql · python: postgres, sqlite · php: postgres, sqlite, mysql)
+--orm <name>         skip the ORM prompt — node only (drizzle, prisma; prisma is postgres-only)
 --extras <list>      comma list: tailwind,eslint — or "none" (default: both)
 --latest             pull the newest templates from GitHub instead of the
                      ones pinned to this CLI version
