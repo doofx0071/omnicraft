@@ -13,7 +13,7 @@
 | v0.3.0  | Backend & database expansion         | ✅ 5/5   | #12–#16 |
 | v0.3.1  | Hardening (master-plan PR 2/3/5)     | ✅ tag   | —       |
 | v0.4.0  | Frontend expansion                   | ✅ 4/4   | #17–#20 |
-| v0.5.0  | Platform expansion (mobile, desktop) | ⬜ 0/2   | #21–#22 |
+| v0.5.0  | Platform expansion (mobile, desktop) | ✅ 2/2   | #21–#22 |
 | v1.0.0  | Maturity milestone                   | 🚧 1/5   | #23–#27 |
 
 ---
@@ -60,8 +60,8 @@ Widen the matrix, deepest-demand first. Order within the phase: SQLite (no Docke
 
 The "What are you building?" branches become real.
 
-- [ ] #21 — Mobile app scaffolding: React Native + Expo
-- [ ] #22 — Desktop app scaffolding: Tauri
+- [x] #21 — Mobile app scaffolding: React Native + Expo
+- [x] #22 — Desktop app scaffolding: Tauri
 
 ## v1.0.0 — Maturity milestone
 
