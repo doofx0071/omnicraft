@@ -1,0 +1,19 @@
+{
+  "name": "{{projectName}}",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n client,server -c cyan,green \"npm run dev -w client\" \"npm run dev:server\"",
+    "dev:server": "cd server && uv run uvicorn app.main:app --reload --port 3000",
+    "build": "npm run build -w client",
+    "db:push": "cd server && uv run alembic upgrade head",
+    "db:migrate": "cd server && uv run alembic revision --autogenerate -m \"migration\"",
+    "db:seed": "cd server && uv run python -m app.seed"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  }
+}

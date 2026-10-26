@@ -22,9 +22,13 @@ export function printNextSteps(answers: Answers, pm: PackageManager): void {
   if (answers.fullStack) {
     const studio = `npm run db:studio`
     const dbLine =
-      answers.database === 'sqlite'
-        ? `  database → SQLite file at server/data/app.db (GUI: ${studio})`
-        : `  database → ${DATABASE_LABELS[answers.database!]} (${studio})`
+      answers.backendRuntime === 'python'
+        ? `  database → SQLite file at server/data/app.db (migrations: npm run db:migrate)`
+        : answers.backendRuntime === 'php'
+          ? `  database → ${DATABASE_LABELS[answers.database!]} (php artisan migrate)`
+          : answers.database === 'sqlite'
+            ? `  database → SQLite file at server/data/app.db (GUI: ${studio})`
+            : `  database → ${DATABASE_LABELS[answers.database!]} (GUI: ${studio})`
     p.log.message(
       `  client   → http://localhost:${CLIENT_PORT}\n` +
         `  server   → http://localhost:${SERVER_PORT} (try /api/health)\n` +

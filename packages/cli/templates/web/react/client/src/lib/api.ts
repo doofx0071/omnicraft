@@ -9,7 +9,9 @@ export interface User {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(path, {
-    headers: { "Content-Type": "application/json" },
+    // Accept: application/json — backends like Laravel return JSON errors
+    // instead of redirects when the client asks for JSON.
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
     ...options,
   });
   if (!res.ok) {

@@ -10,6 +10,7 @@ import {
   type Answers,
   type BackendFramework,
   type BackendRuntime,
+  type Database,
   type Frontend,
   type ProjectType,
 } from '../types.js'
@@ -161,47 +162,91 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
   let backendRuntime: BackendRuntime = 'node'
   let backendFramework: BackendFramework = 'express'
   let database: 'postgres' | 'sqlite' | 'mysql' = 'postgres'
-  let orm: 'drizzle' | 'prisma' = 'drizzle'
+  let orm: 'drizzle' | 'prisma' | null = 'drizzle'
 
   if (fullStack) {
-    if (!forced) {
-      backendRuntime = await selectWithSoon<BackendRuntime>('Select a backend runtime:', [
-        { value: 'node', label: BACKEND_RUNTIME_LABELS.node, available: true, hint: 'v1 focus' },
-        { value: 'python', label: BACKEND_RUNTIME_LABELS.python, available: false },
-        { value: 'php', label: BACKEND_RUNTIME_LABELS.php, available: false },
-      ])
+    backendRuntime = flags.runtime
+      ? parseEnumChoice('--runtime', flags.runtime, AVAILABLE.runtime)
+      : forced
+        ? 'node'
+        : await selectWithSoon<BackendRuntime>('Select a backend runtime:', [
+            { value: 'node', label: BACKEND_RUNTIME_LABELS.node, available: true, hint: 'Express, Fastify, Hono' },
+            { value: 'python', label: BACKEND_RUNTIME_LABELS.python, available: true, hint: 'FastAPI + SQLAlchemy' },
+            { value: 'php', label: BACKEND_RUNTIME_LABELS.php, available: true, hint: 'Laravel + Eloquent' },
+          ])
+
+    const frameworkChoices: Record<BackendRuntime, Choice<BackendFramework>[]> = {
+      node: [
+        { value: 'express', label: BACKEND_FRAMEWORK_LABELS.express, available: true, hint: 'The classic, huge ecosystem' },
+        { value: 'fastify', label: BACKEND_FRAMEWORK_LABELS.fastify, available: true, hint: 'Fast, schema-first' },
+        { value: 'hono', label: BACKEND_FRAMEWORK_LABELS.hono, available: true, hint: 'Ultra-light' },
+        { value: 'nestjs', label: BACKEND_FRAMEWORK_LABELS.nestjs, available: false },
+      ],
+      python: [
+        { value: 'fastapi', label: BACKEND_FRAMEWORK_LABELS.fastapi, available: true, hint: 'SQLAlchemy + Alembic' },
+        { value: 'django', label: BACKEND_FRAMEWORK_LABELS.django, available: false },
+      ],
+      php: [
+        { value: 'laravel', label: BACKEND_FRAMEWORK_LABELS.laravel, available: true, hint: 'Laravel 12 + Eloquent' },
+        { value: 'symfony', label: BACKEND_FRAMEWORK_LABELS.symfony, available: false },
+      ],
     }
 
     backendFramework = flags.backend
-      ? parseEnumChoice('--backend', flags.backend, AVAILABLE.backend)
+      ? parseEnumChoice('--backend', flags.backend, AVAILABLE.backend[backendRuntime])
       : forced
-        ? 'express'
-        : await selectWithSoon<BackendFramework>('Select a backend framework:', [
-            { value: 'express', label: BACKEND_FRAMEWORK_LABELS.express, available: true, hint: 'The classic, huge ecosystem' },
-            { value: 'fastify', label: BACKEND_FRAMEWORK_LABELS.fastify, available: true, hint: 'Fast, schema-first' },
-            { value: 'hono', label: BACKEND_FRAMEWORK_LABELS.hono, available: false },
-            { value: 'nestjs', label: BACKEND_FRAMEWORK_LABELS.nestjs, available: false },
-          ])
+        ? AVAILABLE.backend[backendRuntime][0]
+        : await selectWithSoon<BackendFramework>(
+            'Select a backend framework:',
+            frameworkChoices[backendRuntime],
+          )
+
+    const dbChoices: Record<BackendRuntime, Choice<Database>[]> = {
+      node: [
+        { value: 'postgres', label: DATABASE_LABELS.postgres, available: true, hint: 'Drizzle or Prisma' },
+        { value: 'sqlite', label: DATABASE_LABELS.sqlite, available: true, hint: 'Zero setup — file-based (Drizzle)' },
+        { value: 'mysql', label: DATABASE_LABELS.mysql, available: true, hint: 'Drizzle' },
+        { value: 'mongodb', label: DATABASE_LABELS.mongodb, available: false },
+      ],
+      python: [
+        { value: 'postgres', label: DATABASE_LABELS.postgres, available: true, hint: 'asyncpg + Alembic' },
+        { value: 'sqlite', label: DATABASE_LABELS.sqlite, available: true, hint: 'Zero setup — file-based (aiosqlite)' },
+        { value: 'mysql', label: DATABASE_LABELS.mysql, available: false },
+        { value: 'mongodb', label: DATABASE_LABELS.mongodb, available: false },
+      ],
+      php: [
+        { value: 'postgres', label: DATABASE_LABELS.postgres, available: true, hint: 'Eloquent' },
+        { value: 'sqlite', label: DATABASE_LABELS.sqlite, available: true, hint: 'Zero setup — file-based (Eloquent)' },
+        { value: 'mysql', label: DATABASE_LABELS.mysql, available: true, hint: 'Eloquent' },
+        { value: 'mongodb', label: DATABASE_LABELS.mongodb, available: false },
+      ],
+    }
 
     database = flags.db
-      ? parseEnumChoice('--db', flags.db, AVAILABLE.db)
+      ? parseEnumChoice('--db', flags.db, AVAILABLE.db[backendRuntime])
       : forced
         ? 'postgres'
-        : ((await selectWithSoon<'postgres' | 'sqlite' | 'mysql' | 'mongodb'>('Select a database:', [
-            { value: 'postgres', label: DATABASE_LABELS.postgres, available: true, hint: 'Drizzle or Prisma' },
-            { value: 'sqlite', label: DATABASE_LABELS.sqlite, available: true, hint: 'Zero setup — file-based (Drizzle)' },
-            { value: 'mysql', label: DATABASE_LABELS.mysql, available: true, hint: 'Drizzle' },
-            { value: 'mongodb', label: DATABASE_LABELS.mongodb, available: false },
-          ])) as 'postgres' | 'sqlite' | 'mysql')
+        : ((await selectWithSoon<Database>('Select a database:', dbChoices[backendRuntime])) as 'postgres' | 'sqlite' | 'mysql')
 
-    orm = flags.orm
-      ? parseEnumChoice('--orm', flags.orm, AVAILABLE.orm)
-      : forced
-        ? 'drizzle'
-        : await selectWithSoon<'drizzle' | 'prisma'>('Select an ORM:', [
-            { value: 'drizzle', label: 'Drizzle', available: true, hint: 'SQL-like, lightweight' },
-            { value: 'prisma', label: 'Prisma', available: database === 'postgres', hint: database === 'postgres' ? 'Schema-first, great DX' : 'PostgreSQL only for now' },
-          ])
+    if (backendRuntime === 'node') {
+      orm = flags.orm
+        ? parseEnumChoice('--orm', flags.orm, AVAILABLE.orm.node)
+        : forced
+          ? 'drizzle'
+          : await selectWithSoon<'drizzle' | 'prisma'>('Select an ORM:', [
+              { value: 'drizzle', label: 'Drizzle', available: true, hint: 'SQL-like, lightweight' },
+              { value: 'prisma', label: 'Prisma', available: database === 'postgres', hint: database === 'postgres' ? 'Schema-first, great DX' : 'PostgreSQL only for now' },
+            ])
+      p.log.info(
+        `ORM: ${orm === 'drizzle' ? 'Drizzle' : 'Prisma'}`,
+      )
+    } else if (backendRuntime === 'python') {
+      orm = null
+      p.log.info('ORM: SQLAlchemy + Alembic migrations')
+    } else {
+      orm = null
+      p.log.info('ORM: Eloquent (Laravel migrations)')
+    }
 
     p.log.info(`Database: ${DATABASE_LABELS[database]}`)
   }
@@ -234,9 +279,15 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
   const summary: string[] = [`App:        ${projectName}`]
   summary.push(`Stack:      ${FRONTEND_LABELS[frontend]} (web)`)
   if (fullStack) {
+    const ormLabel =
+      backendRuntime === 'node'
+        ? `(${orm === 'drizzle' ? 'Drizzle' : 'Prisma'})`
+        : backendRuntime === 'python'
+          ? '(SQLAlchemy + Alembic)'
+          : '(Eloquent)'
     summary.push(
-    `Backend:    ${BACKEND_FRAMEWORK_LABELS[backendFramework]} + ${DATABASE_LABELS[database!]} (${orm === 'drizzle' ? 'Drizzle' : 'Prisma'})`,
-  )
+      `Backend:    ${BACKEND_FRAMEWORK_LABELS[backendFramework]} + ${DATABASE_LABELS[database]} ${ormLabel}`,
+    )
   } else {
     summary.push('Backend:    none (frontend only)')
   }

@@ -67,9 +67,9 @@ npm run dev              # client :5173 + server :3000 together
 | --------- | -------------------------------- | ----------------------------------------- |
 | Platform  | Web App                          | Mobile (React Native/Expo), Desktop, API  |
 | Frontend  | React (Vite + TS)                | Next.js, Vue, Svelte, Solid               |
-| Backend   | Node.js — Express, Fastify, Hono | NestJS, Python (FastAPI/Django), Laravel |
+| Backend   | Node: Express, Fastify, Hono · Python: FastAPI · PHP: Laravel | NestJS, Django, Symfony |
 | Database  | PostgreSQL, SQLite, MySQL        | MongoDB                                   |
-| ORM       | Drizzle, Prisma (PostgreSQL)     | Mongoose                                  |
+| ORM       | Drizzle, Prisma · SQLAlchemy · Eloquent | Mongoose                             |
 | Extras    | Tailwind CSS, ESLint + Prettier  | Auth boilerplate, JS (non-TS) templates   |
 
 ## Options

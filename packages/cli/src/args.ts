@@ -9,6 +9,7 @@ export interface ParsedArgs {
   yes: boolean
   /** Stack overrides; when present the matching prompt is skipped. */
   fullStack?: boolean
+  runtime?: string
   frontend?: string
   backend?: string
   orm?: string
@@ -26,11 +27,14 @@ Options:
                        also allows running without a TTY)
   --full-stack         Force the full-stack flow (default: yes)
   --no-full-stack      Frontend only
+  --runtime <name>     Skip the runtime prompt (node, python, php)
   --frontend <name>    Skip the frontend prompt (available: react)
-  --backend <name>     Skip the backend prompt (available: express, fastify, hono)
-  --db <name>          Skip the database prompt (available: postgres, sqlite, mysql)
-  --orm <name>         Skip the ORM prompt (available: drizzle, prisma — prisma is
-                       PostgreSQL-only for now)
+  --backend <name>     Skip the framework prompt (node: express, fastify, hono ·
+                       python: fastapi · php: laravel)
+  --db <name>          Skip the database prompt (node: postgres, sqlite, mysql ·
+                       python: postgres, sqlite · php: postgres, sqlite, mysql)
+  --orm <name>         Skip the ORM prompt — Node.js only (drizzle, prisma;
+                       prisma is PostgreSQL-only for now)
   --extras <list>      Comma-separated extras (available: tailwind, eslint;
                        default: both). Use --extras none to skip all.
   --latest             Pull the newest templates from GitHub instead of the
@@ -47,7 +51,7 @@ Examples:
   npm create omnicraft@latest my-app -- --no-full-stack --extras tailwind
 `
 
-const VALUE_FLAGS = new Set(['--frontend', '--backend', '--orm', '--db', '--extras'])
+const VALUE_FLAGS = new Set(['--runtime', '--frontend', '--backend', '--orm', '--db', '--extras'])
 
 export function parseArgs(argv: string[]): ParsedArgs {
   const args: ParsedArgs = {
@@ -77,7 +81,8 @@ export function parseArgs(argv: string[]): ParsedArgs {
         value = next
         i++
       }
-      if (valueFlag === '--frontend') args.frontend = value
+      if (valueFlag === '--runtime') args.runtime = value
+      else if (valueFlag === '--frontend') args.frontend = value
       else if (valueFlag === '--backend') args.backend = value
       else if (valueFlag === '--orm') args.orm = value
       else if (valueFlag === '--db') args.db = value

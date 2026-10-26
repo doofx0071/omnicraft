@@ -22,6 +22,9 @@ const combos = [
   { framework: 'fastify', orm: 'prisma', db: 'postgres' },
   { framework: 'hono', orm: 'drizzle', db: 'postgres' },
   { framework: 'hono', orm: 'drizzle', db: 'sqlite' },
+  { framework: 'fastapi', orm: null, db: 'postgres' },
+  { framework: 'fastapi', orm: null, db: 'sqlite' },
+  { framework: 'laravel', orm: null, db: 'sqlite' },
 ] as const
 
 function scaffold(answers: Answers): string {
@@ -36,13 +39,13 @@ function scaffold(answers: Answers): string {
 
 for (const { framework, orm, db } of combos) {
   scaffold({
-    projectName: `smoke-${framework}-${orm}-${db}`,
+    projectName: `smoke-${framework}-${orm ?? 'none'}-${db}`,
     targetDir: '.',
     projectType: 'web',
     frontend: 'react',
     language: 'typescript',
     fullStack: true,
-    backendRuntime: 'node',
+    backendRuntime: framework === 'fastapi' ? 'python' : framework === 'laravel' ? 'php' : 'node',
     backendFramework: framework,
     orm,
     database: db,

@@ -1,0 +1,21 @@
+# Python
+server/.venv/
+**/__pycache__/
+*.pyc
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment — commit .env.example instead
+.env
+.env.local
+
+# SQLite data
+server/data/
+
+# Logs & OS
+*.log
+.DS_Store

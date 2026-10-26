@@ -59,7 +59,7 @@ describe('full-stack combos', () => {
 
   for (const { framework, orm, db } of matrix) {
     it(`scaffolds ${framework} + ${orm} + ${db}`, () => {
-      const dir = makeTempDir(`${framework}-${orm}`)
+      const dir = makeTempDir(`${framework}-${orm}-${db}`)
       scaffoldInto(dir, makeAnswers({ backendFramework: framework, orm, database: db }))
 
       // Root layer: workspaces manifest, tokens rendered
@@ -141,6 +141,61 @@ describe('full-stack combos', () => {
   }
 })
 
+
+describe('python + php runtimes', () => {
+  it('scaffolds fastapi + sqlite', () => {
+    const dir = makeTempDir('fastapi-sqlite')
+    scaffoldInto(
+      dir,
+      makeAnswers({ backendRuntime: 'python', backendFramework: 'fastapi', orm: null, database: 'sqlite' }),
+    )
+
+    // python root variant
+    expect((readJson(join(dir, 'package.json')).scripts as Record<string, string>)['dev:server']).toContain('uvicorn')
+    expect(readFileSync(join(dir, '.gitignore'), 'utf8')).toContain('server/.venv/')
+    expect(existsSync(join(dir, 'docker-compose.yml'))).toBe(false)
+
+    // server layer: fastapi base + sqlalchemy adapter, no npm manifest
+    expect(existsSync(join(dir, 'server', 'pyproject.toml'))).toBe(true)
+    expect(existsSync(join(dir, 'server', 'app', 'main.py'))).toBe(true)
+    expect(existsSync(join(dir, 'server', 'app', 'database.py'))).toBe(true)
+    expect(existsSync(join(dir, 'server', 'alembic.ini'))).toBe(true)
+    expect(existsSync(join(dir, 'server', 'package.json'))).toBe(false)
+    expect(readFileSync(join(dir, 'server', '.env'), 'utf8')).toContain('DATABASE_URL=sqlite+aiosqlite:///data/app.db')
+    expect(readFileSync(join(dir, 'server', 'pyproject.toml'), 'utf8')).toContain('aiosqlite')
+  })
+
+  it('scaffolds fastapi + postgres', () => {
+    const dir = makeTempDir('fastapi-postgres')
+    scaffoldInto(
+      dir,
+      makeAnswers({ backendRuntime: 'python', backendFramework: 'fastapi', orm: null, database: 'postgres' }),
+    )
+    expect(existsSync(join(dir, 'docker-compose.yml'))).toBe(true)
+    expect(readFileSync(join(dir, 'server', '.env'), 'utf8')).toContain(
+      'DATABASE_URL=postgresql+asyncpg://omnicraft:omnicraft@localhost:5432/demo_app',
+    )
+    expect(readFileSync(join(dir, 'server', 'pyproject.toml'), 'utf8')).toContain('asyncpg')
+  })
+
+  it('scaffolds the laravel overlay (composer base is created at scaffold time)', () => {
+    const dir = makeTempDir('laravel-sqlite')
+    scaffoldInto(
+      dir,
+      makeAnswers({ backendRuntime: 'php', backendFramework: 'laravel', orm: null, database: 'sqlite' }),
+    )
+
+    // overlay files, destined for the composer-created skeleton
+    expect(existsSync(join(dir, 'server', 'routes', 'api.php'))).toBe(true)
+    expect(existsSync(join(dir, 'server', 'bootstrap', 'app.php'))).toBe(true)
+    expect(existsSync(join(dir, 'server', 'app', 'Http', 'Controllers', 'UserController.php'))).toBe(true)
+    expect(readFileSync(join(dir, 'server', '.env.example'), 'utf8')).toContain('DB_CONNECTION=sqlite')
+
+    // php root variant
+    expect((readJson(join(dir, 'package.json')).scripts as Record<string, string>)['dev:server']).toContain('artisan serve')
+    expect(readFileSync(join(dir, '.gitignore'), 'utf8')).toContain('server/vendor/')
+  })
+})
 describe('frontend-only', () => {
   it('scaffolds the client at the project root without server artifacts', () => {
     const dir = makeTempDir('frontend-only')

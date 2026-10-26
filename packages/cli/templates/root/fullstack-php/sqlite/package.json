@@ -1,0 +1,18 @@
+{
+  "name": "{{projectName}}",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n client,server -c cyan,green \"npm run dev -w client\" \"npm run dev:server\"",
+    "dev:server": "cd server && php artisan serve --port=3000",
+    "build": "npm run build -w client",
+    "db:push": "cd server && php artisan migrate --force",
+    "db:seed": "cd server && php artisan db:seed --force"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  }
+}

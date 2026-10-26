@@ -2,7 +2,15 @@ export type ProjectType = 'web' | 'mobile' | 'desktop'
 export type Frontend = 'react' | 'vue' | 'svelte' | 'nextjs'
 export type Language = 'typescript' | 'javascript'
 export type BackendRuntime = 'node' | 'python' | 'php'
-export type BackendFramework = 'express' | 'fastify' | 'hono' | 'nestjs'
+export type BackendFramework =
+  | 'express'
+  | 'fastify'
+  | 'hono'
+  | 'nestjs'
+  | 'fastapi'
+  | 'laravel'
+  | 'django'
+  | 'symfony'
 export type Orm = 'drizzle' | 'prisma' | 'mongoose'
 export type Database = 'postgres' | 'sqlite' | 'mysql' | 'mongodb'
 
@@ -49,6 +57,10 @@ export const BACKEND_FRAMEWORK_LABELS: Record<BackendFramework, string> = {
   fastify: 'Fastify',
   hono: 'Hono',
   nestjs: 'NestJS',
+  fastapi: 'FastAPI',
+  laravel: 'Laravel',
+  django: 'Django',
+  symfony: 'Symfony',
 }
 
 export const ORM_LABELS: Record<Orm, string> = {

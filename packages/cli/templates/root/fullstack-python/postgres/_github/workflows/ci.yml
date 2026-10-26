@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install client dependencies
+        run: npm ci
+
+      - name: Typecheck client
+        run: npx tsc --noEmit -p client
+
+      - name: Build client
+        run: npm run build
+
+      - name: Sync Python dependencies
+        run: uv sync
+        working-directory: server
+
+      - name: Apply migrations
+        run: uv run alembic upgrade head
+        working-directory: server
+        env:
+          DATABASE_URL: postgresql+asyncpg://ci:ci@localhost:5432/ci

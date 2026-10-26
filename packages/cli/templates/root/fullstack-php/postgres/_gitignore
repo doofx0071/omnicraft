@@ -1,0 +1,16 @@
+# PHP
+server/vendor/
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment — commit .env.example instead
+.env
+.env.local
+
+# Logs & OS
+*.log
+.DS_Store

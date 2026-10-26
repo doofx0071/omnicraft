@@ -28,6 +28,33 @@ describe('validateStackFlags', () => {
     )
     expect(() => validateStackFlags(parseArgs(['--db', 'sqlite', '--orm', 'drizzle']))).not.toThrow()
   })
+
+  it('validates runtime-specific backends and databases', () => {
+    expect(() => validateStackFlags(parseArgs(['--runtime', 'python', '--db', 'sqlite']))).not.toThrow()
+    expect(() => validateStackFlags(parseArgs(['--runtime', 'php', '--backend', 'laravel']))).not.toThrow()
+    expect(() => validateStackFlags(parseArgs(['--runtime', 'python', '--backend', 'express']))).toThrow(
+      /Available: fastapi/,
+    )
+    expect(() => validateStackFlags(parseArgs(['--runtime', 'python', '--db', 'mysql']))).toThrow(
+      /Available: postgres, sqlite/,
+    )
+    expect(() => validateStackFlags(parseArgs(['--runtime', 'php', '--db', 'mysql']))).not.toThrow()
+  })
+
+  it('rejects --orm for non-node runtimes', () => {
+    expect(() => validateStackFlags(parseArgs(['--runtime', 'python', '--orm', 'drizzle']))).toThrow(
+      /--orm applies to Node\.js backends only/,
+    )
+    expect(() => validateStackFlags(parseArgs(['--runtime', 'php', '--orm', 'drizzle']))).toThrow(
+      /--orm applies to Node\.js backends only/,
+    )
+  })
+
+  it('validates the runtime itself', () => {
+    expect(() => validateStackFlags(parseArgs(['--runtime', 'ruby']))).toThrow(
+      /Available: node, python, php/,
+    )
+  })
 })
 
 describe('resolveAnswers', () => {
@@ -60,6 +87,24 @@ describe('resolveAnswers', () => {
     expect(sqlite.orm).toBe('drizzle')
     const mysql = resolveAnswers(parseArgs(['--yes', '--db=mysql']), base.projectName, base.targetDir)
     expect(mysql.database).toBe('mysql')
+  })
+
+  it('resolves python and php runtimes', () => {
+    const py = resolveAnswers(
+      parseArgs(['--yes', '--runtime', 'python', '--db', 'sqlite']),
+      base.projectName,
+      base.targetDir,
+    )
+    expect(py.backendRuntime).toBe('python')
+    expect(py.backendFramework).toBe('fastapi')
+    expect(py.orm).toBeNull()
+    expect(py.database).toBe('sqlite')
+
+    const php = resolveAnswers(parseArgs(['--yes', '--runtime', 'php']), base.projectName, base.targetDir)
+    expect(php.backendRuntime).toBe('php')
+    expect(php.backendFramework).toBe('laravel')
+    expect(php.orm).toBeNull()
+    expect(php.database).toBe('postgres')
   })
 
   it('frontend-only clears backend fields', () => {

@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install client dependencies
+        run: npm ci
+
+      - name: Typecheck client
+        run: npx tsc --noEmit -p client
+
+      - name: Build client
+        run: npm run build
+
+      - name: Sync Python dependencies
+        run: uv sync
+        working-directory: server
+
+      - name: Apply migrations
+        run: uv run alembic upgrade head
+        working-directory: server
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///data/ci.db
