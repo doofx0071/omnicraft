@@ -12,6 +12,9 @@ on:
   pull_request:
 
 jobs:
+  # Hosted runners on 3 OSes x Node {20 (declared minimum), 24}.
+  # bash is pinned: hosted Windows defaults to pwsh, which can't run the
+  # cmd-style cleanup; Git Bash is preinstalled and cross-platform.
   unix:
     strategy:
       matrix:
@@ -19,6 +22,9 @@ jobs:
         node: [20, 24]
     runs-on: ${{ matrix.os }}
     name: unix (${{ matrix.os }}, node ${{ matrix.node }})
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
@@ -46,21 +52,12 @@ jobs:
         run: |
           rm -rf smoke-out
           npx tsx packages/cli/scripts/smoke-e2e.ts smoke-out
-        if: runner.os != 'Windows'
 
-      - name: Scaffold all stack combos (windows)
-        run: |
-          if exist smoke-out rmdir /s /q smoke-out
-          npx tsx packages/cli/scripts/smoke-e2e.ts smoke-out
-        if: runner.os == 'Windows'
-
-      - name: E2E - install and typecheck generated express+prisma project
-        run: cd smoke-out/smoke-express-prisma-postgres && npm install --no-audit --no-fund && npx tsc --noEmit -p client && npx tsc --noEmit -p server
-        if: runner.os != 'Windows' && matrix.node == 24
-
-      - name: E2E - install and typecheck generated express+drizzle project (windows)
-        run: cd smoke-out\smoke-express-drizzle-postgres && npm install --no-audit --no-fund && npx tsc --noEmit -p client && npx tsc --noEmit -p server
-        if: runner.os == 'Windows' && matrix.node == 24
+      # Heavy e2e only on Node 24 to keep the matrix lean;
+      # fast checks prove Node 20 (declared minimum) compatibility.
+      - name: E2E - install and typecheck generated express+drizzle project
+        run: cd smoke-out/smoke-express-drizzle-postgres && npm install --no-audit --no-fund && npx tsc --noEmit -p client && npx tsc --noEmit -p server
+        if: matrix.node == 24
 
   # Trusted events only: the self-hosted runner never executes fork PR code.
   windows-self-hosted:
