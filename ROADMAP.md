@@ -11,6 +11,7 @@
 | v0.1.0  | Public launch                        | ✅ 6/6   | #1–#6   |
 | v0.2.0  | Scaffolder hardening                 | ✅ 5/5   | #7–#11  |
 | v0.3.0  | Backend & database expansion         | ✅ 5/5   | #12–#16 |
+| v0.3.1  | Hardening (master-plan PR 2/3/5)     | ✅ tag   | —       |
 | v0.4.0  | Frontend expansion                   | ⬜ 0/4   | #17–#20 |
 | v0.5.0  | Platform expansion (mobile, desktop) | ⬜ 0/2   | #21–#22 |
 | v1.0.0  | Maturity milestone                   | 🚧 1/5   | #23–#27 |
