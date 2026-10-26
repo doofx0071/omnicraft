@@ -69,7 +69,7 @@ describe('runPrompts flow', () => {
     expect(answers.orm).toBe('prisma')
     expect(answers.database).toBe('postgres')
     expect(answers.language).toBe('typescript')
-    expect(answers.extras).toEqual({ tailwind: true, eslintPrettier: false })
+    expect(answers.extras).toEqual({ tailwind: true, eslintPrettier: false, shadcn: false })
   })
 
   it('takes the frontend-only shortcut when full-stack is declined', async () => {

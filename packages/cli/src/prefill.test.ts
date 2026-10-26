@@ -79,7 +79,7 @@ describe('resolveAnswers', () => {
     expect(answers.backendFramework).toBe('express')
     expect(answers.orm).toBe('drizzle')
     expect(answers.database).toBe('postgres')
-    expect(answers.extras).toEqual({ tailwind: true, eslintPrettier: true })
+    expect(answers.extras).toEqual({ tailwind: true, eslintPrettier: true, shadcn: false })
   })
 
   it('applies flag overrides', () => {
@@ -90,7 +90,7 @@ describe('resolveAnswers', () => {
     )
     expect(answers.backendFramework).toBe('fastify')
     expect(answers.orm).toBe('prisma')
-    expect(answers.extras).toEqual({ tailwind: true, eslintPrettier: false })
+    expect(answers.extras).toEqual({ tailwind: true, eslintPrettier: false, shadcn: false })
   })
 
   it('resolves the database flag', () => {

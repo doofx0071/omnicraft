@@ -51,7 +51,7 @@ for (const { framework, orm, db } of combos) {
     backendFramework: framework,
     orm,
     database: db,
-    extras: { tailwind: true, eslintPrettier: true },
+    extras: { tailwind: true, eslintPrettier: true, shadcn: false },
   })
 }
 
@@ -67,5 +67,5 @@ scaffold({
   backendFramework: null,
   orm: null,
   database: null,
-  extras: { tailwind: true, eslintPrettier: true },
+  extras: { tailwind: true, eslintPrettier: true, shadcn: false },
 })

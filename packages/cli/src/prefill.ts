@@ -20,7 +20,7 @@ export const AVAILABLE = {
     php: ['postgres', 'sqlite', 'mysql'] as const,
   },
   orm: { node: ['drizzle', 'prisma', 'none'] as const },
-  extras: ['tailwind', 'eslint'] as const,
+  extras: ['tailwind', 'eslint', 'shadcn'] as const,
 }
 
 export type Runtime = (typeof AVAILABLE.runtime)[number]
@@ -56,6 +56,10 @@ export function validateStackFlags(args: ParsedArgs): void {
   if (args.orm) parseEnumChoice('--orm', args.orm, AVAILABLE.orm.node)
   if (args.extras) {
     for (const extra of args.extras) parseEnumChoice('--extras', extra, AVAILABLE.extras)
+    // shadcn/ui is built on Tailwind — selecting it implies the tailwind extra.
+    if (args.extras.includes('shadcn') && !args.extras.includes('tailwind')) {
+      args.extras.push('tailwind')
+    }
   }
   // Prisma 7 driver adapters are wired for PostgreSQL only right now —
   // SQLite/MySQL ship with Drizzle or raw SQL.
@@ -108,7 +112,9 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
       ? parseEnumChoice('--orm', args.orm, AVAILABLE.orm.node)
       : 'drizzle'
     : null
-  const extrasList = args.extras ?? [...AVAILABLE.extras]
+  // Defaults mirror the interactive prompt's initialValues (tailwind + eslint,
+  // shadcn opt-in) — NOT the full AVAILABLE list.
+  const extrasList = args.extras ?? AVAILABLE.extras.filter((e) => e !== 'shadcn')
 
   return {
     projectName,
@@ -122,8 +128,9 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
     orm,
     database: fullStack ? db : null,
     extras: {
-      tailwind: extrasList.includes('tailwind'),
+      tailwind: extrasList.includes('tailwind') || extrasList.includes('shadcn'),
       eslintPrettier: extrasList.includes('eslint'),
+      shadcn: extrasList.includes('shadcn'),
     },
   }
 }

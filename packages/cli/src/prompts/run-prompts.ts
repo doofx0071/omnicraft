@@ -263,27 +263,33 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
   }
 
   // ── Extras ──────────────────────────────────────────────────────────────
-  let extras: { tailwind: boolean; eslintPrettier: boolean }
+  let extras: { tailwind: boolean; eslintPrettier: boolean; shadcn: boolean }
   if (flags.extras) {
     extras = {
-      tailwind: flags.extras.includes('tailwind'),
+      tailwind: flags.extras.includes('tailwind') || flags.extras.includes('shadcn'),
       eslintPrettier: flags.extras.includes('eslint'),
+      shadcn: flags.extras.includes('shadcn'),
     }
   } else if (forced) {
-    extras = { tailwind: true, eslintPrettier: true }
+    extras = { tailwind: true, eslintPrettier: true, shadcn: false }
   } else {
     const picked = unwrapMany(
-      await p.multiselect<'tailwind' | 'eslint'>({
+      await p.multiselect<'tailwind' | 'eslint' | 'shadcn'>({
         message: 'Pick extras:',
         required: false,
         initialValues: ['tailwind', 'eslint'],
         options: [
           { value: 'tailwind', label: 'Tailwind CSS', hint: 'Utility-first styling' },
           { value: 'eslint', label: 'ESLint + Prettier', hint: 'Linting + formatting' },
+          { value: 'shadcn', label: 'shadcn/ui', hint: 'Component library (includes Tailwind) — runs shadcn CLI' },
         ],
       }),
     )
-    extras = { tailwind: picked.includes('tailwind'), eslintPrettier: picked.includes('eslint') }
+    extras = {
+      tailwind: picked.includes('tailwind') || picked.includes('shadcn'),
+      eslintPrettier: picked.includes('eslint'),
+      shadcn: picked.includes('shadcn'),
+    }
   }
 
   // ── Summary ─────────────────────────────────────────────────────────────
@@ -306,7 +312,8 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
   }
   summary.push(
     `Extras:     ${[
-      extras.tailwind ? 'Tailwind CSS' : null,
+      extras.tailwind && !extras.shadcn ? 'Tailwind CSS' : null,
+      extras.shadcn ? 'shadcn/ui' : null,
       extras.eslintPrettier ? 'ESLint + Prettier' : null,
     ]
       .filter(Boolean)

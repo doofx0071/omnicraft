@@ -39,6 +39,12 @@ export function composeLayers(answers: Answers): Layer[] {
   if (answers.extras.eslintPrettier) {
     layers.push({ src: 'extras/eslint', dest: '.' })
   }
+  // shadcn builds on Tailwind: pre-provisions the `@/` alias (tsconfig/vite)
+  // and the shadcn-based App; `npx shadcn init/add` run post-scaffold (see
+  // index.ts) to pull the pinned preset and components.
+  if (answers.extras.shadcn) {
+    layers.push({ src: 'extras/shadcn', dest: clientDest })
+  }
 
   const rootPrefix =
     answers.fullStack && answers.backendRuntime === 'python'

@@ -4,6 +4,19 @@ All notable, user-visible changes to `create-omnicraft` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is semver
 (0.x = rapid iteration, breaking changes allowed).
 
+## [0.3.3] — 2026-10-26
+
+### Added
+
+- **shadcn/ui extra** — new "Pick extras" option (and `--extras shadcn`; implies Tailwind).
+  The generated client gets the `@/*` path alias (tsconfig + vite, no deprecated `baseUrl`), a
+  shadcn-based demo app (Button/Input/Card/Badge/Separator via the `@/` alias), and the
+  **pinned shadcn CLI** runs post-install: `init --template vite --base radix --preset nova`
+  then `add` those components, then a prettier pass so the lint gates stay clean. If the CLI
+  step fails, the exact manual commands are printed.
+- Fixed the generated client `tsconfig.json` using deprecated `baseUrl` (TS 5.9 deprecation
+  error); `paths` alone is sufficient.
+
 ## [0.3.2] — 2026-10-26
 
 ### Added

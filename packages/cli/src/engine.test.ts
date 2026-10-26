@@ -20,7 +20,7 @@ function makeAnswers(overrides: Partial<Answers> = {}): Answers {
     backendFramework: 'express',
     orm: 'drizzle',
     database: 'postgres',
-    extras: { tailwind: true, eslintPrettier: true },
+    extras: { tailwind: true, eslintPrettier: true, shadcn: false },
     ...overrides,
   }
 }
@@ -240,6 +240,27 @@ describe('safety: protected paths and collisions', () => {
     const env = readFileSync(join(dir, 'server', '.env'), 'utf8')
     expect(env).toContain('5432/demo_app')
     expect(env).not.toContain('{{')
+  })
+})
+describe('shadcn extra layer', () => {
+  it('pre-provisions alias config and the shadcn App', () => {
+    const dir = makeTempDir('shadcn-layer')
+    scaffoldInto(dir, makeAnswers({ extras: { tailwind: true, eslintPrettier: true, shadcn: true } }))
+
+    // alias config (no baseUrl — deprecated in TS 5.9)
+    const tsconfig = readJson(join(dir, 'client', 'tsconfig.json')) as { compilerOptions: { paths: unknown; baseUrl?: unknown } }
+    expect(tsconfig.compilerOptions.paths).toEqual({ '@/*': ['./src/*'] })
+    expect(tsconfig.compilerOptions.baseUrl).toBeUndefined()
+
+    // vite alias + types/node dep for path resolution
+    expect(readFileSync(join(dir, 'client', 'vite.config.ts'), 'utf8')).toContain("'@'")
+    expect(readJson(join(dir, 'client', 'package.json')).devDependencies).toHaveProperty('@types/node')
+
+    // shadcn-based App imports via the alias; token lives in a JS string (TSX-safe)
+    const app = readFileSync(join(dir, 'client', 'src', 'App.tsx'), 'utf8')
+    expect(app).toContain('@/components/ui/button')
+    expect(app).toContain('const APP_TITLE = "demo-app"')
+    expect(app).not.toContain('{{projectName}}')
   })
 })
 describe('layer composition edge cases', () => {

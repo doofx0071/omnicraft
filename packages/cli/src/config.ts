@@ -33,3 +33,13 @@ export const TEMPLATES_ROOT = fileURLToPath(new URL('../templates/', import.meta
 /** Ports the generated projects standardize on. */
 export const SERVER_PORT = 3000
 export const CLIENT_PORT = 5173
+
+/**
+ * shadcn/ui setup, run post-scaffold by the pinned shadcn CLI (an
+ * official-generator adapter like Laravel/Composer). Pin: preset name +
+ * primitive base + component list are fixed and tested together; bump them
+ * deliberately (they are part of the template contract) and re-verify.
+ */
+export const SHADCN_PRESET = 'nova'
+export const SHADCN_BASE = 'radix' as const
+export const SHADCN_COMPONENTS = ['button', 'input', 'card', 'badge', 'separator']

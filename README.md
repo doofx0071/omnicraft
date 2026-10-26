@@ -17,8 +17,6 @@ npm create omnicraft@latest
 Open <a href="docs/demo.html">docs/demo.html</a> in a browser — the same flow as a replayable terminal player.
 </details>
 
-
-
 ## The flow
 
 ```
@@ -63,14 +61,14 @@ npm run dev              # client :5173 + server :3000 together
 
 ## Supported stacks (v1 — per-combo status: [docs/templates/stack-support-matrix.md](docs/templates/stack-support-matrix.md))
 
-| Layer     | Available                        | On the roadmap                            |
-| --------- | -------------------------------- | ----------------------------------------- |
-| Platform  | Web App                          | Mobile (React Native/Expo), Desktop, API  |
-| Frontend  | React (Vite + TS)                | Next.js, Vue, Svelte, Solid               |
-| Backend   | Node: Express, Fastify, Hono · Python: FastAPI · PHP: Laravel | NestJS, Django, Symfony |
-| Database  | PostgreSQL, SQLite, MySQL        | MongoDB                                   |
-| ORM       | Drizzle, Prisma, or None (raw SQL) · SQLAlchemy · Eloquent | Mongoose                             |
-| Extras    | Tailwind CSS, ESLint + Prettier  | Auth boilerplate, JS (non-TS) templates   |
+| Layer    | Available                                                     | On the roadmap                           |
+| -------- | ------------------------------------------------------------- | ---------------------------------------- |
+| Platform | Web App                                                       | Mobile (React Native/Expo), Desktop, API |
+| Frontend | React (Vite + TS)                                             | Next.js, Vue, Svelte, Solid              |
+| Backend  | Node: Express, Fastify, Hono · Python: FastAPI · PHP: Laravel | NestJS, Django, Symfony                  |
+| Database | PostgreSQL, SQLite, MySQL                                     | MongoDB                                  |
+| ORM      | Drizzle, Prisma, or None (raw SQL) · SQLAlchemy · Eloquent    | Mongoose                                 |
+| Extras   | Tailwind CSS, shadcn/ui, ESLint + Prettier                    | Auth boilerplate, JS (non-TS) templates  |
 
 ## Options
 
@@ -85,7 +83,7 @@ npm create omnicraft@latest [project-name] [options]
 --backend <name>     skip the framework prompt (node: express, fastify, hono · python: fastapi · php: laravel)
 --db <name>          skip the database prompt (node: postgres, sqlite, mysql · python: postgres, sqlite · php: postgres, sqlite, mysql)
 --orm <name>         skip the ORM prompt — node only (drizzle, prisma; prisma is postgres-only)
---extras <list>      comma list: tailwind,eslint — or "none" (default: both)
+--extras <list>     comma list: tailwind,eslint,shadcn — or "none" (default: tailwind,eslint)
 --latest             pull the newest templates from GitHub instead of the
                      ones pinned to this CLI version
 --skip-install       generate without installing dependencies

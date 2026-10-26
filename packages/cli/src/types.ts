@@ -17,6 +17,8 @@ export type Database = 'postgres' | 'sqlite' | 'mysql' | 'mongodb'
 export interface Extras {
   tailwind: boolean
   eslintPrettier: boolean
+  /** shadcn/ui — implies tailwind; components are added by the pinned shadcn CLI post-scaffold. */
+  shadcn: boolean
 }
 
 export interface Answers {

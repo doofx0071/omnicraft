@@ -1,7 +1,7 @@
 import * as p from '@clack/prompts'
 import { HELP_TEXT, parseArgs } from './args.js'
 import { CancelledError, unwrap } from './cancel.js'
-import { CLI_VERSION, TEMPLATES_ROOT, TEMPLATE_REPO } from './config.js'
+import { CLI_VERSION, SHADCN_COMPONENTS, SHADCN_PRESET, TEMPLATES_ROOT, TEMPLATE_REPO } from './config.js'
 import { printNextSteps } from './next-steps.js'
 import { runPrompts } from './prompts/run-prompts.js'
 import { composeLayers, isPostComposerLayer, templateVariables } from './scaffold/compose.js'
@@ -185,6 +185,34 @@ async function main(): Promise<void> {
             p.log.success(`Dependencies installed with ${pm}`)
           } else {
             p.log.warn(`Install failed — check the output above, then run "${pm} install" inside the project`)
+          }
+
+          // shadcn/ui: components are pulled from the registry by the pinned
+          // shadcn CLI (an official-generator adapter, like Laravel/Composer).
+          // The client must be installed first — the CLI writes into it and
+          // installs component deps itself.
+          if (answers.extras.shadcn && ok) {
+            const clientDir = answers.fullStack ? join(answers.targetDir, 'client') : answers.targetDir
+            spinner.start('Setting up shadcn/ui (init + components — this can take a minute)...')
+            const init = runCommand(
+              'npx',
+              ['--yes', 'shadcn@latest', 'init', '--template', 'vite', '--base', 'radix', '--preset', SHADCN_PRESET, '--no-monorepo', '--force'],
+              clientDir,
+            )
+            const add =
+              init.ok &&
+              runCommand('npx', ['--yes', 'shadcn@latest', 'add', ...SHADCN_COMPONENTS, '--yes', '--overwrite'], clientDir).ok
+            if (init.ok && add) {
+              // The shadcn CLI emits its own formatting — normalize to the
+              // project's prettier config so the lint gates stay clean.
+              runCommand('npx', ['--yes', 'prettier@latest', '--write', '.'], clientDir)
+              spinner.stop(`shadcn/ui ready (${SHADCN_PRESET}: ${SHADCN_COMPONENTS.join(', ')})`)
+            } else {
+              spinner.stop('shadcn setup failed')
+              p.log.warn(
+                `Run manually inside ${answers.fullStack ? 'client/' : 'the project'}:\n  npx shadcn@latest init --template vite --base radix --preset ${SHADCN_PRESET} --no-monorepo --force\n  npx shadcn@latest add ${SHADCN_COMPONENTS.join(' ')}`,
+              )
+            }
           }
         } else {
           p.log.step(`Skipped install — run "${pm} install" when ready`)
