@@ -12,7 +12,7 @@
 | v0.2.0  | Scaffolder hardening                 | ✅ 5/5   | #7–#11  |
 | v0.3.0  | Backend & database expansion         | ✅ 5/5   | #12–#16 |
 | v0.3.1  | Hardening (master-plan PR 2/3/5)     | ✅ tag   | —       |
-| v0.4.0  | Frontend expansion                   | ⬜ 0/4   | #17–#20 |
+| v0.4.0  | Frontend expansion                   | ✅ 4/4   | #17–#20 |
 | v0.5.0  | Platform expansion (mobile, desktop) | ⬜ 0/2   | #21–#22 |
 | v1.0.0  | Maturity milestone                   | 🚧 1/5   | #23–#27 |
 
@@ -51,10 +51,10 @@ Widen the matrix, deepest-demand first. Order within the phase: SQLite (no Docke
 
 ## v0.4.0 — Frontend expansion
 
-- [ ] #17 — Next.js frontend (fullstack-in-one path — changes the prompt flow)
-- [ ] #18 — Vue + Vite frontend
-- [ ] #19 — Svelte + Vite frontend
-- [ ] #20 — Evaluate TanStack Start / React Router v7 as an option
+- [x] #17 — Next.js frontend (fullstack-in-one path — changes the prompt flow)
+- [x] #18 — Vue + Vite frontend
+- [x] #19 — Svelte + Vite frontend
+- [x] #20 — Evaluate TanStack Start / React Router v7 as an option
 
 ## v0.5.0 — Platform expansion
 
