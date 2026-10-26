@@ -2,15 +2,17 @@ import { downloadTemplate } from 'giget'
 import { TEMPLATE_REPO } from '../config.js'
 
 /**
- * Pulls the newest templates from the OmniCraft GitHub repo (the same
- * `packages/cli/templates` directory that ships embedded) and returns the
- * local cache directory to scaffold from.
+ * Fetches the template subtree pinned to the release tag matching the CLI
+ * version (the same `packages/cli/templates` directory that ships embedded).
+ * Two runs of the same CLI version therefore produce identical output —
+ * the ref is a `v<version>` tag, not a mutable branch.
  */
-export async function fetchRemoteTemplates(): Promise<string> {
-  const source = `gh:${TEMPLATE_REPO.owner}/${TEMPLATE_REPO.repo}/${TEMPLATE_REPO.subdir}#${TEMPLATE_REPO.branch}`
+export async function fetchRemoteTemplates(): Promise<{ dir: string; ref: string }> {
+  const ref = TEMPLATE_REPO.ref
+  const source = `gh:${TEMPLATE_REPO.owner}/${TEMPLATE_REPO.repo}/${TEMPLATE_REPO.subdir}#${ref}`
   const result = await downloadTemplate(source, {
     force: true,
     provider: 'github',
   })
-  return result.dir
+  return { dir: result.dir, ref }
 }

@@ -1,7 +1,8 @@
 import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, relative } from 'node:path'
+import { isProtectedPath } from '../validators.js'
 import { deepMergePackageJson } from './merge.js'
-import { isBinaryFile, renderString, restoreDotfileName } from './renderer.js'
+import { assertNoUnresolvedTokens, isBinaryFile, renderString, restoreDotfileName } from './renderer.js'
 
 /** A template layer: a directory under the templates root copied into `dest` relative to the target. */
 export interface Layer {
@@ -34,6 +35,12 @@ export function applyLayer(
 
     const segments = relative(layerRoot, srcPath).split(/[\\/]/)
     const renamed = segments.map((s) => restoreDotfileName(s))
+    const destRelToTarget = [layer.dest, ...renamed].filter((s) => s !== '.').join('/')
+
+    // Secrets and VCS state in the destination are user-owned — templates
+    // never touch them (their .env.example / _gitignore forms still ship).
+    if (isProtectedPath(destRelToTarget)) continue
+
     const destPath = join(targetDir, layer.dest, ...renamed)
 
     mkdirSync(dirname(destPath), { recursive: true })
@@ -44,6 +51,7 @@ export function applyLayer(
     }
 
     const content = renderString(readFileSync(srcPath, 'utf8'), variables)
+    assertNoUnresolvedTokens(content, destRelToTarget)
 
     if (basename(destPath) === 'package.json' && existsAndIsFile(destPath)) {
       const existing = JSON.parse(readFileSync(destPath, 'utf8'))

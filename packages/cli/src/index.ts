@@ -1,7 +1,7 @@
 import * as p from '@clack/prompts'
 import { HELP_TEXT, parseArgs } from './args.js'
 import { CancelledError, unwrap } from './cancel.js'
-import { CLI_VERSION, TEMPLATES_ROOT } from './config.js'
+import { CLI_VERSION, TEMPLATES_ROOT, TEMPLATE_REPO } from './config.js'
 import { printNextSteps } from './next-steps.js'
 import { runPrompts } from './prompts/run-prompts.js'
 import { composeLayers, isPostComposerLayer, templateVariables } from './scaffold/compose.js'
@@ -92,14 +92,15 @@ async function main(): Promise<void> {
   let templatesRoot = TEMPLATES_ROOT
   if (args.latest) {
     const spinner = p.spinner()
-    spinner.start('Fetching latest templates from GitHub...')
+    spinner.start(`Fetching templates for ${TEMPLATE_REPO.ref} from GitHub...`)
     try {
-      templatesRoot = await fetchRemoteTemplates()
-      spinner.stop('Latest templates fetched')
+      const remote = await fetchRemoteTemplates()
+      templatesRoot = remote.dir
+      spinner.stop(`Templates fetched (${remote.ref})`)
     } catch {
       spinner.stop('Could not fetch templates from GitHub')
       p.log.warn(
-        'Check the repo config in src/config.ts and your connection, or run without --latest to use the embedded templates.',
+        `Make sure release tag ${TEMPLATE_REPO.ref} exists on GitHub, check your connection, or run without --latest to use the embedded templates.`,
       )
       p.outro('Aborted.')
       return

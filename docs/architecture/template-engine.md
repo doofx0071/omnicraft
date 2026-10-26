@@ -45,12 +45,25 @@ For each layer, the engine lists `templatesRoot/<src>` **recursively** and, for 
 
 A missing layer directory throws `MissingLayerError` (fail fast, before any later layer runs).
 
-**Current overwrite semantics (honest statement):** same-path files from later layers silently replace
-earlier ones (except `package.json`, which merges). This is a **feature the template tree relies on** —
-e.g. `src/routes/index.ts`, `src/env.ts`, `vite.config.ts`, `src/index.css`, and `.env.example` are
+**Overwrite semantics (current):** same-path files from later layers silently replace earlier ones
+(except `package.json`, which merges). This is a **feature the template tree relies on** — e.g.
+`src/routes/index.ts`, `src/env.ts`, `vite.config.ts`, `src/index.css`, and `.env.example` are
 intentionally provided by a base layer and _overridden_ by an ORM/db/extras layer. Do not "dedupe" them.
-The master plan (§4.2) proposes making collisions explicit with declared strategies; until that lands,
-any new layer must be written knowing it may override and be overridden.
+
+Two safety rails bound this behavior (added in 0.3.1, master plan §4.1/§4.3):
+
+1. **Protected paths** — the engine skips any destination file named `.env`, matching `.env.*`
+   (except `.env.example`), or `.git`. User secrets and VCS state are never overwritten by generation,
+   even when the user accepts scaffolding into a non-empty directory.
+2. **Unresolved-token failure** — after rendering, any remaining `{{token}}` throws
+   `UnresolvedTokenError` (file + token names) instead of leaking into the generated project.
+
+And at the prompt layer: scaffolding into a non-empty directory shows a **collision summary** (the
+exact file list that would be overwritten, via `findCollisions`) before the confirm; `--yes` mode
+refuses non-empty destinations outright.
+
+The master plan (§4.2) proposes going further — declared per-file collision strategies and
+manifest field-level merge policies; that remains future work.
 
 ## 3. Token rendering
 
@@ -67,9 +80,10 @@ any new layer must be written knowing it may override and be overridden.
 | `{{orm}}`               | `drizzle` \| `prisma` \| (empty)                           | generated README tables                |
 | `{{dbConfig}}`          | Laravel-only multi-line DB env block                       | `server/php/laravel/.env.example`      |
 
-**Unknown tokens are left untouched today** (not an error). Tests assert no known token leaks into any
-generated file. The master plan (§4.3) proposes failing on unresolved tokens; if you implement that, keep
-`{{dbConfig}}` (composed in `templateVariables`) valid in every database branch.
+**Unknown tokens are left untouched by `renderString` itself**, but the engine then runs
+`assertNoUnresolvedTokens` on the rendered content — generation **fails** with `UnresolvedTokenError`
+if any token didn't resolve. Tests assert no known token leaks into any generated file. New tokens:
+extend `templateVariables` and document them here.
 
 ## 4. Manifest merging
 
@@ -91,8 +105,12 @@ override (the db layers' `db:*` scripts are the convention).
 
 - `MissingLayerError` — composition referenced a template that doesn't exist (broken `compose.ts` or
   renamed directory). Surfaces immediately with the layer name.
-- Destination is a non-empty directory → interactive confirm; `--yes` refuses outright (never scaffolds
-  over existing files non-interactively).
+- `UnresolvedTokenError` — a template referenced a token with no variable; generation fails with the
+  file and token names (0.3.1).
+- Destination is a non-empty directory → collision summary + interactive confirm; `--yes` refuses
+  outright (never scaffolds over existing files non-interactively).
+- Protected paths (`.env*` except `.env.example`, `.git`) are skipped by the engine — user secrets and
+  VCS state are never written.
 - Install/uv/composer failures are non-fatal to the generated files: the CLI reports the failure, prints
   the manual command, and still shows next steps.
 - `restoreTerminal()` runs on every exit path so clack's raw mode can't garble the terminal.

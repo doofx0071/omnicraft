@@ -1,3 +1,9 @@
+# CI for OmniCraft.
+#
+# Security model (repo is PUBLIC):
+# - `pull_request` from forks runs the `unix` jobs on GitHub-hosted runners only.
+# - The self-hosted Windows runner executes push-to-main and same-repo PR events
+#   only — never fork PRs (untrusted code must not run on a persistent machine).
 name: CI
 
 on:
@@ -6,7 +12,59 @@ on:
   pull_request:
 
 jobs:
-  windows:
+  unix:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [20, 24]
+    runs-on: ${{ matrix.os }}
+    name: unix (${{ matrix.os }}, node ${{ matrix.node }})
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Typecheck CLI
+        run: npx tsc --noEmit
+        working-directory: packages/cli
+
+      - name: Unit tests
+        run: npx vitest run
+        working-directory: packages/cli
+
+      - name: Build CLI
+        run: npx tsup
+        working-directory: packages/cli
+
+      - name: Scaffold all stack combos
+        run: |
+          rm -rf smoke-out
+          npx tsx packages/cli/scripts/smoke-e2e.ts smoke-out
+        if: runner.os != 'Windows'
+
+      - name: Scaffold all stack combos (windows)
+        run: |
+          if exist smoke-out rmdir /s /q smoke-out
+          npx tsx packages/cli/scripts/smoke-e2e.ts smoke-out
+        if: runner.os == 'Windows'
+
+      - name: E2E - install and typecheck generated express+prisma project
+        run: cd smoke-out/smoke-express-prisma-postgres && npm install --no-audit --no-fund && npx tsc --noEmit -p client && npx tsc --noEmit -p server
+        if: runner.os != 'Windows' && matrix.node == 24
+
+      - name: E2E - install and typecheck generated express+drizzle project (windows)
+        run: cd smoke-out\smoke-express-drizzle-postgres && npm install --no-audit --no-fund && npx tsc --noEmit -p client && npx tsc --noEmit -p server
+        if: runner.os == 'Windows' && matrix.node == 24
+
+  # Trusted events only: the self-hosted runner never executes fork PR code.
+  windows-self-hosted:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, windows]
     defaults:
       run:
@@ -44,11 +102,10 @@ jobs:
       - name: Lint generated project output
         run: cd smoke-out\smoke-express-drizzle-postgres && npx eslint . && npx prettier --check .
 
-  unix:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+  # Package-artifact e2e: pack the tarball, install it into a clean temp dir,
+  # run the published-style binary and scaffold a real project from it.
+  package:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -60,22 +117,23 @@ jobs:
       - name: Install workspace dependencies
         run: npm ci
 
-      - name: Typecheck CLI
-        run: npx tsc --noEmit
-        working-directory: packages/cli
-
-      - name: Unit tests
-        run: npx vitest run
-        working-directory: packages/cli
-
       - name: Build CLI
         run: npx tsup
         working-directory: packages/cli
 
-      - name: Scaffold all stack combos
-        run: |
-          rm -rf smoke-out
-          npx tsx packages/cli/scripts/smoke-e2e.ts smoke-out
+      - name: Pack tarball
+        run: npm pack
+        working-directory: packages/cli
 
-      - name: E2E - install and typecheck generated express+prisma project
-        run: cd smoke-out/smoke-express-prisma-postgres && npm install --no-audit --no-fund && npx tsc --noEmit -p client && npx tsc --noEmit -p server
+      - name: Install tarball into clean workspace and scaffold non-interactively
+        run: |
+          mkdir -p "$RUNNER_TEMP/pkg-test" && cd "$RUNNER_TEMP/pkg-test"
+          VERSION=$(node -p "require('$GITHUB_WORKSPACE/packages/cli/package.json').version")
+          npm install "$GITHUB_WORKSPACE/packages/cli/create-omnicraft-$VERSION.tgz" --no-audit --no-fund
+          node node_modules/create-omnicraft/dist/index.js --yes --skip-install my-pkg-app < /dev/null
+          test -f my-pkg-app/package.json
+          test -f my-pkg-app/client/src/App.tsx
+          test -f my-pkg-app/server/src/index.ts
+          test -f my-pkg-app/server/.env
+          test -f my-pkg-app/.github/workflows/ci.yml
+          echo "package e2e OK"

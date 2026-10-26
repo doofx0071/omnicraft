@@ -7,6 +7,34 @@ export function renderString(input: string, variables: Record<string, string>): 
   )
 }
 
+export class UnresolvedTokenError extends Error {
+  constructor(
+    public readonly file: string,
+    public readonly tokens: string[],
+  ) {
+    super(`Unresolved template token(s) ${tokens.map((t) => `{{${t}}}`).join(', ')} in ${file}`)
+    this.name = 'UnresolvedTokenError'
+  }
+}
+
+/**
+ * Post-render scan: any remaining {{token}} means a template references a
+ * variable that doesn't exist (a typo becomes a leak into generated code).
+ * `allowed` lists tokens that are intentionally left unrendered in a given
+ * file kind (currently none — the option exists for future escaping needs).
+ */
+export function assertNoUnresolvedTokens(
+  rendered: string,
+  file: string,
+  allowed: string[] = [],
+): void {
+  const found = [...rendered.matchAll(TOKEN_RE)]
+    .map((m) => m[1])
+    .filter((t) => !allowed.includes(t))
+  const unique = [...new Set(found)]
+  if (unique.length > 0) throw new UnresolvedTokenError(file, unique)
+}
+
 const DOTFILE_RENAME_RE = /^_/ // _gitignore -> .gitignore
 
 /**

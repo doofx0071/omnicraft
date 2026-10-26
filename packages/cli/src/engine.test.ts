@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
@@ -213,6 +213,35 @@ describe('frontend-only', () => {
   })
 })
 
+describe('safety: protected paths and collisions', () => {
+  it('never overwrites an existing user .env', () => {
+    const dir = makeTempDir('protected-env')
+    mkdirSync(join(dir, 'server'), { recursive: true })
+    writeFileSync(join(dir, 'server', '.env'), 'DATABASE_URL=postgres://user-secret@localhost/keepme')
+    scaffoldInto(dir, makeAnswers())
+    const env = readFileSync(join(dir, 'server', '.env'), 'utf8')
+    expect(env).toBe('DATABASE_URL=postgres://user-secret@localhost/keepme')
+    // while .env.example still ships
+    expect(existsSync(join(dir, 'server', '.env.example'))).toBe(true)
+  })
+
+  it('never overwrites an existing .git directory', () => {
+    const dir = makeTempDir('protected-git')
+    mkdirSync(join(dir, '.git'), { recursive: true })
+    writeFileSync(join(dir, '.git', 'HEAD'), 'ref: refs/heads/main')
+    scaffoldInto(dir, makeAnswers({ fullStack: false }))
+    expect(readFileSync(join(dir, '.git', 'HEAD'), 'utf8')).toBe('ref: refs/heads/main')
+    expect(existsSync(join(dir, 'src', 'App.tsx'))).toBe(true)
+  })
+
+  it('renders no unresolved tokens in env files', () => {
+    const dir = makeTempDir('env-tokens')
+    scaffoldInto(dir, makeAnswers({ orm: 'prisma' }))
+    const env = readFileSync(join(dir, 'server', '.env'), 'utf8')
+    expect(env).toContain('5432/demo_app')
+    expect(env).not.toContain('{{')
+  })
+})
 describe('layer composition edge cases', () => {
   it('throws MissingLayerError for unknown layers', async () => {
     const dir = makeTempDir('missing-layer')

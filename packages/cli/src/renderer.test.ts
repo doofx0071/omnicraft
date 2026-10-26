@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isBinaryFile, renderString, restoreDotfileName } from './scaffold/renderer.js'
+import { UnresolvedTokenError, assertNoUnresolvedTokens, isBinaryFile, renderString, restoreDotfileName } from './scaffold/renderer.js'
 
 describe('renderString', () => {
   const vars = { projectName: 'my-app', serverPort: '3000' }
@@ -30,6 +30,26 @@ describe('restoreDotfileName', () => {
   })
 })
 
+describe('assertNoUnresolvedTokens', () => {
+  it('passes when every token resolved', () => {
+    expect(() => assertNoUnresolvedTokens('name: my-app', 'package.json')).not.toThrow()
+  })
+
+  it('throws with file and token names on leftovers', () => {
+    try {
+      assertNoUnresolvedTokens('title: {{projectNam}} rest {{unknownTok}}', 'src/file.ts')
+      expect.unreachable('should have thrown')
+    } catch (err) {
+      expect(err).toBeInstanceOf(UnresolvedTokenError)
+      expect((err as UnresolvedTokenError).tokens).toEqual(['projectNam', 'unknownTok'])
+      expect((err as UnresolvedTokenError).file).toBe('src/file.ts')
+    }
+  })
+
+  it('allows whitelisted tokens', () => {
+    expect(() => assertNoUnresolvedTokens('keep {{dbConfig}}', 'x', ['dbConfig'])).not.toThrow()
+  })
+})
 describe('isBinaryFile', () => {
   it('detects common binary extensions', () => {
     expect(isBinaryFile('logo.png')).toBe(true)

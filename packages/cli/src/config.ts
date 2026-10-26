@@ -9,14 +9,17 @@ export const CLI_NAME = 'omnicraft'
 export const CLI_VERSION = pkg.version
 
 /**
- * Where `--latest` pulls templates from. Update `owner` once the repo is
- * pushed to GitHub — remote templates use the same `packages/cli/templates`
- * directory that ships embedded in the package.
+ * Where `--latest` pulls templates from. The ref is the **release tag**
+ * matching the CLI version (`v` + version), not a mutable branch — two runs
+ * of the same CLI version must produce identical projects. Templates are
+ * tagged in lockstep with releases (see CONTRIBUTING.md).
  */
 export const TEMPLATE_REPO = {
   owner: 'doofx0071',
   repo: 'omnicraft',
   branch: 'main',
+  /** Resolved at runtime: the release tag matching the CLI version. */
+  ref: `v${CLI_VERSION}`,
   subdir: 'packages/cli/templates',
 } as const
 

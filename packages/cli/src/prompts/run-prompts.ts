@@ -14,7 +14,7 @@ import {
   type Frontend,
   type ProjectType,
 } from '../types.js'
-import { checkRawProjectName, isNonEmptyDirectory, resolveTargetDir } from '../validators.js'
+import { checkRawProjectName, findCollisions, isNonEmptyDirectory, resolveTargetDir } from '../validators.js'
 import { CLIENT_PORT, SERVER_PORT } from '../config.js'
 import { AVAILABLE, parseEnumChoice } from '../prefill.js'
 import type { ParsedArgs } from '../args.js'
@@ -115,13 +115,25 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
         `Directory "${projectName}" exists and is not empty — refusing to scaffold over it in non-interactive mode.`,
       )
     }
-    const proceed = unwrap<boolean>(
-      await p.confirm({
-        message: `Directory "${projectName}" already exists and is not empty. Scaffold into it anyway?`,
-        initialValue: false,
-      }),
-    )
-    if (!proceed) throw new CancelledError('Nothing was created.')
+    // Show exactly what would collide so "continue" is an informed choice.
+    const layerDirs = ['.', 'client', 'server']
+    const { collisions, protectedFiles } = findCollisions(targetDir, layerDirs)
+    if (protectedFiles.length > 0) {
+      p.log.warn(
+        `These files are user-owned and will NOT be touched: ${protectedFiles.join(', ')}`,
+      )
+    }
+    if (collisions.length > 0) {
+      const preview = collisions.slice(0, 10).join(', ')
+      const more = collisions.length > 10 ? ` … and ${collisions.length - 10} more` : ''
+      const proceed = unwrap<boolean>(
+        await p.confirm({
+          message: `Directory "${projectName}" is not empty — ${collisions.length} file(s) would be overwritten (${preview}${more}). Continue?`,
+          initialValue: false,
+        }),
+      )
+      if (!proceed) throw new CancelledError('Nothing was created.')
+    }
   }
 
   // ── What for? ───────────────────────────────────────────────────────────
