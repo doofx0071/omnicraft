@@ -24,9 +24,9 @@ Docs update **in the same PR** as the code they describe:
 
 1. **Capability change** (new/changed runtime, framework, database, ORM, extra) →
    [support matrix](../templates/stack-support-matrix.md) + README choice scope/flow diagram + the
-   relevant flag registry, prompt choices, module registry, and composition rules. `AVAILABLE` is
-   currently a dimension-level registry, not the complete capability source. Status moves forward only
-   with evidence (see the matrix's rules).
+   relevant flag registry, prompt choices, `src/compatibility.ts`, module guard, and composition rules.
+   `AVAILABLE` remains the dimension-level choice list. Status moves forward only with evidence (see
+   the matrix's rules).
 2. **CLI surface change** (flag, prompt, default) → README "Options" **and** `HELP_TEXT` in `src/args.ts`
    together — they must be identical.
 3. **Engine/composition change** → [template engine](../architecture/template-engine.md) +

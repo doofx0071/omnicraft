@@ -35,6 +35,8 @@ Open <a href="docs/demo.html">docs/demo.html</a> in a browser — the same flow 
 └  Scaffolds → git init → installs deps → prints next steps
 ```
 
+Next.js skips the separate backend, ORM, and extras prompts. Its `create-next-app` base always includes Tailwind and ESLint.
+
 ## What you get (full-stack React)
 
 This example is the default React + Vite client with a Node.js Express + Drizzle API and PostgreSQL. Other frontends, runtimes, ORMs, and databases have different verification levels; see the matrix before treating the choices as interchangeable.
@@ -70,12 +72,12 @@ The prompt and flags expose these choices. A choice in one row does not imply ev
 | --- | --- | --- |
 | Platform | Web, Mobile (Expo), Desktop (Tauri) | Mobile and desktop projects pair with a separately run backend. Native build and device verification limits are in the matrix. |
 | Frontend | React + Vite, Next.js, Vue + Vite, Svelte + Vite | Next.js is integrated full-stack; the Vite clients use a separate API when full-stack is selected. |
-| Language | TypeScript, JavaScript | JavaScript changes only the React/Vite client; native apps remain TypeScript. A selected backend keeps its runtime language. |
+| Language | TypeScript, JavaScript | JavaScript is selectable only for the web React/Vite client; Vue, Svelte, Next.js, Expo, and Tauri use TypeScript. A selected backend keeps its runtime language. |
 | Backend | Node: Express, Fastify, Hono · Python: FastAPI · PHP: Laravel | Framework, ORM, and database compatibility is combination-specific. |
-| Data access | Separate Node API: Drizzle, Prisma, or raw SQL · Next.js route handlers: raw SQL · Python: SQLAlchemy + Alembic · PHP: Eloquent | Prisma is PostgreSQL-only. Raw SQL is not an ORM. |
+| Data access | Separate Node API: Drizzle, Prisma, or raw SQL · Next.js route handlers: raw SQL · Python: SQLAlchemy + Alembic · PHP: Eloquent | Prisma is PostgreSQL-only and unavailable for Hono. Raw SQL is not an ORM. |
 | Database | PostgreSQL, SQLite, MySQL (availability varies by runtime) | The matrix lists which combinations have scaffold or runtime evidence. |
-| Extras | Tailwind CSS, ESLint + Prettier, shadcn/ui | shadcn/ui is React + Vite only and implies Tailwind. |
-| `omnicraft add` modules | `docker`, `testing`, Better Auth email/password (`auth`) | Hosted end-to-end auth evidence covers Express + Drizzle + SQLite, PostgreSQL, and MySQL; other frameworks are not in the verified auth scope. |
+| Extras | Tailwind CSS, ESLint + Prettier, shadcn/ui | Next.js always includes Tailwind + ESLint from create-next-app; shadcn/ui is web React/Vite-only and implies Tailwind. |
+| `omnicraft add` modules | `docker`, `testing`, Better Auth email/password (`auth`) | Auth accepts Node + Express + Drizzle in a separate API project; hosted end-to-end evidence covers SQLite, PostgreSQL, and MySQL. |
 
 ## Options
 
@@ -84,21 +86,23 @@ npm create omnicraft@latest [project-name] [options]
 
   --yes                Accept all defaults, skip every prompt (CI-friendly;
                        also allows running without a TTY)
-  --lang <name>        Skip the language prompt (typescript, javascript; JS client template is React/Vite only)
+  --lang <name>        Skip the language prompt (typescript, javascript; JS is web React/Vite only)
   --platform <name>    Skip the "What are you building?" prompt (web, mobile, desktop)
-  --full-stack         Force the full-stack flow (default: yes)
-  --no-full-stack      Frontend only
+  --full-stack         Force the full-stack flow (default: yes; --runtime/--backend/--db/--orm imply it)
+  --no-full-stack      Frontend only (cannot be combined with backend/database flags)
   --runtime <name>     Skip the runtime prompt (node, python, php)
-  --frontend <name>    Skip the frontend prompt (react, nextjs, vue, svelte)
+  --frontend <name>    Skip the frontend prompt (react, nextjs, vue, svelte; Next.js is integrated)
   --backend <name>     Skip the framework prompt (node: express, fastify, hono ·
                        python: fastapi · php: laravel)
   --db <name>          Skip the database prompt (node: postgres, sqlite, mysql ·
                        python: postgres, sqlite · php: postgres, sqlite, mysql)
-  --orm <name>         Skip ORM selection (drizzle, prisma, none; Prisma is PostgreSQL-only)
-                       Applies to separate Node APIs; Next.js always generates raw SQL
+  --orm <name>         Skip ORM selection (drizzle, prisma, none; Prisma is PostgreSQL-only and
+                       unavailable for Hono). Separate Node APIs only; Next.js uses raw SQL and
+                       rejects --runtime, --backend, --orm, and --no-full-stack
   --extras <list>      Comma-separated extras (tailwind, eslint, shadcn;
-                       default: tailwind,eslint). shadcn is React/Vite-only and
-                       implies tailwind. Use --extras none to skip all.
+                       default: tailwind,eslint). shadcn is web React/Vite-only and
+                       implies tailwind. Next.js always includes Tailwind + ESLint;
+                       if set with Next.js, use --extras tailwind,eslint. Use none on other stacks to skip all.
   --latest             Pull templates from this CLI version's release tag
                        instead of the embedded templates
   --skip-install       Generate the project without installing dependencies

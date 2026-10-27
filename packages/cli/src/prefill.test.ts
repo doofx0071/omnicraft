@@ -57,6 +57,27 @@ describe('validateStackFlags', () => {
     expect(js.language).toBe('javascript')
   })
 
+  it.each([
+    [['--frontend', 'vue', '--lang', 'javascript'], /JavaScript is only available/],
+    [['--frontend', 'nextjs', '--lang', 'javascript'], /JavaScript is only available/],
+    [['--platform', 'mobile', '--lang', 'javascript'], /Native Expo and Tauri scaffolds use TypeScript/],
+    [['--frontend', 'nextjs', '--orm', 'drizzle'], /Next\.js is integrated full-stack/],
+    [['--frontend', 'nextjs', '--runtime', 'node'], /Next\.js is integrated full-stack/],
+    [['--frontend', 'nextjs', '--backend', 'express'], /Next\.js is integrated full-stack/],
+    [['--frontend', 'nextjs', '--no-full-stack'], /Next\.js is integrated full-stack/],
+    [['--frontend', 'nextjs', '--extras', 'none'], /Next\.js always includes Tailwind and ESLint/],
+    [['--frontend', 'nextjs', '--extras', 'tailwind'], /Next\.js always includes Tailwind and ESLint/],
+    [['--backend', 'hono', '--orm', 'prisma'], /Prisma is not available for Hono/],
+    [['--frontend', 'vue', '--extras', 'shadcn'], /shadcn\/ui is only available/],
+  ])('rejects incompatible flags: %j', (argv, message) => {
+    expect(() => validateStackFlags(parseArgs(argv))).toThrow(message)
+  })
+
+  it('accepts the native TypeScript selection', () => {
+    expect(() => validateStackFlags(parseArgs(['--platform', 'mobile', '--lang', 'typescript']))).not.toThrow()
+    expect(() => validateStackFlags(parseArgs(['--platform', 'mobile', '--extras', 'none']))).not.toThrow()
+  })
+
   it('validates the runtime itself', () => {
     expect(() => validateStackFlags(parseArgs(['--runtime', 'ruby']))).toThrow(
       /Available: node, python, php/,
@@ -124,6 +145,20 @@ describe('resolveAnswers', () => {
     expect(php.backendFramework).toBe('laravel')
     expect(php.orm).toBeNull()
     expect(php.database).toBe('postgres')
+  })
+
+  it('resolves Next.js as integrated raw SQL without a separate backend', () => {
+    expect(() => validateStackFlags(parseArgs(['--frontend', 'nextjs', '--extras', 'tailwind,eslint']))).not.toThrow()
+    const next = resolveAnswers(
+      parseArgs(['--yes', '--frontend', 'nextjs', '--db', 'sqlite']),
+      base.projectName,
+      base.targetDir,
+    )
+    expect(next.architecture).toEqual({ kind: 'integrated-fullstack', framework: 'nextjs' })
+    expect(next.backendRuntime).toBeNull()
+    expect(next.backendFramework).toBeNull()
+    expect(next.orm).toBe('none')
+    expect(next.database).toBe('sqlite')
   })
 
   it('frontend-only clears backend fields', () => {

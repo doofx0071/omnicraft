@@ -101,8 +101,8 @@ use hosted runners only.
   Level 3 evidence.
 - **Selectable — unverified** means the registry and layers expose the choice but no exact fixture/smoke
   covers it.
-- **Invalid registry entry** means current flags/prompts accept a combination with a known missing
-  adapter or compatibility guard; it must not be presented as supported.
+- **Rejected — unsupported combination** means preflight rejects the combination, or the prompt omits
+  it, because no compatible adapter or module path exists.
 
 Some existing matrix rows cite manual verification performed before this documentation pass. The matrix
 labels those as repository-recorded history; they were not rerun as part of the 2026-10-27 source test

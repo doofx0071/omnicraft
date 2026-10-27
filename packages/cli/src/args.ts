@@ -27,21 +27,23 @@ available web, backend, or native-platform choices.
 Options:
   --yes                Accept all defaults, skip every prompt (CI-friendly;
                        also allows running without a TTY)
-  --lang <name>        Skip the language prompt (typescript, javascript; JS client template is React/Vite only)
+  --lang <name>        Skip the language prompt (typescript, javascript; JS is web React/Vite only)
   --platform <name>    Skip the "What are you building?" prompt (web, mobile, desktop)
-  --full-stack         Force the full-stack flow (default: yes)
-  --no-full-stack      Frontend only
+  --full-stack         Force the full-stack flow (default: yes; --runtime/--backend/--db/--orm imply it)
+  --no-full-stack      Frontend only (cannot be combined with backend/database flags)
   --runtime <name>     Skip the runtime prompt (node, python, php)
-  --frontend <name>    Skip the frontend prompt (react, nextjs, vue, svelte)
+  --frontend <name>    Skip the frontend prompt (react, nextjs, vue, svelte; Next.js is integrated)
   --backend <name>     Skip the framework prompt (node: express, fastify, hono ·
                        python: fastapi · php: laravel)
   --db <name>          Skip the database prompt (node: postgres, sqlite, mysql ·
                        python: postgres, sqlite · php: postgres, sqlite, mysql)
-  --orm <name>         Skip ORM selection (drizzle, prisma, none; Prisma is PostgreSQL-only)
-                       Applies to separate Node APIs; Next.js always generates raw SQL
+  --orm <name>         Skip ORM selection (drizzle, prisma, none; Prisma is PostgreSQL-only and
+                       unavailable for Hono). Separate Node APIs only; Next.js uses raw SQL and
+                       rejects --runtime, --backend, --orm, and --no-full-stack
   --extras <list>      Comma-separated extras (tailwind, eslint, shadcn;
-                       default: tailwind,eslint). shadcn is React/Vite-only and
-                       implies tailwind. Use --extras none to skip all.
+                       default: tailwind,eslint). shadcn is web React/Vite-only and
+                       implies tailwind. Next.js always includes Tailwind + ESLint;
+                       if set with Next.js, use --extras tailwind,eslint. Use none on other stacks to skip all.
   --latest             Pull templates from this CLI version's release tag
                        instead of the embedded templates
   --skip-install       Generate the project without installing dependencies

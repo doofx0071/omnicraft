@@ -80,7 +80,7 @@ omnicraft/
 | ------------------------------ | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
 | CLI source module              | `packages/cli/src/` (grouped: `prompts/`, `scaffold/`) | Co-locate its test as `<name>.test.ts`.                                                              |
 | New prompt                     | `src/prompts/run-prompts.ts`                           | Split into `src/prompts/<topic>.ts` if the flow grows; keep `run-prompts.ts` as the orchestrator.    |
-| Capability/availability change | `src/prefill.ts` (`AVAILABLE`) and prompt/validation code | `AVAILABLE` is currently dimension-level; verify compatibility and test prompt/flag behavior.     |
+| Capability/availability change | `src/prefill.ts` (`AVAILABLE`), `src/compatibility.ts`, and prompt/validation/composition code | Keep cross-option constraints shared; verify actual template paths and test prompt, flag, and composition behavior. |
 | Framework base template        | `templates/server/<runtime>/<framework>/base/`         | Entry, env validation, health route, tsconfig, package.json, .env.example.                           |
 | Node ORM wiring                | `templates/server/node/<framework>/<orm>/`             | Route registrations + ORM-specific users routes.                                                     |
 | Node db adapter                | `templates/db/<orm>/<database>/`                       | package.json (deps+scripts), db config, client, schema, seed, .env.example.                          |

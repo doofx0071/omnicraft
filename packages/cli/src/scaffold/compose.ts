@@ -1,5 +1,6 @@
 import type { Answers } from '../types.js'
 import type { Layer } from './engine.js'
+import { validateAnswerCompatibility } from '../compatibility.js'
 
 /**
  * Maps the user's answers to an ordered list of template layers. Templates
@@ -15,6 +16,7 @@ import type { Layer } from './engine.js'
  * (docker-compose only ships for containerized databases).
  */
 export function composeLayers(answers: Answers): Layer[] {
+  validateAnswerCompatibility(answers)
   const layers: Layer[] = []
   const integrated = answers.architecture.kind === 'integrated-fullstack'
   const native = answers.architecture.kind === 'native-app'
