@@ -82,31 +82,23 @@ This section records the commands and outcomes actually run for this change.
 
 - `npm ci --no-audit --no-fund` — passed; installed 263 packages. npm printed a non-blocking
   deprecation warning for transitive `glob@10.5.0`.
-- `npm test` — passed, 77 tests across 9 files.
-- `npx tsc --noEmit` — passed.
-- `npx tsup` — passed.
-- `npx tsx scripts/smoke-e2e.ts <temp-dir>` — passed; scaffolded the existing matrix, frontend-only,
-  Vue/Svelte variants, and the Next.js overlay.
-- `npm run test:integration:db` — passed for SQLite, PostgreSQL, and MySQL. Each ran migrations,
-  generated client/API typechecks, CRUD, Better Auth, restart/session checks, password-hash verification,
-  and cleanup.
-- `npm run test:integration:php` — passed for Laravel 12 with PostgreSQL and MySQL. Both ran Composer
-  platform checks, migrations, database-driver assertions, API feature tests, and cleanup.
-- `git diff --check` — passed. No Docker test containers remained after the integration runs.
+- From `packages/cli/`, `npx vitest run` — passed, 82 tests across 10 files.
+- From `packages/cli/`, `npx tsc --noEmit` and `npx tsup` — passed.
+- From `packages/cli/`, `npx tsx scripts/smoke-e2e.ts <temp-dir>` — passed; scaffolded 17 projects,
+  including the existing matrix, frontend-only, Vue/Svelte variants, and the Next.js overlay.
+- `npm run test:integration:db --workspace=create-omnicraft` — passed for SQLite, PostgreSQL, and
+  MySQL. Each ran migrations, generated client/API typechecks, CRUD, Better Auth, restart/session
+  checks, password-hash verification, and cleanup.
+- `npm run test:integration:php --workspace=create-omnicraft` — passed for Laravel 12 with PostgreSQL
+  and MySQL. Both ran Composer platform checks, migrations, database-driver assertions, API feature
+  tests, and cleanup.
+- `docker ps` — no test containers remained after the integration runs.
 
 The first PHP image build attempted to compile `pdo_sqlite`, which the selected PHP image already
 loads; the Dockerfile now adds only missing extensions. The final PHP runs passed with that image.
 
-## Shared documentation follow-up
+## Status boundary
 
-The shared [testing strategy](testing-strategy.md) was left unchanged as requested. Before merging,
-update its opening count to the verified local fast-suite result (77 tests / 9 files), add the two
-hosted-Linux database jobs to the CI level, and replace the statement that CI does not boot servers or
-hit databases. The new jobs boot generated APIs and exercise real databases. Do not change
-support-matrix statuses based on the presence of this test scaffolding alone.
-
-The local Level-3 runs now verify Express + Drizzle with SQLite, PostgreSQL, and MySQL, plus Laravel
-with PostgreSQL and MySQL. After the new hosted CI jobs pass, update the affected evidence in
-`stack-support-matrix.md`; promote the currently scaffold-verified MySQL/Laravel rows only if the full
-CI and per-combination evidence meet the matrix's criteria. The `CONTRIBUTING.md` checklist still says
-62 tests and should be refreshed to 77 tests / 9 files as part of that shared-doc update.
+These local integration results update the verification record for the exact combinations exercised.
+They do not change support-matrix statuses. The hosted Linux integration jobs must pass for the merged
+revision before any status promotion; their configured presence or a local pass is not that CI evidence.

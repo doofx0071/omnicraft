@@ -2,8 +2,11 @@
 
 How OmniCraft verifies itself. Commands run from `packages/cli/` unless noted.
 
-Current local baseline checked on 2026-10-27: `npx vitest run` passed **80 tests in 9 files**. Typecheck
-and build also passed. Those source checks do not prove that every generated project installs or runs.
+Current merged baseline checked on 2026-10-27: `npx vitest run` passed **82 tests in 10 files**;
+typecheck, build, and scaffold smoke also passed. The database suite passed for Express + Drizzle with
+SQLite, PostgreSQL, and MySQL, and the Laravel suite passed with PostgreSQL and MySQL. These results
+apply only to the exact generated combinations exercised; source checks and smoke scaffolding do not
+prove that every generated project installs or runs.
 
 ## Test levels
 
@@ -21,6 +24,7 @@ The current suite covers:
 | `src/update-check.test.ts` | Version comparison, mocked registry fetch, offline behavior, and cache. |
 | `src/prompts/run-prompts.test.ts` | Scripted prompt flow, frontend-only branch, unavailable-option retry, cancellation, and invalid names. |
 | `src/next-steps.test.ts` | Integrated Next.js commands/endpoints and container startup for PostgreSQL. |
+| `src/exec.test.ts` | Fixed-command output, timeout handling, and stopping a child process. |
 | `src/engine.test.ts` | Selected generated files, layer overrides, manifests, env files, token scans, protected-path examples, and selected engine combinations. |
 
 The engine fixtures cover Express + Drizzle with PostgreSQL/SQLite/MySQL, Express + Prisma + PostgreSQL,
@@ -75,9 +79,17 @@ The current workflow:
 3. Builds the CLI tarball, installs it into a clean workspace, runs the packaged binary, and checks
    expected files in the default scaffold. The generated project's dependencies are not installed in
    this package job.
+4. Runs the hosted Ubuntu `database-integration` job against SQLite, PostgreSQL, and MySQL. For each
+   generated Express + Drizzle project it installs dependencies, typechecks client and API, applies
+   migrations, boots the API, and exercises CRUD plus Better Auth.
+5. Runs the hosted Ubuntu `php-laravel-integration` job against PostgreSQL and MySQL. It creates a
+   Laravel 12 project, checks Composer platform requirements, migrates, and runs database/API feature
+   tests.
 
-CI does not boot generated servers or query databases. The self-hosted Windows runner is restricted to
-pushes and same-repository pull requests; fork pull requests use hosted runners only.
+The two hosted Linux integration jobs add real database and API checks for those exact combinations;
+they do not verify other framework/database combinations. Keep support-matrix statuses unchanged until
+the required hosted checks pass for the merged revision. The self-hosted Windows runner is restricted
+to pushes and same-repository pull requests; fork pull requests use hosted runners only.
 
 ## Support statuses
 

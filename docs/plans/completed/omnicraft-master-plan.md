@@ -9,9 +9,10 @@
 > metadata, broader generated-project runtime/database coverage, JavaScript scope enforcement, module
 > regression tests, and safe staging/rollback; these are follow-ups, not completed items in this plan.
 
-**Prepared:** 26 October 2026  
-**Repository reviewed:** https://github.com/doofx0071/omnicraft  
-**Baseline:** public `main` branch snapshot, CLI package `create-omnicraft@0.3.0`  
+- **Prepared:** 26 October 2026
+- **Repository reviewed:** https://github.com/doofx0071/omnicraft
+- **Baseline:** public `main` branch snapshot, CLI package `create-omnicraft@0.3.0`
+
 **Purpose:** A single master plan combining repository hardening, template-engine architecture, stack expansion, development standards, Markdown documentation, coding-agent instructions, testing, and release governance. It defines both what OmniCraft should improve and how future changes must be implemented consistently.
 
 > This master plan merges two related workstreams: repository/implementation improvements and the development-documentation/agent-governance system. It is based on the public repository snapshot, not a claim that proposed changes have already been implemented. Re-check branch, package, file paths, and issue status before beginning each phase.

@@ -16,12 +16,13 @@ unions, or the presence of a template directory do not prove that every cross-pr
   adapter or compatibility guard. Do not select or describe it as supported.
 - **Planned** — not selectable and not implemented.
 
-The local verification run for this reconciliation was on Windows on 2026-10-27: 80 unit tests passed,
-typecheck and build passed, and `scripts/smoke-e2e.ts` generated 17 projects. That smoke run did not
-install or boot those generated applications. The CI workflow runs the same smoke script; its generated
-project install/typecheck step covers Express + Drizzle + PostgreSQL only. CI does not boot generated
-servers or exercise database operations. Previous manual results below are repository-recorded evidence,
-not results reproduced during this documentation pass.
+The merged local verification run on Windows on 2026-10-27 passed 82 unit tests, typecheck, build, and
+the 17-project smoke. Separate local integration runs installed, typechecked, migrated, booted, and
+exercised Express + Drizzle with SQLite, PostgreSQL, and MySQL; Laravel 12 passed migrations and API
+feature tests against PostgreSQL and MySQL. The workflow now defines hosted Linux jobs for those exact
+integration paths, but hosted checks have not run for this local merge. No support status was promoted;
+wait for the required hosted CI evidence before changing the rows below. Previous manual results remain
+repository-recorded history, not results reproduced during this local run.
 
 ## Frontends and platforms
 
@@ -54,8 +55,8 @@ product is implied.
 | Framework | ORM/data access | Database | Status | Evidence |
 | --- | --- | --- | --- | --- |
 | Express | Drizzle | PostgreSQL | **Supported** | CI install + typecheck; prior matrix records local boot, health, CRUD, and duplicate-email 409. Runtime result not rerun in this pass. |
-| Express | Drizzle | SQLite | **Scaffold-verified** | Engine fixture and smoke; prior matrix records local boot, full CRUD, and 409, but does not record generated install/typecheck evidence. Runtime result not rerun in this pass. |
-| Express | Drizzle | MySQL | **Scaffold-verified** | Engine fixture and smoke; no generated install/runtime result recorded. |
+| Express | Drizzle | SQLite | **Scaffold-verified** | Engine fixture and smoke; local 2026-10-27 integration run passed generated install/typechecks, migrations, boot, CRUD, and Better Auth. Hosted result for this merge is pending; status unchanged. |
+| Express | Drizzle | MySQL | **Scaffold-verified** | Engine fixture and smoke; local 2026-10-27 integration run passed generated install/typechecks, migrations, boot, CRUD, and Better Auth. Hosted result for this merge is pending; status unchanged. |
 | Express | Prisma | PostgreSQL | **Scaffold-verified** | Engine fixture and smoke. Prior matrix records boot/error handling, not a successful database CRUD operation; current CI does not install this generated project. |
 | Express | Raw SQL (`none`) | SQLite | **Scaffold-verified** | Changelog records migration, seed, boot, CRUD, duplicate 409, and missing-record 404, but does not record generated install/typecheck evidence. Runtime result not rerun in this pass. |
 | Express | Raw SQL (`none`) | PostgreSQL | **Scaffold-verified** | Current smoke run generated it; no PostgreSQL runtime result recorded. |
@@ -81,8 +82,8 @@ but does not constrain Prisma by framework.
 | FastAPI | SQLAlchemy 2 async + Alembic | SQLite | **Supported** | Prior matrix records `uv sync`, migration, seed, boot, and full CRUD. Runtime result not rerun in this pass. |
 | FastAPI | SQLAlchemy 2 async + Alembic | PostgreSQL | **Scaffold-verified** | Engine fixture and smoke; no generated install/migration/runtime result recorded. |
 | Laravel 12 | Eloquent | SQLite | **Supported** | Prior matrix records Composer scaffold, migrate, seed, serve, and CRUD. Runtime result not rerun in this pass. |
-| Laravel 12 | Eloquent | PostgreSQL | **Selectable — unverified** | Template layers exist, but current engine tests and smoke script cover Laravel SQLite only. |
-| Laravel 12 | Eloquent | MySQL | **Selectable — unverified** | Template layers exist, but current engine tests and smoke script cover Laravel SQLite only. |
+| Laravel 12 | Eloquent | PostgreSQL | **Selectable — unverified** | Local 2026-10-27 generated-project migrations and API feature tests passed. The new hosted job must pass before the matrix status changes. |
+| Laravel 12 | Eloquent | MySQL | **Selectable — unverified** | Local 2026-10-27 generated-project migrations and API feature tests passed. The new hosted job must pass before the matrix status changes. |
 
 ## Language variants, modules, and extras
 
