@@ -1,109 +1,127 @@
 # Stack support matrix
 
-Every combination OmniCraft can generate, with its honest verification status. Updated in the same PR as
-capability changes (see [documentation standards](../development/documentation-standards.md)).
+This matrix records exact combinations and the evidence available for each one. Prompt options, type
+unions, or the presence of a template directory do not prove that every cross-product works.
 
-**Statuses** (defined in [docs/index.md](../index.md#status-vocabulary)):
+## Statuses
 
-- **Supported** — template + CI-verified scaffold/install/typecheck + boot and at least one real DB
-  operation verified per the [testing strategy](../development/testing-strategy.md) Level 3.
-- **Scaffold-verified** — generates + CI smoke green; install/build or functional check not yet done.
-- **Planned** — offered as "(soon)" in prompts; no template. Tracked in [ROADMAP.md](../../ROADMAP.md).
+- **Supported** — the repository records a generated-project install/setup, typecheck or equivalent,
+  boot, and successful real operation for the exact combination. Historical manual results are labeled
+  as such; this documentation pass did not rerun those application-level checks.
+- **Scaffold-verified** — an engine test or the smoke script generated the exact combination. This does
+  not prove dependencies install, the app boots, or database operations work.
+- **Selectable — unverified** — the CLI registry and template layers expose the combination, but no
+  exact engine fixture or smoke entry verifies it.
+- **Invalid registry entry** — the current prompt/flags accept a combination that is missing a required
+  adapter or compatibility guard. Do not select or describe it as supported.
+- **Planned** — not selectable and not implemented.
 
-Last reconciled: after v0.3.0 (`main`, `create-omnicraft@0.3.0`).
+The merged local verification run on Windows on 2026-10-27 passed 82 unit tests, typecheck, build, and
+the 17-project smoke. Separate local integration runs installed, typechecked, migrated, booted, and
+exercised Express + Drizzle with SQLite, PostgreSQL, and MySQL; Laravel 12 passed migrations and API
+feature tests against PostgreSQL and MySQL. In [PR #28 hosted run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380)
+on head `88f7d42`, all ten CI jobs passed, including the database and Laravel integration jobs, package
+verification, the Ubuntu/macOS/Windows matrix, and the self-hosted job. Only combinations covered by
+the passing integration jobs are promoted below. Previous manual results remain repository-recorded
+history, not results reproduced during this local run.
 
-## Platforms
+## Frontends and platforms
 
-| Platform                               | Status            | Evidence                                                                                                                                     |
-| -------------------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mobile — Expo SDK 58 (TS, Expo Router) | **Supported**     | verified locally: create-expo-app pinned scaffold, npm install, tsc pass; device/backend pairing documented (OMNICRAFT.md)                   |
-| Desktop — Tauri 2 + React UI           | Scaffold-verified | scaffold + frontend install/build verified locally; full desktop build requires the Rust toolchain (not present on the verification machine) |
+| Adapter or exact path | Status | Evidence and limits |
+| --- | --- | --- |
+| React + Vite + TypeScript, frontend-only | **Scaffold-verified** | The prior matrix records local typecheck/build; the current smoke and package job scaffold it. No browser boot/operation result is recorded. |
+| React + Vite + TypeScript + Express + Drizzle + PostgreSQL | **Supported** | See the exact backend row below: current CI installs/typechecks this generated project, and the prior matrix records local boot/health/CRUD/409 verification. |
+| Vue + Vite + TypeScript + Express + Drizzle + SQLite | **Scaffold-verified** | Current smoke run generated it. The changelog records Vue build/CRUD verification but does not identify the database combination, so that result is not attributed to this exact row. |
+| Svelte + Vite + TypeScript + Express + Drizzle + SQLite | **Scaffold-verified** | Current smoke run generated it. The changelog records Svelte build/CRUD verification but does not identify the database combination, so that result is not attributed to this exact row. |
+| Next.js integrated full-stack + raw SQL + SQLite | **Scaffold-verified** | Engine test, current smoke run, and a built-CLI `--yes --skip-install` run generated the database adapter and root files. No dependency install or app boot was run. Earlier Next.js CRUD evidence does not identify a database dialect. |
+| Next.js integrated full-stack + raw SQL + PostgreSQL | **Scaffold-verified** | Engine fixture composes the adapter and root files; no database-specific runtime result is recorded. |
+| Next.js integrated full-stack + MySQL | **Selectable — unverified** | Template directories exist, but no engine fixture or smoke entry covers this dialect. |
+| React + Vite JavaScript, frontend-only | **Scaffold-verified** | The previous matrix records a frontend-only JavaScript scaffold. The current unit suite and smoke script do not cover this path. |
+| React + Vite JavaScript + separate API | **Selectable — unverified** | The JavaScript client layer composes with the TypeScript server, but no exact test or smoke entry verifies it. |
+| Expo SDK 58 + TypeScript | **Scaffold-verified** | The prior matrix/changelog record scaffold, install, and TypeScript checks. No simulator/device build or launch is recorded. |
+| Tauri 2 + React UI | **Scaffold-verified** | The prior matrix/changelog record scaffold and frontend install/build. The native desktop build was not run because it requires the Rust toolchain. |
 
-## Architecture: separate frontend + API (web)
+The smoke script covers React frontend-only, Vue and Svelte with Express + Drizzle + SQLite, and Next.js
+with SQLite. It does not cover Expo or Tauri. Its Next.js step invokes `create-next-app`; if that command
+fails, the script logs the failure and skips the overlay without failing the whole smoke run.
 
-**Frontend (all combos):** React 19 + Vite + TypeScript — _Supported_ (every full-stack e2e run also
-exercises the client; frontend-only builds via `npm run build` in CI and locally).
+## Separate frontend + API backend combinations
 
-### Node.js backends — framework × ORM × database
+The rows below describe the backend/data-access portion with the React + Vite TypeScript client. Vue and
+Svelte are only scaffolded in the exact SQLite pairings shown above. No frontend/backend Cartesian
+product is implied.
 
-| Framework | ORM            | Database   | Status            | Evidence                                                                                                    |
-| --------- | -------------- | ---------- | ----------------- | ----------------------------------------------------------------------------------------------------------- |
-| Express   | Drizzle        | PostgreSQL | **Supported**     | CI e2e (windows): install + typecheck; boot + health + CRUD + 409 verified locally; docker compose verified |
-| Express   | Drizzle        | SQLite     | **Supported**     | CI smoke; boot + full CRUD + 409 verified locally, zero-docker                                              |
-| Express   | Drizzle        | MySQL      | Scaffold-verified | CI smoke; install/build/functional not yet run                                                              |
-| Express   | Prisma         | PostgreSQL | **Supported**     | CI e2e (unix): install (incl. `prisma generate`) + typecheck; boot + DB error handling verified             |
-| Fastify   | Drizzle        | PostgreSQL | **Supported**     | CI smoke + typecheck; boot + health + CRUD verified locally                                                 |
-| Fastify   | Drizzle        | SQLite     | **Supported**     | CI smoke; typecheck verified locally; boot verified (health)                                                |
-| Fastify   | Drizzle        | MySQL      | Scaffold-verified | CI smoke; install/build/functional not yet run                                                              |
-| Fastify   | Prisma         | PostgreSQL | **Supported**     | CI smoke + typecheck; boot + health + Prisma adapter error path verified locally                            |
-| Express   | None (raw SQL) | SQLite     | **Supported**     | verified locally: migrate (sql-file runner), seed, boot, full CRUD, 409/404 paths, zero-docker              |
-| Express   | None (raw SQL) | PostgreSQL | Scaffold-verified | CI smoke; functional run pending                                                                            |
-| Fastify   | None (raw SQL) | SQLite     | Scaffold-verified | CI smoke; wiring shared with the express pattern                                                            |
-| Fastify   | None (raw SQL) | PostgreSQL | Scaffold-verified | CI smoke                                                                                                    |
-| Hono      | None (raw SQL) | SQLite     | Scaffold-verified | CI smoke                                                                                                    |
-| Hono      | None (raw SQL) | PostgreSQL | Scaffold-verified | CI smoke                                                                                                    |
+### Node.js
 
-### Python backend
+| Framework | ORM/data access | Database | Status | Evidence |
+| --- | --- | --- | --- | --- |
+| Express | Drizzle | PostgreSQL | **Supported** | Hosted `database-integration` job in [run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380) passed generated install/typechecks, migrations, boot, CRUD, and Better Auth; the earlier matrix also records health and duplicate-email 409 checks. |
+| Express | Drizzle | SQLite | **Supported** | Hosted `database-integration` job in [run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380) passed generated install/typechecks, migrations, boot, CRUD, and Better Auth. |
+| Express | Drizzle | MySQL | **Supported** | Hosted `database-integration` job in [run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380) passed generated install/typechecks, migrations, boot, CRUD, and Better Auth. |
+| Express | Prisma | PostgreSQL | **Scaffold-verified** | Engine fixture and smoke. Prior matrix records boot/error handling, not a successful database CRUD operation; current CI does not install this generated project. |
+| Express | Raw SQL (`none`) | SQLite | **Scaffold-verified** | Changelog records migration, seed, boot, CRUD, duplicate 409, and missing-record 404, but does not record generated install/typecheck evidence. Runtime result not rerun in this pass. |
+| Express | Raw SQL (`none`) | PostgreSQL | **Scaffold-verified** | Current smoke run generated it; no PostgreSQL runtime result recorded. |
+| Express | Raw SQL (`none`) | MySQL | **Selectable — unverified** | Registry and template layers exist; no exact engine fixture or smoke entry. |
+| Fastify | Drizzle | PostgreSQL | **Scaffold-verified** | Engine fixture; prior matrix records local boot, health, and CRUD, but does not record generated install/typecheck evidence. Current CI does not install this generated project. |
+| Fastify | Drizzle | SQLite | **Scaffold-verified** | Engine fixture and smoke. Prior matrix records boot/health only, without a successful database operation. |
+| Fastify | Drizzle | MySQL | **Scaffold-verified** | Engine fixture; no smoke entry or generated runtime result. |
+| Fastify | Prisma | PostgreSQL | **Scaffold-verified** | Engine fixture and smoke. Prior matrix records health/error handling, not a successful database CRUD operation. |
+| Fastify | Raw SQL (`none`) | PostgreSQL, SQLite, MySQL | **Selectable — unverified** | Registry and template layers exist; no exact engine fixture or smoke entry. |
+| Hono | Drizzle | PostgreSQL, SQLite | **Scaffold-verified** | Current smoke script generates both; no install/runtime result recorded. |
+| Hono | Drizzle | MySQL | **Selectable — unverified** | Registry and template layers exist; no exact engine fixture or smoke entry. |
+| Hono | Raw SQL (`none`) | PostgreSQL, SQLite, MySQL | **Selectable — unverified** | Registry and template layers exist; no exact engine fixture or smoke entry. |
 
-| Framework | ORM/data                     | Database   | Status            | Evidence                                                                                              |
-| --------- | ---------------------------- | ---------- | ----------------- | ----------------------------------------------------------------------------------------------------- |
-| FastAPI   | SQLAlchemy 2 async + Alembic | SQLite     | **Supported**     | verified locally: `uv sync`, `alembic upgrade head`, seed, uvicorn boot, full CRUD + 409, zero-docker |
-| FastAPI   | SQLAlchemy 2 async + Alembic | PostgreSQL | Scaffold-verified | CI smoke; install/migrate/boot not yet run end-to-end                                                 |
+`Hono + Prisma + PostgreSQL` is an **Invalid registry entry**: the current registry/prompt accepts it, but
+`templates/server/node/hono/prisma/` does not exist, so composition fails with `MissingLayerError`.
+It must not be treated as supported. The registry currently checks Prisma's PostgreSQL database limit
+but does not constrain Prisma by framework.
 
-### PHP backend
+### Python and PHP
 
-| Framework  | ORM/data | Database   | Status            | Evidence                                                                                                           |
-| ---------- | -------- | ---------- | ----------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Laravel 12 | Eloquent | SQLite     | **Supported**     | verified locally: composer create-project via CLI, migrate + seed, artisan serve, full CRUD, 422 JSON on duplicate |
-| Laravel 12 | Eloquent | PostgreSQL | Scaffold-verified | template + compose verified in CI smoke; install/functional not yet run                                            |
-| Laravel 12 | Eloquent | MySQL      | Scaffold-verified | template + compose verified in CI smoke; install/functional not yet run                                            |
+| Framework | Data access | Database | Status | Evidence |
+| --- | --- | --- | --- | --- |
+| FastAPI | SQLAlchemy 2 async + Alembic | SQLite | **Supported** | Prior matrix records `uv sync`, migration, seed, boot, and full CRUD. Runtime result not rerun in this pass. |
+| FastAPI | SQLAlchemy 2 async + Alembic | PostgreSQL | **Scaffold-verified** | Engine fixture and smoke; no generated install/migration/runtime result recorded. |
+| Laravel 12 | Eloquent | SQLite | **Supported** | Prior matrix records Composer scaffold, migrate, seed, serve, and CRUD. Runtime result not rerun in this pass. |
+| Laravel 12 | Eloquent | PostgreSQL | **Supported** | Hosted `php-laravel-integration` job in [run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380) passed Composer platform checks, migrations, database-driver assertions, and generated API feature tests against PostgreSQL. |
+| Laravel 12 | Eloquent | MySQL | **Supported** | Hosted `php-laravel-integration` job in [run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380) passed Composer platform checks, migrations, database-driver assertions, and generated API feature tests against MySQL. |
 
-### Frontend-only
+## Language variants, modules, and extras
 
-| Architecture              | Status        | Evidence                                                        |
-| ------------------------- | ------------- | --------------------------------------------------------------- |
-| React + Vite (no backend) | **Supported** | CI smoke (all OSes); local `npm run build` + typecheck verified |
+| Capability | Status | Evidence and limits |
+| --- | --- | --- |
+| TypeScript templates | **Supported** | Default for the recorded supported web combinations. |
+| JavaScript React/Vite client | **Scaffold-verified** | Previous matrix records a frontend-only scaffold; no current automated fixture. Full-stack server remains TypeScript. |
+| JavaScript Vue, Svelte, or Next.js templates | **Invalid registry entry** | No JavaScript template overlay exists for these frontends. The current language prompt/flag still accepts JavaScript globally; selecting it silently leaves the generated files TypeScript. |
+| JavaScript Expo or Tauri | **Invalid registry entry** | `--lang javascript` is accepted, but native prompt flow and templates always use TypeScript. |
+| Next.js with `--orm drizzle` or `--orm prisma` | **Invalid registry entry** | The Next.js prompt/flags expose Node ORM values, but composition ignores the selection and always uses its raw-SQL adapter. |
+| `omnicraft add auth` — Express + Drizzle + SQLite | **Supported** | Hosted `database-integration` job in [run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380) passed the generated email/password flow, session validity and persistence across restart, logout invalidation, password-hash check, and CRUD. |
+| `omnicraft add auth` — Express + Drizzle + PostgreSQL/MySQL | **Supported** | Hosted `database-integration` job in [run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380) passed the generated email/password flow, session validity and persistence across restart, logout invalidation, password-hash check, and CRUD for both dialects. |
+| `omnicraft add auth` — Fastify/Hono + Drizzle | **Invalid registry entry** | The guard does not reject these frameworks, but the module patches target Express files and do not have framework-specific wiring. |
+| `omnicraft add testing` | **Supported** | Changelog records adding the client Vitest module and running its sample test; no automated add-module regression test is present. |
+| `omnicraft add docker` | **Selectable — unverified** | Implementation exists for PostgreSQL/MySQL separate-API projects; no current add-module test covers it. |
+| Tailwind CSS | **Scaffold-verified** | Generated in the current smoke paths; prior matrix records a generated-project build. |
+| ESLint + Prettier | **Scaffold-verified** | Current smoke paths include the extra; CI lint is limited to Express + Drizzle + PostgreSQL on the Windows job. |
+| shadcn/ui — React/Vite | **Scaffold-verified** | Engine test checks the overlay; the post-scaffold shadcn CLI install is not covered by the current suite. For other frontends, the accepted flag is an invalid registry entry because composition silently skips the overlay. |
 
-## Language variants
+## Planned and registry gaps
 
-| Variant                           | Status                                                | Evidence                                                                                                                                   |
-| --------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| JavaScript — React/Vite client    | **Supported** (frontend-only + separate-frontend-api) | verified: frontend-only JS scaffold (main.jsx/App.jsx/api.js, no TS tooling); full-stack JS client + node server TS is the current pairing |
-| JavaScript — node server overlays | Planned                                               | next increment of #25                                                                                                                      |
+The prompts mark NestJS, Django, Symfony, MongoDB, and PHP/MySQL or Python/MySQL as unavailable where
+applicable. The type unions also contain future names such as Mongoose; a type union alone does not make
+an option selectable.
 
-## Modules (`omnicraft add`)
+The `AVAILABLE` object is a dimension-level list for runtimes, frontends, language, backends, databases,
+Node ORMs, and extras. It does not yet encode every compatibility edge, native platform prerequisites,
+module compatibility, or verification status. Platforms are listed directly in the prompt, while modules
+live in a separate registry. Known mismatches found in this review:
 
-| Module                          | Status        | Evidence                                                                                                          |
-| ------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------- |
-| docker (postgres/mysql compose) | **Supported** | manifest-driven, incompatible-with-sqlite rejection verified; compose content identical to the fullstack template |
-| testing (vitest for client)     | **Supported** | verified: add testing → deps merged → vitest runs the sample test                                                 |
+- Hono + Prisma is accepted but has no framework/ORM template layer.
+- JavaScript is accepted for all web frontends although only the React/Vite JavaScript client exists.
+- `--lang javascript` is accepted for native platforms even though Expo/Tauri templates stay TypeScript.
+- Next.js exposes ORM choices that its composition ignores; it always uses raw SQL. `--runtime` and
+  `--backend` overrides are also accepted but ignored because Next.js is integrated full-stack.
+- shadcn is accepted by flags for all frontends although composition applies it only to React/Vite.
+- Better Auth's guard does not reject non-Express frameworks, although the patches target Express files.
 
-## Extras
-
-| Extra             | Status        | Evidence                                                                        |
-| ----------------- | ------------- | ------------------------------------------------------------------------------- |
-| Tailwind CSS      | **Supported** | shipped in every smoke combo; generated project builds with `@tailwindcss/vite` |
-| ESLint + Prettier | **Supported** | CI windows job lints a generated project (eslint + prettier --check)            |
-
-## Planned (prompts show "(soon)")
-
-| Dimension        | Choices                                     | Tracking                         |
-| ---------------- | ------------------------------------------- | -------------------------------- |
-| Platform         | Mobile (React Native/Expo), Desktop (Tauri) | #21, #22                         |
-| Frontend         | Next.js, Vue, Svelte                        | #17, #18, #19 (+ #20 evaluation) |
-| Node framework   | NestJS                                      | master plan Phase E              |
-| Python framework | Django                                      | master plan Phase E              |
-| PHP framework    | Symfony                                     | master plan Phase E              |
-| Database         | MongoDB                                     | master plan Phase E              |
-| Node ORM         | Mongoose                                    | master plan Phase E              |
-| Language         | JavaScript variants                         | #25                              |
-
-## Promotion rules
-
-- **Scaffold-verified → Supported:** run the Level-3 verification (install + typecheck + boot + one real
-  DB operation for the specific combo), add evidence to this table. Install/build coverage in CI
-  (currently one combo per OS) doesn't auto-promote others.
-- **Supported → regression:** if CI or re-verification fails, demote with a note and open/label an issue.
-- **Planned → any:** requires the full [adding-a-stack](adding-a-stack.md) /
-  [adding-an-integration](adding-an-integration.md) procedure.
-- Never edit a status without linking the evidence (PR, CI run, or local verification summary in an issue).
+These combinations are not promoted by this matrix. A later capability-registry phase should represent
+these constraints in one place and test that prompts, flags, composition, and documentation agree.

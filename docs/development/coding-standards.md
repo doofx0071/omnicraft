@@ -42,7 +42,11 @@ directory (`cwd`) or by the smoke script's file operations, never as part of a s
 - `Option<Value>` can't be satisfied by an unresolved generic — constrain to `string` and cast at the
   edge (see `selectWithSoon` in `run-prompts.ts`).
 - `p.select` needs `Option<T>[]`; build option objects imperatively when the hint is conditional.
-- Availability is never hardcoded in prompt choice arrays — derive from `AVAILABLE` (`src/prefill.ts`).
+- Prompt availability is currently split across `AVAILABLE` in `src/prefill.ts`, choice arrays in
+  `run-prompts.ts`, platform choices, and the module registry. `AVAILABLE` lists dimensions but does
+  not encode every compatibility edge. When changing choices, update the relevant sources together and
+  test flag validation, prompts, and composition. Consolidating these definitions is a separate planned
+  registry improvement.
 
 ## Capability changes
 

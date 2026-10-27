@@ -4,7 +4,7 @@
 [![npm version](https://img.shields.io/npm/v/create-omnicraft)](https://www.npmjs.com/package/create-omnicraft)
 [![roadmap](https://img.shields.io/badge/roadmap-ROADMAP.md-8A2BE2)](./ROADMAP.md)
 
-**Craft any stack** — an interactive CLI that scaffolds full-stack-ready projects. No flags to memorize: answer a few prompts and get a running app with the database wired end-to-end.
+**Compose a project from compatible stack choices.** OmniCraft is an interactive CLI for web, mobile, and desktop starters. The selectable catalog is broader than the combinations with end-to-end verification; check the [support matrix](docs/templates/stack-support-matrix.md) for exact evidence.
 
 ```bash
 npm create omnicraft@latest
@@ -20,11 +20,12 @@ Open <a href="docs/demo.html">docs/demo.html</a> in a browser — the same flow 
 ## The flow
 
 ```
-┌  ⚡ OmniCraft — craft any stack
+┌  ⚡ OmniCraft — compose a project
 │
 ◆  What is the name of your app?          ▸ becomes the folder name
 ◆  What are you building?                 ● Web App · Mobile (Expo) · Desktop (Tauri)
 ◆  Select a frontend framework:           ● React · Next.js · Vue · Svelte
+◆  Select a language:                     ● TypeScript · JavaScript (React/Vite client only)
 ◆  Full-stack?                            Adds backend + database
 ◆  Select a backend runtime:              ● Node.js · Python · PHP
 ◆  Select a backend framework:            ● Express · Fastify · Hono / FastAPI / Laravel
@@ -36,13 +37,15 @@ Open <a href="docs/demo.html">docs/demo.html</a> in a browser — the same flow 
 
 ## What you get (full-stack React)
 
+This example is the default React + Vite client with a Node.js Express + Drizzle API and PostgreSQL. Other frontends, runtimes, ORMs, and databases have different verification levels; see the matrix before treating the choices as interchangeable.
+
 A workspace with everything talking to everything on first run:
 
 ```
 my-app/
 ├── client/                 # Vite + React + TypeScript (+ Tailwind)
 │   └── src/lib/api.ts      # typed fetch wrapper for your API
-├── server/                 # Express or Fastify + TypeScript
+├── server/                 # Express + TypeScript
 │   ├── src/db/             # ORM client, users schema, seed script
 │   ├── src/routes/         # /api/health + working users CRUD
 │   └── src/env.ts          # zod-validated environment variables
@@ -50,7 +53,7 @@ my-app/
 └── package.json            # workspaces root — `npm run dev` runs both
 ```
 
-The generated demo is **end-to-end**: the React page lists, creates and deletes users through the real API into real PostgreSQL. Start crafting your own feature from there instead of wiring plumbing.
+For this example, the generated demo is **end-to-end**: the React page lists, creates, and deletes users through the API in PostgreSQL. Start crafting your own feature from there instead of wiring plumbing.
 
 ```bash
 cd my-app
@@ -59,35 +62,49 @@ npm run db:push          # create tables from the schema
 npm run dev              # client :5173 + server :3000 together
 ```
 
-## Supported stacks (v1 — per-combo status: [docs/templates/stack-support-matrix.md](docs/templates/stack-support-matrix.md))
+## Selectable choices and support status
 
-| Layer    | Available                                                     | On the roadmap                           |
-| -------- | ------------------------------------------------------------- | ---------------------------------------- |
-| Platform | Web App                                                       | Mobile (React Native/Expo), Desktop, API |
-| Frontend | React (Vite + TS)                                             | Next.js, Vue, Svelte, Solid              |
-| Backend  | Node: Express, Fastify, Hono · Python: FastAPI · PHP: Laravel | NestJS, Django, Symfony                  |
-| Database | PostgreSQL, SQLite, MySQL                                     | MongoDB                                  |
-| ORM      | Drizzle, Prisma, or None (raw SQL) · SQLAlchemy · Eloquent    | Mongoose                                 |
-| Extras   | Tailwind CSS, shadcn/ui, ESLint + Prettier                    | Auth boilerplate, JS (non-TS) templates  |
+The prompt and flags expose these choices. A choice in one row does not imply every cross-product with choices in other rows works or has been verified. Status applies to exact combinations in the [support matrix](docs/templates/stack-support-matrix.md).
+
+| Layer | Selectable choices | Scope notes |
+| --- | --- | --- |
+| Platform | Web, Mobile (Expo), Desktop (Tauri) | Mobile and desktop projects pair with a separately run backend. Native build and device verification limits are in the matrix. |
+| Frontend | React + Vite, Next.js, Vue + Vite, Svelte + Vite | Next.js is integrated full-stack; the Vite clients use a separate API when full-stack is selected. |
+| Language | TypeScript, JavaScript | JavaScript changes only the React/Vite client; native apps remain TypeScript. A selected backend keeps its runtime language. |
+| Backend | Node: Express, Fastify, Hono · Python: FastAPI · PHP: Laravel | Framework, ORM, and database compatibility is combination-specific. |
+| Data access | Separate Node API: Drizzle, Prisma, or raw SQL · Next.js route handlers: raw SQL · Python: SQLAlchemy + Alembic · PHP: Eloquent | Prisma is PostgreSQL-only. Raw SQL is not an ORM. |
+| Database | PostgreSQL, SQLite, MySQL (availability varies by runtime) | The matrix lists which combinations have scaffold or runtime evidence. |
+| Extras | Tailwind CSS, ESLint + Prettier, shadcn/ui | shadcn/ui is React + Vite only and implies Tailwind. |
+| `omnicraft add` modules | `docker`, `testing`, Better Auth email/password (`auth`) | Hosted end-to-end auth evidence covers Express + Drizzle + SQLite, PostgreSQL, and MySQL; other frameworks are not in the verified auth scope. |
 
 ## Options
 
 ```
 npm create omnicraft@latest [project-name] [options]
 
---yes                accept all defaults, skip every prompt (CI-friendly)
---full-stack         force the full-stack flow (default: yes)
---no-full-stack      frontend only
---frontend <name>    skip the frontend prompt (react)
---runtime <name>     skip the runtime prompt (node, python, php)
---backend <name>     skip the framework prompt (node: express, fastify, hono · python: fastapi · php: laravel)
---db <name>          skip the database prompt (node: postgres, sqlite, mysql · python: postgres, sqlite · php: postgres, sqlite, mysql)
---orm <name>         skip the ORM prompt — node only (drizzle, prisma; prisma is postgres-only)
---extras <list>     comma list: tailwind,eslint,shadcn — or "none" (default: tailwind,eslint)
---latest             pull the newest templates from GitHub instead of the
-                     ones pinned to this CLI version
---skip-install       generate without installing dependencies
---debug              print stack traces on errors
+  --yes                Accept all defaults, skip every prompt (CI-friendly;
+                       also allows running without a TTY)
+  --lang <name>        Skip the language prompt (typescript, javascript; JS client template is React/Vite only)
+  --platform <name>    Skip the "What are you building?" prompt (web, mobile, desktop)
+  --full-stack         Force the full-stack flow (default: yes)
+  --no-full-stack      Frontend only
+  --runtime <name>     Skip the runtime prompt (node, python, php)
+  --frontend <name>    Skip the frontend prompt (react, nextjs, vue, svelte)
+  --backend <name>     Skip the framework prompt (node: express, fastify, hono ·
+                       python: fastapi · php: laravel)
+  --db <name>          Skip the database prompt (node: postgres, sqlite, mysql ·
+                       python: postgres, sqlite · php: postgres, sqlite, mysql)
+  --orm <name>         Skip ORM selection (drizzle, prisma, none; Prisma is PostgreSQL-only)
+                       Applies to separate Node APIs; Next.js always generates raw SQL
+  --extras <list>      Comma-separated extras (tailwind, eslint, shadcn;
+                       default: tailwind,eslint). shadcn is React/Vite-only and
+                       implies tailwind. Use --extras none to skip all.
+  --latest             Pull templates from this CLI version's release tag
+                       instead of the embedded templates
+  --skip-install       Generate the project without installing dependencies
+  --debug              Print stack traces on errors
+  -h, --help           Show this help
+  -v, --version        Show version
 ```
 
 Scripted use in CI:
@@ -100,8 +117,9 @@ npm create omnicraft@latest api -- --no-full-stack --extras none
 ## How it works
 
 - **Composable templates** — the React client, each server base, and each ORM adapter are separate layers. OmniCraft assembles them at scaffold time (later layers may overwrite files; `package.json` manifests deep-merge), so `Express + Drizzle` and `Fastify + Prisma` share one source of truth.
-- **Hybrid template delivery** — templates ship embedded in the CLI package (deterministic, offline, pinned to the CLI version — downgrade by installing an older `create-omnicraft`). `--latest` fetches the newest templates from this repo via [giget](https://github.com/unjs/giget).
-- **Graceful everything** — Ctrl+C cancels cleanly, non-empty folders are never deleted, install failures are non-fatal with a printed hint.
+- **Hybrid template delivery** — templates ship embedded in the CLI package. `--latest` fetches the release tag matching this CLI version via [giget](https://github.com/unjs/giget), so it does not silently follow `main`.
+- **Destination behavior** — interactive runs show a collision preview and ask before continuing; `--yes` refuses any non-empty destination. Existing environment files are preserved. See the [template engine notes](docs/architecture/template-engine.md) for overwrite and failure limits.
+- **Install handling** — Ctrl+C cancels cleanly; dependency installation failures are non-fatal and print a manual command.
 
 ## Development
 
@@ -111,7 +129,7 @@ npm run dev -w create-omnicraft   # run the CLI from source
 npm test               # vitest — engine, prompts, validators
 npm run build          # tsup → packages/cli/dist
 
-# scaffold every stack combo without prompts (for manual testing)
+# scaffold the combinations listed in the smoke script
 npx tsx packages/cli/scripts/smoke-e2e.ts ../omnicraft-smoke
 ```
 
@@ -134,7 +152,7 @@ packages/cli/
 3. Bump `version` in `packages/cli/package.json` (semver; templates and CLI version together).
 4. `cd packages/cli && npm pack` — inspect the tarball (templates + dist included).
 5. `npm publish` (public registry; `create-*` packages publish public by default).
-6. Tag the repo: `git tag v0.x.y && git push --tags` — `--latest` pulls from `main`.
+6. Tag the repo: `git tag v<version> && git push --tags` — `--latest` fetches the matching release tag.
 
 ## Inspiration & credits
 

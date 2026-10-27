@@ -1,0 +1,51 @@
+services:
+  php-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    init: true
+    user: "${OMNICRAFT_TEST_UID:-1000}:${OMNICRAFT_TEST_GID:-1000}"
+    working_dir: /workspace
+    volumes:
+      - type: bind
+        source: ${OMNICRAFT_TEST_PROJECT_DIR:?Set OMNICRAFT_TEST_PROJECT_DIR}
+        target: /workspace
+    environment:
+      APP_ENV: testing
+      APP_DEBUG: "true"
+      COMPOSER_HOME: /tmp/composer
+      HOME: /tmp
+      OMNICRAFT_EXPECTED_DB_DRIVER: ${OMNICRAFT_EXPECTED_DB_DRIVER:?Set OMNICRAFT_EXPECTED_DB_DRIVER}
+      DB_CONNECTION: ${OMNICRAFT_DB_CONNECTION:?Set OMNICRAFT_DB_CONNECTION}
+      DB_HOST: ${OMNICRAFT_DB_HOST:?Set OMNICRAFT_DB_HOST}
+      DB_PORT: ${OMNICRAFT_DB_PORT:?Set OMNICRAFT_DB_PORT}
+      DB_DATABASE: ${OMNICRAFT_DB_DATABASE:?Set OMNICRAFT_DB_DATABASE}
+      DB_USERNAME: ${OMNICRAFT_DB_USERNAME:?Set OMNICRAFT_DB_USERNAME}
+      DB_PASSWORD: ${OMNICRAFT_DB_PASSWORD:?Set OMNICRAFT_DB_PASSWORD}
+
+  postgres:
+    image: postgres:17.11-alpine3.24
+    profiles: [postgres]
+    environment:
+      POSTGRES_DB: ${OMNICRAFT_DB_DATABASE:?Set OMNICRAFT_DB_DATABASE}
+      POSTGRES_USER: ${OMNICRAFT_DB_USERNAME:?Set OMNICRAFT_DB_USERNAME}
+      POSTGRES_PASSWORD: ${OMNICRAFT_DB_PASSWORD:?Set OMNICRAFT_DB_PASSWORD}
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 3s
+      timeout: 5s
+      retries: 40
+
+  mysql:
+    image: mysql:8.4.13
+    profiles: [mysql]
+    environment:
+      MYSQL_DATABASE: ${OMNICRAFT_DB_DATABASE:?Set OMNICRAFT_DB_DATABASE}
+      MYSQL_USER: ${OMNICRAFT_DB_USERNAME:?Set OMNICRAFT_DB_USERNAME}
+      MYSQL_PASSWORD: ${OMNICRAFT_DB_PASSWORD:?Set OMNICRAFT_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${OMNICRAFT_DB_ROOT_PASSWORD:?Set OMNICRAFT_DB_ROOT_PASSWORD}
+    healthcheck:
+      test: [CMD-SHELL, 'mysqladmin ping -h 127.0.0.1 -uroot -p"$${MYSQL_ROOT_PASSWORD}" --silent']
+      interval: 3s
+      timeout: 5s
+      retries: 60

@@ -29,7 +29,7 @@ All from `packages/cli/` unless noted:
 | `npx tsc --noEmit`                   | Typecheck                                                     |
 | `npx vitest run`                     | Tests (or `npm test` from the root)                           |
 | `npx tsup`                           | Build → `dist/index.js`                                       |
-| `npx tsx scripts/smoke-e2e.ts <dir>` | Scaffold all supported combos without prompts                 |
+| `npx tsx scripts/smoke-e2e.ts <dir>` | Scaffold the combinations currently listed in the smoke script |
 | `npm run demo` (root)                | Regenerate `docs/demo.gif` + `docs/demo.html`                 |
 
 Try your changes like a user would: `npx tsup && node dist/index.js` (or `--yes --skip-install my-app`
@@ -42,13 +42,15 @@ what to read per change type, what tests are required, and which docs must be up
 
 Checklist:
 
-- [ ] `npx tsc --noEmit` and `npx vitest run` are green (62 tests currently)
+- [ ] `npx tsc --noEmit` and `npx vitest run` are green (82 tests in 10 files at the 2026-10-27
+      merged baseline; check command output for the current count)
 - [ ] New behavior has tests; changed capabilities updated `src/prefill.ts`-driven surfaces
 - [ ] Template changes verified per the [testing strategy](docs/development/testing-strategy.md) Level 3
       (scaffold → install → typecheck → boot → DB operation for every claimed combo)
 - [ ] Docs updated ([stack support matrix](docs/templates/stack-support-matrix.md), README, `HELP_TEXT`)
 - [ ] No unresolved `{{tokens}}`, no secrets, prettier-clean
-- [ ] CI green (windows + ubuntu + macos: typecheck, tests, build, scaffold matrix, e2e, lint)
+- [ ] CI green (Windows + Ubuntu + macOS: typecheck, tests, build, scaffold matrix, package check,
+      and hosted Linux database/Laravel integration jobs)
 
 ## PR expectations
 
