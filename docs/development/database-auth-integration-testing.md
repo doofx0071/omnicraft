@@ -72,9 +72,9 @@ credentials only through child process environment, redact them from failure out
 child processes, remove only their own containers/volumes, and delete generated project directories.
 Testcontainers uses Ryuk as a fallback if the Node process exits unexpectedly.
 
-These tests cover the implemented Express + Drizzle email/password auth path. They do not add providers,
-implement authentication for another framework, or change the support status of any generated stack.
-The support matrix remains the source of truth for supported combinations.
+These tests cover the implemented Express + Drizzle email/password auth path. They do not add providers
+or implement authentication for another framework. The support matrix remains the source of truth for
+supported combinations.
 
 ## Verification record
 
@@ -97,8 +97,11 @@ This section records the commands and outcomes actually run for this change.
 The first PHP image build attempted to compile `pdo_sqlite`, which the selected PHP image already
 loads; the Dockerfile now adds only missing extensions. The final PHP runs passed with that image.
 
-## Status boundary
+## Hosted CI and status boundary
 
-These local integration results update the verification record for the exact combinations exercised.
-They do not change support-matrix statuses. The hosted Linux integration jobs must pass for the merged
-revision before any status promotion; their configured presence or a local pass is not that CI evidence.
+On PR #28 head `3caf3e897a6fa6e5f15dd131e138c3164836666c`, [hosted run #40529892092](https://github.com/doofx0071/omnicraft/actions/runs/40529892092)
+passed `database-integration` for Express + Drizzle + SQLite/PostgreSQL/MySQL, including the generated
+Better Auth flow, and `php-laravel-integration` for Laravel 12 + Eloquent + PostgreSQL/MySQL. The
+support matrix promotes only these exact combinations. The macOS Node 20 and Node 24 jobs were still
+queued when recorded, so the full cross-platform workflow remains pending; that does not change the
+targeted integration results. Other matrix rows and auth providers remain unchanged.

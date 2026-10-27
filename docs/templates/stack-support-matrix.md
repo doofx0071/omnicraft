@@ -19,10 +19,12 @@ unions, or the presence of a template directory do not prove that every cross-pr
 The merged local verification run on Windows on 2026-10-27 passed 82 unit tests, typecheck, build, and
 the 17-project smoke. Separate local integration runs installed, typechecked, migrated, booted, and
 exercised Express + Drizzle with SQLite, PostgreSQL, and MySQL; Laravel 12 passed migrations and API
-feature tests against PostgreSQL and MySQL. The workflow now defines hosted Linux jobs for those exact
-integration paths, but hosted checks have not run for this local merge. No support status was promoted;
-wait for the required hosted CI evidence before changing the rows below. Previous manual results remain
-repository-recorded history, not results reproduced during this local run.
+feature tests against PostgreSQL and MySQL. In [PR #28 hosted run #40529892092](https://github.com/doofx0071/omnicraft/actions/runs/40529892092),
+the database and Laravel integration jobs passed for those exact paths. The Ubuntu and Windows matrix,
+package, and self-hosted jobs also passed; both macOS jobs remained queued when recorded, so the full
+cross-platform run is still pending. Only combinations covered by the passing integration jobs are
+promoted below. Previous manual results remain repository-recorded history, not results reproduced
+during this local run.
 
 ## Frontends and platforms
 
@@ -54,9 +56,9 @@ product is implied.
 
 | Framework | ORM/data access | Database | Status | Evidence |
 | --- | --- | --- | --- | --- |
-| Express | Drizzle | PostgreSQL | **Supported** | CI install + typecheck; prior matrix records local boot, health, CRUD, and duplicate-email 409. Runtime result not rerun in this pass. |
-| Express | Drizzle | SQLite | **Scaffold-verified** | Engine fixture and smoke; local 2026-10-27 integration run passed generated install/typechecks, migrations, boot, CRUD, and Better Auth. Hosted result for this merge is pending; status unchanged. |
-| Express | Drizzle | MySQL | **Scaffold-verified** | Engine fixture and smoke; local 2026-10-27 integration run passed generated install/typechecks, migrations, boot, CRUD, and Better Auth. Hosted result for this merge is pending; status unchanged. |
+| Express | Drizzle | PostgreSQL | **Supported** | Hosted `database-integration` job in [run #40529892092](https://github.com/doofx0071/omnicraft/actions/runs/40529892092) passed generated install/typechecks, migrations, boot, CRUD, and Better Auth; the earlier matrix also records health and duplicate-email 409 checks. |
+| Express | Drizzle | SQLite | **Supported** | Hosted `database-integration` job in [run #40529892092](https://github.com/doofx0071/omnicraft/actions/runs/40529892092) passed generated install/typechecks, migrations, boot, CRUD, and Better Auth. |
+| Express | Drizzle | MySQL | **Supported** | Hosted `database-integration` job in [run #40529892092](https://github.com/doofx0071/omnicraft/actions/runs/40529892092) passed generated install/typechecks, migrations, boot, CRUD, and Better Auth. |
 | Express | Prisma | PostgreSQL | **Scaffold-verified** | Engine fixture and smoke. Prior matrix records boot/error handling, not a successful database CRUD operation; current CI does not install this generated project. |
 | Express | Raw SQL (`none`) | SQLite | **Scaffold-verified** | Changelog records migration, seed, boot, CRUD, duplicate 409, and missing-record 404, but does not record generated install/typecheck evidence. Runtime result not rerun in this pass. |
 | Express | Raw SQL (`none`) | PostgreSQL | **Scaffold-verified** | Current smoke run generated it; no PostgreSQL runtime result recorded. |
@@ -82,8 +84,8 @@ but does not constrain Prisma by framework.
 | FastAPI | SQLAlchemy 2 async + Alembic | SQLite | **Supported** | Prior matrix records `uv sync`, migration, seed, boot, and full CRUD. Runtime result not rerun in this pass. |
 | FastAPI | SQLAlchemy 2 async + Alembic | PostgreSQL | **Scaffold-verified** | Engine fixture and smoke; no generated install/migration/runtime result recorded. |
 | Laravel 12 | Eloquent | SQLite | **Supported** | Prior matrix records Composer scaffold, migrate, seed, serve, and CRUD. Runtime result not rerun in this pass. |
-| Laravel 12 | Eloquent | PostgreSQL | **Selectable — unverified** | Local 2026-10-27 generated-project migrations and API feature tests passed. The new hosted job must pass before the matrix status changes. |
-| Laravel 12 | Eloquent | MySQL | **Selectable — unverified** | Local 2026-10-27 generated-project migrations and API feature tests passed. The new hosted job must pass before the matrix status changes. |
+| Laravel 12 | Eloquent | PostgreSQL | **Supported** | Hosted `php-laravel-integration` job in [run #40529892092](https://github.com/doofx0071/omnicraft/actions/runs/40529892092) passed Composer platform checks, migrations, database-driver assertions, and generated API feature tests against PostgreSQL. |
+| Laravel 12 | Eloquent | MySQL | **Supported** | Hosted `php-laravel-integration` job in [run #40529892092](https://github.com/doofx0071/omnicraft/actions/runs/40529892092) passed Composer platform checks, migrations, database-driver assertions, and generated API feature tests against MySQL. |
 
 ## Language variants, modules, and extras
 
@@ -94,8 +96,8 @@ but does not constrain Prisma by framework.
 | JavaScript Vue, Svelte, or Next.js templates | **Invalid registry entry** | No JavaScript template overlay exists for these frontends. The current language prompt/flag still accepts JavaScript globally; selecting it silently leaves the generated files TypeScript. |
 | JavaScript Expo or Tauri | **Invalid registry entry** | `--lang javascript` is accepted, but native prompt flow and templates always use TypeScript. |
 | Next.js with `--orm drizzle` or `--orm prisma` | **Invalid registry entry** | The Next.js prompt/flags expose Node ORM values, but composition ignores the selection and always uses its raw-SQL adapter. |
-| `omnicraft add auth` — Express + Drizzle + SQLite | **Supported** | Changelog records the complete email/password, cookie/session, sign-out, and protected-route flow. No automated module test is present in the current 8-file suite. |
-| `omnicraft add auth` — Express + Drizzle + PostgreSQL/MySQL | **Selectable — unverified** | Dialect schema variants exist, but no equivalent end-to-end evidence is recorded. |
+| `omnicraft add auth` — Express + Drizzle + SQLite | **Supported** | Hosted `database-integration` job in [run #40529892092](https://github.com/doofx0071/omnicraft/actions/runs/40529892092) passed the generated email/password flow, session validity and persistence across restart, logout invalidation, password-hash check, and CRUD. |
+| `omnicraft add auth` — Express + Drizzle + PostgreSQL/MySQL | **Supported** | Hosted `database-integration` job in [run #40529892092](https://github.com/doofx0071/omnicraft/actions/runs/40529892092) passed the generated email/password flow, session validity and persistence across restart, logout invalidation, password-hash check, and CRUD for both dialects. |
 | `omnicraft add auth` — Fastify/Hono + Drizzle | **Invalid registry entry** | The guard does not reject these frameworks, but the module patches target Express files and do not have framework-specific wiring. |
 | `omnicraft add testing` | **Supported** | Changelog records adding the client Vitest module and running its sample test; no automated add-module regression test is present. |
 | `omnicraft add docker` | **Selectable — unverified** | Implementation exists for PostgreSQL/MySQL separate-API projects; no current add-module test covers it. |

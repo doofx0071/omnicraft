@@ -75,7 +75,7 @@ The prompt and flags expose these choices. A choice in one row does not imply ev
 | Data access | Separate Node API: Drizzle, Prisma, or raw SQL · Next.js route handlers: raw SQL · Python: SQLAlchemy + Alembic · PHP: Eloquent | Prisma is PostgreSQL-only. Raw SQL is not an ORM. |
 | Database | PostgreSQL, SQLite, MySQL (availability varies by runtime) | The matrix lists which combinations have scaffold or runtime evidence. |
 | Extras | Tailwind CSS, ESLint + Prettier, shadcn/ui | shadcn/ui is React + Vite only and implies Tailwind. |
-| `omnicraft add` modules | `docker`, `testing`, Better Auth email/password (`auth`) | Auth has recorded end-to-end evidence for Express + Drizzle + SQLite; other dialects/frameworks are not in the verified auth scope. |
+| `omnicraft add` modules | `docker`, `testing`, Better Auth email/password (`auth`) | Hosted end-to-end auth evidence covers Express + Drizzle + SQLite, PostgreSQL, and MySQL; other frameworks are not in the verified auth scope. |
 
 ## Options
 

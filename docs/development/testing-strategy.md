@@ -86,10 +86,13 @@ The current workflow:
    Laravel 12 project, checks Composer platform requirements, migrates, and runs database/API feature
    tests.
 
-The two hosted Linux integration jobs add real database and API checks for those exact combinations;
-they do not verify other framework/database combinations. Keep support-matrix statuses unchanged until
-the required hosted checks pass for the merged revision. The self-hosted Windows runner is restricted
-to pushes and same-repository pull requests; fork pull requests use hosted runners only.
+The hosted Linux integration jobs add real database and API checks for those exact combinations; they
+do not verify other framework/database combinations. On PR #28 head
+`3caf3e897a6fa6e5f15dd131e138c3164836666c`, both integration jobs passed in [run #40529892092](https://github.com/doofx0071/omnicraft/actions/runs/40529892092),
+and the matrix records Supported only for the exact combinations they exercised. The macOS Node 20 and
+Node 24 jobs remained queued, so cross-platform CI was still incomplete when recorded. The self-hosted
+Windows runner is restricted to pushes and same-repository pull requests; fork pull requests use hosted
+runners only.
 
 ## Support statuses
 
