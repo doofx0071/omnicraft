@@ -92,7 +92,8 @@ Follow the dedicated procedures — they exist so new code looks like the existi
    repeats this complete gate before it can publish.
 4. Create and push the matching `v<version>` tag from that commit. The `CI` workflow then publishes the
    package to npm with OIDC trusted publishing, creates the GitHub Release from the matching changelog
-   section, and commits the published version and source commit to `ROADMAP.md` and the system overview.
+   section with the title `v<version> — <ROADMAP theme>`, and commits the published version and source
+   commit to `ROADMAP.md` and the system overview.
 5. Verify `npm view create-omnicraft version dist-tags --json` and `gh release view v<version>`.
 
 Before the first automated npm publish, configure the `create-omnicraft` package's npm **Trusted
