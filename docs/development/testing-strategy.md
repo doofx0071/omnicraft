@@ -19,13 +19,12 @@ npm run test:integration:python   # FastAPI + SQLite, Python 3.12
 npm run test:integration:php      # Laravel 12: SQLite, PostgreSQL, MySQL, pinned PHP/Composer image
 ```
 
-The hosted [closeout run #40558971071](https://github.com/doofx0071/omnicraft/actions/runs/40558971071)
-passed on commit `4c4f9d02cd0559149ca31edce6b0a98678a87f14`, including the full OS/Node matrix, package
-smoke, evidence checker, database integrations, FastAPI + SQLite, Laravel + SQLite/PostgreSQL/MySQL,
-and the aggregate supported-stack release gate. The FastAPI + SQLite and Laravel + SQLite rows are
-Supported based on their generated-project install, migration, boot, and database-operation checks in
-that run. The subsequent PR run validates the expanded ten-row evidence registry on the final review
-commit.
+The hosted [closeout PR run #40562224821](https://github.com/doofx0071/omnicraft/actions/runs/40562224821)
+passed on commit `2a1e581312af0e1a84f604c9c86541ea8bdf9eed`, including the full OS/Node matrix, package
+smoke, ten-row evidence checker, database integrations, FastAPI + SQLite, Laravel + SQLite/PostgreSQL/
+MySQL, and the aggregate supported-stack release gate. The FastAPI + SQLite and Laravel + SQLite rows
+are Supported based on their generated-project install, migration, boot, and database-operation checks
+in that run.
 
 ## Test levels
 

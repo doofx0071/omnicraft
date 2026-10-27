@@ -3,8 +3,8 @@
 **Status:** Active
 **Created:** 2026-10-28
 **Source:** Explicit runtime and registry-to-documentation deferrals from the
-[post-masterplan audit](omnicraft-post-masterplan-audit.md) and
-[testing-infrastructure plan](omnicraft-testing-infrastructure-plan.md).
+[post-masterplan audit](../completed/omnicraft-post-masterplan-audit.md) and
+[testing-infrastructure plan](../completed/omnicraft-testing-infrastructure-plan.md).
 
 ## Goal
 
@@ -91,6 +91,6 @@ rejected or provisional.
 
 ## Out of scope
 
-- Better Auth expansion to Fastify or Hono, new auth providers, and a creation-time auth prompt. These remain under the separate [auth-provider and PHP stack expansion plan](omnicraft-auth-provider-php-stack-expansion-plan.md).
+- Better Auth expansion to Fastify or Hono, new auth providers, and a creation-time auth prompt remain deferred to the separately managed auth-provider/PHP stack expansion plan.
 - New template variants or framework/database/ORM combinations.
 - `omnicraft doctor`, a third-party registry, telemetry, or a project-upgrade command; these remain roadmap ideas until separately specified.

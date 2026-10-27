@@ -76,7 +76,7 @@ Published on 2026-10-27. Issue #27 was delivered early with the template contrac
 
 ## v1.1.x and beyond — post-v1 priorities
 
-These are follow-up priorities, not release commitments. The post-masterplan audit and testing-infrastructure plans will move to `docs/plans/completed/` after the final PR release gate validates all ten Supported rows. Exact remaining runtime-evidence and registry-consistency work is tracked in [the stack runtime evidence plan](docs/plans/active/omnicraft-stack-runtime-evidence-plan.md). Track roadmap-only features as issues before implementation:
+These are follow-up priorities, not release commitments. The post-masterplan audit and testing-infrastructure plans are complete and archived under `docs/plans/completed/`; hosted PR run [#40562224821](https://github.com/doofx0071/omnicraft/actions/runs/40562224821) passed the ten-row Supported matrix. Exact remaining runtime-evidence and registry-consistency work is tracked in [the stack runtime evidence plan](docs/plans/active/omnicraft-stack-runtime-evidence-plan.md). Track roadmap-only features as issues before implementation:
 
 - [x] Keep README, changelog, roadmap, CLI help, and the support matrix aligned with implementation evidence.
 - [x] Derive prompt and flag choices from the typed capability registry; reject unsupported combinations before writing files.

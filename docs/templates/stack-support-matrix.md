@@ -19,9 +19,11 @@ unions, or the presence of a template directory do not prove that every cross-pr
 On 2026-10-28, the Windows checkout passed 129 unit tests, typecheck, build, support-evidence check,
 and the 17-project smoke. Local generated-project runs passed Express + Drizzle on SQLite/PostgreSQL/
 MySQL, FastAPI + SQLite, and Laravel 12 on SQLite/PostgreSQL/MySQL. The hosted
-[closeout run #40558971071](https://github.com/doofx0071/omnicraft/actions/runs/40558971071) on head
-`4c4f9d02cd0559149ca31edce6b0a98678a87f14` passed the complete release gate, including the FastAPI and
-Laravel SQLite generated-project jobs. Those exact combinations are now Supported. The prior
+[closeout run #40558971071](https://github.com/doofx0071/omnicraft/actions/runs/40558971071) passed the
+new FastAPI and Laravel SQLite runtime jobs. The follow-up
+[PR run #40562224821](https://github.com/doofx0071/omnicraft/actions/runs/40562224821) on head
+`2a1e581312af0e1a84f604c9c86541ea8bdf9eed` passed the complete ten-row release gate. Those exact
+combinations are now Supported. The prior
 [PR #28 hosted run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380) on
 head `88f7d42` remains historical evidence for its then-current matrix; do not use it as evidence for
 jobs added after that run.
@@ -80,9 +82,9 @@ The repository has no `templates/server/node/hono/prisma/` layer.
 
 | Framework | Data access | Database | Status | Evidence |
 | --- | --- | --- | --- | --- |
-| FastAPI | SQLAlchemy 2 async + Alembic | SQLite | **Supported** | Hosted [`python-fastapi-integration`](https://github.com/doofx0071/omnicraft/actions/runs/40558971071/job/122382541343) installed generated dependencies, applied Alembic migrations, booted Uvicorn, and checked SQLite CRUD, validation, and conflict responses. <!-- support-id: fastapi-sqlalchemy-sqlite --> |
+| FastAPI | SQLAlchemy 2 async + Alembic | SQLite | **Supported** | Hosted [`python-fastapi-integration`](https://github.com/doofx0071/omnicraft/actions/runs/40562224821/job/122394000487) installed generated dependencies, applied Alembic migrations, booted Uvicorn, and checked SQLite CRUD, validation, and conflict responses. <!-- support-id: fastapi-sqlalchemy-sqlite --> |
 | FastAPI | SQLAlchemy 2 async + Alembic | PostgreSQL | **Scaffold-verified** | Engine fixture and smoke; no generated install/migration/runtime result recorded. |
-| Laravel 12 | Eloquent | SQLite | **Supported** | Hosted [`php-laravel-integration`](https://github.com/doofx0071/omnicraft/actions/runs/40558971071/job/122382541076) installed Composer dependencies in the pinned PHP image, migrated SQLite, verified the active driver, and exercised the generated API. <!-- support-id: laravel-eloquent-sqlite --> |
+| Laravel 12 | Eloquent | SQLite | **Supported** | Hosted [`php-laravel-integration`](https://github.com/doofx0071/omnicraft/actions/runs/40562224821/job/122394000585) installed Composer dependencies in the pinned PHP image, migrated SQLite, verified the active driver, and exercised the generated API. <!-- support-id: laravel-eloquent-sqlite --> |
 | Laravel 12 | Eloquent | PostgreSQL | **Supported** | `php-laravel-integration` installs Composer dependencies in the pinned PHP image, migrates PostgreSQL, verifies the active driver, and exercises the generated API. <!-- support-id: laravel-eloquent-postgres --> |
 | Laravel 12 | Eloquent | MySQL | **Supported** | `php-laravel-integration` installs Composer dependencies in the pinned PHP image, migrates MySQL, verifies the active driver, and exercises the generated API. <!-- support-id: laravel-eloquent-mysql --> |
 

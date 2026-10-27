@@ -1,9 +1,9 @@
 # OmniCraft — Database, Authentication, PHP/Composer, and Generated-Project Testing Plan
 
-**Status:** Closeout in progress; initial hosted runtime jobs passed, final expanded-matrix PR gate pending
+**Status:** Complete — all in-scope criteria have evidence; remaining modes and combinations are explicitly dispositioned
 **Prepared:** 2026-10-27
 **Repository:** <https://github.com/doofx0071/omnicraft>
-**Current repository path:** `docs/plans/active/omnicraft-testing-infrastructure-plan.md`
+**Current repository path:** `docs/plans/completed/omnicraft-testing-infrastructure-plan.md`
 **Related plan:** `docs/plans/completed/omnicraft-master-plan.md`
 **Related guides:** `docs/development/testing-strategy.md`, `docs/templates/stack-support-matrix.md`, `docs/templates/adding-an-integration.md`, `docs/templates/template-contract.md`
 
@@ -21,15 +21,16 @@
 - **Phase 4:** creation-time auth is **not applicable** because the CLI has no creation-time auth
   feature. The existing `omnicraft add auth` path is tested in the generated-project database suite.
 - **Phase 5:** FastAPI + SQLite and Laravel + SQLite generated-project jobs passed in hosted run
-  [#40558971071](https://github.com/doofx0071/omnicraft/actions/runs/40558971071); their exact matrix
+  [#40562224821](https://github.com/doofx0071/omnicraft/actions/runs/40562224821); their exact matrix
   rows are now Supported. Laravel PostgreSQL/MySQL are also exercised. Remaining existing selectable
-  combinations are not promoted and are itemized in the [runtime evidence follow-up](omnicraft-stack-runtime-evidence-plan.md).
+  combinations are not promoted and are itemized in the [runtime evidence follow-up](../active/omnicraft-stack-runtime-evidence-plan.md).
   Laravel Livewire/Inertia starter modes are **not applicable** because the current CLI exposes no
   such modes.
 - **Phase 6:** CI maps Supported rows to scripts/scenarios/jobs, gates releases on the full supported
   matrix and package artifact, and supports pull requests, main pushes, nightly runs, and explicit
   pre-release dispatch. Documentation contains exact commands and runtime boundaries. The final PR run
-  must validate the expanded ten-row matrix before this plan is archived.
+  [#40562224821](https://github.com/doofx0071/omnicraft/actions/runs/40562224821) passed the expanded
+  ten-row matrix on commit `2a1e581312af0e1a84f604c9c86541ea8bdf9eed`.
 - **Phase 7:** future browser, mail-catcher, and external-service work remains conditional on those
   features being implemented; it is not a blocker for this plan.
 
@@ -780,32 +781,34 @@ For debugging a failed generated project, the test report should print the gener
 
 ## 14. Acceptance criteria / definition of done
 
-This plan is complete when:
+This plan is complete on the evidence below. Each criterion is checked only where implemented; unavailable starter modes and features are marked not applicable.
 
-- [ ] A dedicated Node DB integration test command exists and is separate from fast unit tests.
-- [ ] The Node test harness starts, waits for, connects to, and tears down disposable PostgreSQL and MySQL containers.
-- [ ] A PHP CLI test image is built from a pinned official PHP image and contains Composer plus all PHP extensions required by the Laravel templates being tested.
-- [ ] Composer installs dependencies inside the matching PHP version/extension environment; the generic Composer-only image is not treated as the app runtime.
-- [ ] PHP/Laravel integration tests can run without host PHP or Composer installed.
-- [ ] The PHP test runner and the selected PostgreSQL/MySQL database share an isolated Compose network; credentials and data are ephemeral.
-- [ ] Laravel variants using Vite/Inertia assets build those assets in a pinned Node environment, separate from the PHP runtime.
-- [ ] At least one real generated app works against PostgreSQL in CI.
-- [ ] At least one real generated app works against MySQL in CI.
-- [ ] SQLite integration tests remain repeatable and Docker-free.
-- [ ] Database tests execute the generated migrations/initialization path and at least one real operation; they do not only compile.
-- [ ] Better Auth's existing SQLite E2E tests run as an automated regression test.
-- [ ] Better Auth + PostgreSQL and + MySQL are only marked supported after their full real-DB auth flows pass.
-- [ ] Authentication checks cover registration, login, wrong credentials, session retrieval, protected-route denial/allowance, logout/session invalidation, duplicate accounts, and secret handling.
-- [ ] Create-time auth (if implemented) and `omnicraft add auth` use the same integration definition and have separate workflow tests.
-- [ ] CI runs targeted Node DB and PHP/Laravel Docker-backed integration jobs on GitHub-hosted Linux runners and runs a fuller supported matrix before release.
-- [ ] Failure logs are useful but redact credentials and cookies.
-- [ ] `docs/development/testing-strategy.md` and `docs/templates/stack-support-matrix.md` are updated with exact evidence.
-- [ ] No stack is promoted from Scaffold-verified based solely on generation/typechecking.
-- [ ] The normal unit test suite remains runnable without Docker.
+- [x] A dedicated Node DB integration command, `npm run test:integration:db`, is separate from the fast unit suite.
+- [x] The Node harness starts, waits for, connects to, and tears down disposable PostgreSQL/MySQL containers; hosted run #40562224821 passed the suite.
+- [x] The Laravel PHP CLI image uses a pinned official PHP image with Composer and the required PHP extensions.
+- [x] Composer installs inside the matching PHP/extension environment; the app runtime is not a Composer-only image.
+- [x] PHP/Laravel integration runs without host PHP or Composer.
+- [x] The PHP runner and PostgreSQL/MySQL services share an isolated Compose network with ephemeral credentials/data.
+- [x] Laravel Livewire/Inertia asset builds are not applicable: the current CLI exposes no such starter modes. Revisit if those modes become selectable.
+- [x] Generated applications pass hosted PostgreSQL and MySQL migration and real-operation checks in `database-integration` and `php-laravel-integration`.
+- [x] Node and FastAPI SQLite integration tests are repeatable and Docker-free; Laravel SQLite uses the PHP test image without a database service.
+- [x] Database suites run generated migrations/initialization and real API/database operations, not compile-only checks.
+- [x] Better Auth's SQLite flow runs as an automated regression test.
+- [x] Better Auth PostgreSQL and MySQL are marked Supported only after both real-database auth flows pass in hosted CI.
+- [x] Auth checks cover registration, login, invalid credentials, session persistence, protected-route denial/allowance, logout, duplicate signup, password hashing, and secret/log handling.
+- [x] Creation-time auth is not implemented and is not applicable; the existing `omnicraft add auth` path is tested in the same generated-project DB target.
+- [x] Hosted CI runs Node DB, Python/FastAPI, and PHP/Laravel integration jobs and the full supported matrix before release; PR run #40562224821 passed.
+- [x] Integration diagnostics redact credentials and assert test secrets do not appear in captured process output.
+- [x] `docs/development/testing-strategy.md` and `docs/templates/stack-support-matrix.md` record commands and exact hosted evidence.
+- [x] FastAPI + SQLite and Laravel + SQLite were promoted only after hosted generated-project install, migration, boot, and operation checks.
+- [x] The normal unit suite remains runnable without Docker.
 
 ---
 
-## 15. Suggested issues / pull requests
+## 15. Historical proposed issues / pull requests
+
+This original breakdown predates the implementation above. The current outstanding runtime and
+capability-to-matrix work is tracked in the [active runtime-evidence plan](../active/omnicraft-stack-runtime-evidence-plan.md); creation-time auth remains not applicable unless that feature is implemented.
 
 Create separate issues or PRs so work remains reviewable:
 
