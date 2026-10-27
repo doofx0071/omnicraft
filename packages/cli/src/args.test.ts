@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs'
 
 describe('parseArgs', () => {
   it('documents the current selectable values and release-tag behavior', () => {
-    expect(HELP_TEXT).toContain('--frontend <name>    Skip the frontend prompt (react, nextjs, vue, svelte)')
-    expect(HELP_TEXT).toContain('shadcn is React/Vite-only')
+    expect(HELP_TEXT).toContain('--frontend <name>    Skip the frontend prompt (react, nextjs, vue, svelte; Next.js is integrated)')
+    expect(HELP_TEXT).toContain('shadcn is web React/Vite-only')
     expect(HELP_TEXT).toContain("this CLI version's release tag")
 
     const helpOptions = HELP_TEXT.match(/Options:\n([\s\S]*?)\n\nExamples:/)?.[1]

@@ -9,19 +9,20 @@ import { composeLayers, planLayerApplication, templateVariables } from './scaffo
 import type { Answers } from './types.js'
 
 function makeAnswers(overrides: Partial<Answers> = {}): Answers {
+  const fullStack = overrides.fullStack ?? true
   return {
     projectName: 'demo-app',
     targetDir: '.',
     projectType: 'web',
     frontend: 'react',
     language: 'typescript',
-    fullStack: true,
-    backendRuntime: 'node',
-    backendFramework: 'express',
-    orm: 'drizzle',
-    database: 'postgres',
+    fullStack,
+    backendRuntime: fullStack ? 'node' : null,
+    backendFramework: fullStack ? 'express' : null,
+    orm: fullStack ? 'drizzle' : null,
+    database: fullStack ? 'postgres' : null,
     extras: { tailwind: true, eslintPrettier: true, shadcn: false },
-    architecture: { kind: 'separate-frontend-api' },
+    architecture: fullStack ? { kind: 'separate-frontend-api' } : { kind: 'frontend-only' },
     ...overrides,
   }
 }
@@ -52,7 +53,7 @@ describe('official-generator layer order', () => {
       frontend: 'nextjs',
       backendRuntime: null,
       backendFramework: null,
-      orm: 'drizzle',
+      orm: 'none',
       database: 'sqlite',
       architecture: { kind: 'integrated-fullstack', framework: 'nextjs' },
     })
@@ -80,6 +81,19 @@ describe('official-generator layer order', () => {
     expect(plan.beforeComposer.map(({ src }) => src)).toContain('web/react/client')
     expect(plan.beforeComposer.map(({ src }) => src)).toContain('root/fullstack-php/sqlite')
     expect(plan.afterComposer.map(({ src }) => src)).toEqual(['server/php/laravel'])
+  })
+})
+
+describe('composition compatibility', () => {
+  it.each([
+    [{ frontend: 'vue', language: 'javascript' }, /JavaScript is only available/],
+    [{ backendFramework: 'hono', orm: 'prisma' }, /prisma is not available for hono/i],
+    [{ frontend: 'vue', extras: { tailwind: true, eslintPrettier: true, shadcn: true } }, /shadcn\/ui is only available/],
+    [{ frontend: 'nextjs', backendRuntime: null, backendFramework: null, orm: 'drizzle', architecture: { kind: 'integrated-fullstack', framework: 'nextjs' } }, /Next\.js must use the integrated full-stack architecture/],
+    [{ frontend: 'nextjs', backendRuntime: null, backendFramework: null, orm: 'none', database: 'mongodb', architecture: { kind: 'integrated-fullstack', framework: 'nextjs' } }, /Next\.js must use the integrated full-stack architecture/],
+    [{ frontend: 'nextjs', backendRuntime: null, backendFramework: null, orm: 'none', extras: { tailwind: false, eslintPrettier: true, shadcn: false }, architecture: { kind: 'integrated-fullstack', framework: 'nextjs' } }, /Next\.js must use the integrated full-stack architecture/],
+  ] as const)('rejects incompatible answers before returning layers', (overrides, message) => {
+    expect(() => composeLayers(makeAnswers(overrides))).toThrow(message)
   })
 })
 
@@ -333,6 +347,8 @@ describe('frontend expansion (v0.4)', () => {
 
     const nextAnswers = makeAnswers({
       frontend: 'nextjs',
+      backendRuntime: null,
+      backendFramework: null,
       orm: 'none',
       database: 'sqlite',
       extras: { tailwind: true, eslintPrettier: true, shadcn: false },
@@ -367,6 +383,8 @@ describe('frontend expansion (v0.4)', () => {
       dir,
       makeAnswers({
         frontend: 'nextjs',
+        backendRuntime: null,
+        backendFramework: null,
         orm: 'none',
         database: 'postgres',
         extras: { tailwind: true, eslintPrettier: true, shadcn: false },

@@ -36,8 +36,8 @@ For multi-file features, write a short plan into the issue (or `docs/plans/activ
 
 - Smallest complete change; match existing patterns (see [coding standards](coding-standards.md)).
 - Capability changes update the relevant flag choices, prompt choices, module/platform choices, and
-  composition rules together. `AVAILABLE` (`src/prefill.ts`) is currently a dimension-level registry and
-  does not represent all compatibility constraints; see the [support matrix](../templates/stack-support-matrix.md).
+  composition rules together. `AVAILABLE` (`src/prefill.ts`) lists dimensions; `src/compatibility.ts`
+  shares cross-option constraints. Check the [support matrix](../templates/stack-support-matrix.md).
 - Template changes follow the [template contract](../templates/template-contract.md); remember layers
   overwrite (and `package.json` merges) — design for it, don't fight it.
 - Don't refactor unrelated code in the same change.

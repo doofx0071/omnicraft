@@ -43,7 +43,7 @@ the catalog is not a promise that every cross-product is equally supported.
 - **Supported** — the exact combination has recorded generated-project install/setup, typecheck or runtime-equivalent validation, boot, and a successful real database operation (where it uses a database). The [support matrix](templates/stack-support-matrix.md) states whether that evidence is CI-backed or a previous manual report.
 - **Scaffold-verified** — an engine test or smoke run generates the exact combination; generated-project install/build or functional behavior is not fully verified.
 - **Selectable — unverified** — the registry and template layers expose the combination, but no exact engine fixture or smoke entry verifies it.
-- **Invalid registry entry** — current prompts/flags accept a combination that is missing a required adapter or compatibility guard. Do not select or describe it as supported.
+- **Rejected — unsupported combination** — preflight validation rejects the combination, or the prompt omits it, because no compatible template/module path exists.
 - **Planned** — appears in prompts as "(soon)" but has no template yet. Tracked in [ROADMAP.md](../ROADMAP.md).
 
 For the current CI coverage and repository-recorded manual results, see the per-combination [support matrix](templates/stack-support-matrix.md). A CI scaffold or typecheck does not by itself establish database/runtime support.

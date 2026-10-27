@@ -27,8 +27,8 @@ frontend/backend/database combination.
 ## 2. Capability registration — `src/prefill.ts` and prompt flow
 
 - Add the framework to `AVAILABLE.backend[<runtime>]` (new runtime: add it to `AVAILABLE.runtime` and a
-  `backend`/`db` entry). `AVAILABLE` currently lists dimensions and does not encode every cross-dimension
-  constraint; explicitly validate framework × ORM/database compatibility.
+  `backend`/`db` entry). Add cross-option rules to `src/compatibility.ts` so prompt filters, flags, and
+  composition share framework × ORM/database compatibility.
 - New runtime → extend `resolveAnswers`' default-framework mapping.
 
 ## 3. CLI plumbing

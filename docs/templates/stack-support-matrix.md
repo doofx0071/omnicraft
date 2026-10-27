@@ -12,8 +12,8 @@ unions, or the presence of a template directory do not prove that every cross-pr
   not prove dependencies install, the app boots, or database operations work.
 - **Selectable — unverified** — the CLI registry and template layers expose the combination, but no
   exact engine fixture or smoke entry verifies it.
-- **Invalid registry entry** — the current prompt/flags accept a combination that is missing a required
-  adapter or compatibility guard. Do not select or describe it as supported.
+- **Rejected — unsupported combination** — preflight rejects the combination, or the prompt omits it,
+  because no compatible template/module path exists.
 - **Planned** — not selectable and not implemented.
 
 The merged local verification run on Windows on 2026-10-27 passed 82 unit tests, typecheck, build, and
@@ -71,10 +71,9 @@ product is implied.
 | Hono | Drizzle | MySQL | **Selectable — unverified** | Registry and template layers exist; no exact engine fixture or smoke entry. |
 | Hono | Raw SQL (`none`) | PostgreSQL, SQLite, MySQL | **Selectable — unverified** | Registry and template layers exist; no exact engine fixture or smoke entry. |
 
-`Hono + Prisma + PostgreSQL` is an **Invalid registry entry**: the current registry/prompt accepts it, but
-`templates/server/node/hono/prisma/` does not exist, so composition fails with `MissingLayerError`.
-It must not be treated as supported. The registry currently checks Prisma's PostgreSQL database limit
-but does not constrain Prisma by framework.
+`Hono + Prisma + PostgreSQL` is **Rejected — unsupported combination**: the capability registry and
+prompt omit Prisma for Hono, flag preflight rejects it, and composition guards direct invalid answers.
+The repository has no `templates/server/node/hono/prisma/` layer.
 
 ### Python and PHP
 
@@ -92,17 +91,17 @@ but does not constrain Prisma by framework.
 | --- | --- | --- |
 | TypeScript templates | **Supported** | Default for the recorded supported web combinations. |
 | JavaScript React/Vite client | **Scaffold-verified** | Previous matrix records a frontend-only scaffold; no current automated fixture. Full-stack server remains TypeScript. |
-| JavaScript Vue, Svelte, or Next.js templates | **Invalid registry entry** | No JavaScript template overlay exists for these frontends. The current language prompt/flag still accepts JavaScript globally; selecting it silently leaves the generated files TypeScript. |
-| JavaScript Expo or Tauri | **Invalid registry entry** | `--lang javascript` is accepted, but native prompt flow and templates always use TypeScript. |
-| Next.js with `--orm drizzle` or `--orm prisma` | **Invalid registry entry** | The Next.js prompt/flags expose Node ORM values, but composition ignores the selection and always uses its raw-SQL adapter. |
+| JavaScript Vue, Svelte, or Next.js templates | **Rejected — unsupported combination** | No JavaScript template overlay exists for these frontends. The prompt only offers JavaScript for React/Vite; incompatible flags are rejected. |
+| JavaScript Expo or Tauri | **Rejected — unsupported combination** | Native scaffolds are fixed to TypeScript; incompatible `--lang` flags are rejected. |
+| Next.js with `--orm`, `--runtime`, `--backend`, `--no-full-stack`, or contradictory `--extras` | **Rejected — unsupported combination** | Next.js is integrated full-stack and always uses raw SQL, Tailwind, and ESLint from create-next-app; separate-backend flags are rejected, extras are fixed, and the prompt has no ORM or extras question. |
 | `omnicraft add auth` — Express + Drizzle + SQLite | **Supported** | Hosted `database-integration` job in [run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380) passed the generated email/password flow, session validity and persistence across restart, logout invalidation, password-hash check, and CRUD. |
 | `omnicraft add auth` — Express + Drizzle + PostgreSQL/MySQL | **Supported** | Hosted `database-integration` job in [run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380) passed the generated email/password flow, session validity and persistence across restart, logout invalidation, password-hash check, and CRUD for both dialects. |
-| `omnicraft add auth` — Fastify/Hono + Drizzle | **Invalid registry entry** | The guard does not reject these frameworks, but the module patches target Express files and do not have framework-specific wiring. |
+| `omnicraft add auth` — Fastify/Hono + Drizzle | **Rejected — unsupported combination** | The module guard rejects these frameworks because its route patches target Express files. |
 | `omnicraft add testing` | **Supported** | Changelog records adding the client Vitest module and running its sample test; no automated add-module regression test is present. |
 | `omnicraft add docker` | **Selectable — unverified** | Implementation exists for PostgreSQL/MySQL separate-API projects; no current add-module test covers it. |
 | Tailwind CSS | **Scaffold-verified** | Generated in the current smoke paths; prior matrix records a generated-project build. |
 | ESLint + Prettier | **Scaffold-verified** | Current smoke paths include the extra; CI lint is limited to Express + Drizzle + PostgreSQL on the Windows job. |
-| shadcn/ui — React/Vite | **Scaffold-verified** | Engine test checks the overlay; the post-scaffold shadcn CLI install is not covered by the current suite. For other frontends, the accepted flag is an invalid registry entry because composition silently skips the overlay. |
+| shadcn/ui — React/Vite | **Scaffold-verified** | Engine test checks the overlay; the post-scaffold shadcn CLI install is not covered by the current suite. Other frontend/platform combinations omit shadcn from the prompt and reject incompatible flags. |
 
 ## Planned and registry gaps
 
@@ -110,18 +109,8 @@ The prompts mark NestJS, Django, Symfony, MongoDB, and PHP/MySQL or Python/MySQL
 applicable. The type unions also contain future names such as Mongoose; a type union alone does not make
 an option selectable.
 
-The `AVAILABLE` object is a dimension-level list for runtimes, frontends, language, backends, databases,
-Node ORMs, and extras. It does not yet encode every compatibility edge, native platform prerequisites,
-module compatibility, or verification status. Platforms are listed directly in the prompt, while modules
-live in a separate registry. Known mismatches found in this review:
-
-- Hono + Prisma is accepted but has no framework/ORM template layer.
-- JavaScript is accepted for all web frontends although only the React/Vite JavaScript client exists.
-- `--lang javascript` is accepted for native platforms even though Expo/Tauri templates stay TypeScript.
-- Next.js exposes ORM choices that its composition ignores; it always uses raw SQL. `--runtime` and
-  `--backend` overrides are also accepted but ignored because Next.js is integrated full-stack.
-- shadcn is accepted by flags for all frontends although composition applies it only to React/Vite.
-- Better Auth's guard does not reject non-Express frameworks, although the patches target Express files.
-
-These combinations are not promoted by this matrix. A later capability-registry phase should represent
-these constraints in one place and test that prompts, flags, composition, and documentation agree.
+`AVAILABLE` still lists choices by dimension, while `compatibility.ts` holds cross-option constraints
+shared by prompt filtering, flag validation, composition, and the Better Auth module guard. Regression
+tests cover JavaScript frontend limits, Next.js raw-SQL behavior, Hono ORM choices, shadcn frontend
+choices, and Express-only auth patching. These checks make invalid combinations unavailable without
+changing the evidence status of any valid stack row above.

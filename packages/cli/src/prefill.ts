@@ -1,5 +1,11 @@
 import type { Answers, BackendFramework, Frontend, Orm } from './types.js'
 import type { ParsedArgs } from './args.js'
+import {
+  RUNTIME_BACKENDS,
+  RUNTIME_DATABASES,
+  validateAnswerCompatibility,
+  validateFlagCompatibility,
+} from './compatibility.js'
 
 /**
  * Stack choices that exist in the current release — the prompts show more
@@ -10,16 +16,8 @@ export const AVAILABLE = {
   runtime: ['node', 'python', 'php'] as const,
   frontend: ['react', 'nextjs', 'vue', 'svelte'] as const,
   lang: ['typescript', 'javascript'] as const,
-  backend: {
-    node: ['express', 'fastify', 'hono'] as const,
-    python: ['fastapi'] as const,
-    php: ['laravel'] as const,
-  },
-  db: {
-    node: ['postgres', 'sqlite', 'mysql'] as const,
-    python: ['postgres', 'sqlite'] as const,
-    php: ['postgres', 'sqlite', 'mysql'] as const,
-  },
+  backend: RUNTIME_BACKENDS,
+  db: RUNTIME_DATABASES,
   orm: { node: ['drizzle', 'prisma', 'none'] as const },
   extras: ['tailwind', 'eslint', 'shadcn'] as const,
 }
@@ -48,6 +46,7 @@ function resolveRuntime(args: ParsedArgs): Runtime {
 /** Validates every stack flag present on the parsed args; throws on bad values. */
 export function validateStackFlags(args: ParsedArgs): void {
   const runtime = resolveRuntime(args)
+  if (args.platform) parseEnumChoice('--platform', args.platform, ['web', 'mobile', 'desktop'])
   if (args.lang) parseEnumChoice('--lang', args.lang, AVAILABLE.lang)
   if (args.frontend) parseEnumChoice('--frontend', args.frontend, AVAILABLE.frontend)
   if (args.backend) parseEnumChoice('--backend', args.backend, AVAILABLE.backend[runtime])
@@ -74,6 +73,7 @@ export function validateStackFlags(args: ParsedArgs): void {
       )
     }
   }
+  validateFlagCompatibility(args)
 }
 
 /** True when at least one prompt would be answered by a flag. */
@@ -94,6 +94,7 @@ export function hasStackFlags(args: ParsedArgs): boolean {
  * no prompt may appear. Defaults match the interactive flow's initial values.
  */
 export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir: string): Answers {
+  validateStackFlags(args)
   const runtime = resolveRuntime(args)
   const frontend: Frontend = args.frontend
     ? parseEnumChoice('--frontend', args.frontend, AVAILABLE.frontend)
@@ -103,7 +104,7 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
   const integrated = frontend === 'nextjs'
   const fullStack = integrated ? true : (args.fullStack ?? true)
   const db = args.db ? parseEnumChoice('--db', args.db, AVAILABLE.db[runtime]) : 'postgres'
-  const backendFramework: BackendFramework = fullStack && !integrated
+  const backendFramework: BackendFramework | null = fullStack && !integrated
     ? args.backend
       ? parseEnumChoice('--backend', args.backend, AVAILABLE.backend[runtime])
       : runtime === 'node'
@@ -111,8 +112,10 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
         : runtime === 'python'
           ? 'fastapi'
           : 'laravel'
-    : 'express'
-  const orm: Orm | null = fullStack && runtime === 'node'
+    : null
+  const orm: Orm | null = integrated
+    ? 'none'
+    : fullStack && runtime === 'node'
     ? args.orm
       ? parseEnumChoice('--orm', args.orm, AVAILABLE.orm.node)
       : 'drizzle'
@@ -121,7 +124,7 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
   // shadcn opt-in) — NOT the full AVAILABLE list.
   const extrasList = args.extras ?? AVAILABLE.extras.filter((e) => e !== 'shadcn')
 
-  return {
+  const answers: Answers = {
     projectName,
     targetDir,
     projectType: 'web',
@@ -129,7 +132,7 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
     language: args.lang ? parseEnumChoice('--lang', args.lang, AVAILABLE.lang) : 'typescript',
     fullStack,
     backendRuntime: fullStack && !integrated ? runtime : null,
-    backendFramework: fullStack && !integrated ? backendFramework : null,
+    backendFramework,
     orm,
     database: fullStack ? db : null,
     extras: {
@@ -143,4 +146,6 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
         ? { kind: 'separate-frontend-api' }
         : { kind: 'frontend-only' },
   }
+  validateAnswerCompatibility(answers)
+  return answers
 }

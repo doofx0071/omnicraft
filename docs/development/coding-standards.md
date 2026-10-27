@@ -42,18 +42,16 @@ directory (`cwd`) or by the smoke script's file operations, never as part of a s
 - `Option<Value>` can't be satisfied by an unresolved generic — constrain to `string` and cast at the
   edge (see `selectWithSoon` in `run-prompts.ts`).
 - `p.select` needs `Option<T>[]`; build option objects imperatively when the hint is conditional.
-- Prompt availability is currently split across `AVAILABLE` in `src/prefill.ts`, choice arrays in
-  `run-prompts.ts`, platform choices, and the module registry. `AVAILABLE` lists dimensions but does
-  not encode every compatibility edge. When changing choices, update the relevant sources together and
-  test flag validation, prompts, and composition. Consolidating these definitions is a separate planned
-  registry improvement.
+- `AVAILABLE` in `src/prefill.ts` lists individual choices; `src/compatibility.ts` owns cross-option
+  constraints shared by flag validation, prompt filtering, composition, and Better Auth. When changing
+  choices, update the relevant sources together and test flag validation, prompts, and composition.
 
 ## Capability changes
 
 When adding/changing what the CLI can scaffold, update **all** of these together (see the
 [feature workflow](feature-development-workflow.md)):
 
-1. `AVAILABLE` in `src/prefill.ts` (+ `validateStackFlags` rules),
+1. `AVAILABLE` in `src/prefill.ts` and cross-option rules in `src/compatibility.ts`,
 2. prompt choices in `run-prompts.ts` (choices + hints, incl. "(soon)" entries),
 3. `composeLayers` if a new layer kind is involved,
 4. tests (`prefill.test.ts`, `engine.test.ts`, `prompts/run-prompts.test.ts` as applicable),

@@ -9,6 +9,7 @@
  * if the anchor is missing.
  */
 import type { ModuleDefinition } from '../add.js'
+import { MODULE_COMPATIBILITY } from '../compatibility.js'
 
 const AUTH_TS = (provider: string) => `import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
@@ -312,10 +313,15 @@ export const authModule: ModuleDefinition = {
   id: 'auth',
   description: 'better-auth email/password boilerplate (express + drizzle stacks)',
   incompatible(manifest) {
-    if (manifest.stack.backendRuntime !== 'node' || manifest.stack.orm !== 'drizzle') {
-      return 'the first auth stack is Node.js backends with Drizzle (express). Hono/Fastify wiring is on the roadmap.'
+    const supported = MODULE_COMPATIBILITY.auth
+    if (
+      manifest.stack.backendRuntime !== supported.backendRuntime ||
+      manifest.stack.backendFramework !== supported.backendFramework ||
+      manifest.stack.orm !== supported.orm
+    ) {
+      return 'Better Auth currently requires Node.js + Express + Drizzle; its route patches target Express.'
     }
-    if (manifest.stack.architecture.kind !== 'separate-frontend-api') {
+    if (manifest.stack.architecture.kind !== supported.architecture) {
       return `architecture "${manifest.stack.architecture.kind}" is not covered yet`
     }
     return null

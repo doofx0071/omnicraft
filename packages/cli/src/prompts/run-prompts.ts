@@ -17,8 +17,18 @@ import {
 } from '../types.js'
 import { checkRawProjectName, findCollisions, isNonEmptyDirectory, resolveTargetDir } from '../validators.js'
 import { CLIENT_PORT, SERVER_PORT } from '../config.js'
-import { AVAILABLE, parseEnumChoice } from '../prefill.js'
+import { AVAILABLE, parseEnumChoice, validateStackFlags } from '../prefill.js'
 import type { ParsedArgs } from '../args.js'
+import {
+  hasFullStackFlags,
+  isFrontendAllowedByFlags,
+  isProjectTypeAllowedByFlags,
+  isRuntimeAllowedByFlags,
+  nodeOrmsForFramework,
+  supportsLanguage,
+  supportsShadcn,
+  validateAnswerCompatibility,
+} from '../compatibility.js'
 
 interface Choice<T extends string> {
   value: T
@@ -61,6 +71,34 @@ async function selectWithSoonLoop(message: string, choices: Choice<string>[]): P
   }
 }
 
+function projectTypeChoices(flags: ParsedArgs): Choice<ProjectType>[] {
+  const choices: Choice<ProjectType>[] = [
+    { value: 'web', label: PROJECT_TYPE_LABELS.web, available: true, hint: 'Browser app' },
+    { value: 'mobile', label: PROJECT_TYPE_LABELS.mobile, available: true, hint: 'Expo + TypeScript (iOS/Android)' },
+    { value: 'desktop', label: PROJECT_TYPE_LABELS.desktop, available: true, hint: 'Tauri 2 + React UI' },
+  ]
+  return choices.filter((choice) => isProjectTypeAllowedByFlags(choice.value, flags))
+}
+
+function frontendChoices(flags: ParsedArgs): Choice<Frontend>[] {
+  const choices: Choice<Frontend>[] = [
+    { value: 'react', label: FRONTEND_LABELS.react, available: true, hint: 'Vite + TypeScript' },
+    { value: 'nextjs', label: FRONTEND_LABELS.nextjs, available: true, hint: 'Integrated full-stack — Next.js IS the server' },
+    { value: 'vue', label: FRONTEND_LABELS.vue, available: true, hint: 'Vite + TypeScript' },
+    { value: 'svelte', label: FRONTEND_LABELS.svelte, available: true, hint: 'Vite + TypeScript' },
+  ]
+  return choices.filter((choice) => isFrontendAllowedByFlags(choice.value, flags))
+}
+
+function runtimeChoices(flags: ParsedArgs): Choice<BackendRuntime>[] {
+  const choices: Choice<BackendRuntime>[] = [
+    { value: 'node', label: BACKEND_RUNTIME_LABELS.node, available: true, hint: 'Express, Fastify, Hono' },
+    { value: 'python', label: BACKEND_RUNTIME_LABELS.python, available: true, hint: 'FastAPI + SQLAlchemy' },
+    { value: 'php', label: BACKEND_RUNTIME_LABELS.php, available: true, hint: 'Laravel + Eloquent' },
+  ]
+  return choices.filter((choice) => isRuntimeAllowedByFlags(choice.value, flags))
+}
+
 /**
  * Runs the interactive flow. Flags from the command line answer their prompt
  * directly; `--yes` answers everything with the defaults and skips the final
@@ -68,6 +106,7 @@ async function selectWithSoonLoop(message: string, choices: Choice<string>[]): P
  */
 export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<Answers> {
   const flags: ParsedArgs = args ?? ({} as ParsedArgs)
+  validateStackFlags(flags)
   const forced = flags.yes === true
 
   // ── App name ────────────────────────────────────────────────────────────
@@ -144,11 +183,7 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
   } else if (forced) {
     projectType = 'web'
   } else {
-    projectType = await selectWithSoon<ProjectType>('What are you building?', [
-      { value: 'web', label: PROJECT_TYPE_LABELS.web, available: true, hint: 'Browser app' },
-      { value: 'mobile', label: PROJECT_TYPE_LABELS.mobile, available: true, hint: 'Expo + TypeScript (iOS/Android)' },
-      { value: 'desktop', label: PROJECT_TYPE_LABELS.desktop, available: true, hint: 'Tauri 2 + React UI' },
-    ])
+    projectType = await selectWithSoon<ProjectType>('What are you building?', projectTypeChoices(flags))
   }
 
   // Native platforms: the official generator IS the scaffold — no frontend,
@@ -170,12 +205,7 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
       ? parseEnumChoice('--frontend', flags.frontend, AVAILABLE.frontend)
       : forced
         ? 'react'
-        : await selectWithSoon<Frontend>('Select a frontend framework:', [
-            { value: 'react', label: FRONTEND_LABELS.react, available: true, hint: 'Vite + TypeScript' },
-            { value: 'nextjs', label: FRONTEND_LABELS.nextjs, available: true, hint: 'Integrated full-stack — Next.js IS the server' },
-            { value: 'vue', label: FRONTEND_LABELS.vue, available: true, hint: 'Vite + TypeScript' },
-            { value: 'svelte', label: FRONTEND_LABELS.svelte, available: true, hint: 'Vite + TypeScript' },
-          ])
+        : await selectWithSoon<Frontend>('Select a frontend framework:', frontendChoices(flags))
 
   // Next.js = integrated full-stack: the framework is the server. The separate
   // "Full-stack?" / backend prompts collapse into the database questions.
@@ -188,14 +218,17 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
       : !native
         ? await selectWithSoon<Language>('Select a language:', [
             { value: 'typescript', label: 'TypeScript', available: true, hint: 'Recommended' },
-            { value: 'javascript', label: 'JavaScript', available: true, hint: 'React/Vite client ships as JS' },
+            ...(supportsLanguage(projectType, frontend, 'javascript')
+              ? [{ value: 'javascript' as const, label: 'JavaScript', available: true, hint: 'React/Vite client ships as JS; a selected server remains TypeScript' }]
+              : []),
           ])
         : 'typescript'
   if (!native) p.log.info(`Language: ${language === 'typescript' ? 'TypeScript' : 'JavaScript'}`)
 
   // ── Full stack? ─────────────────────────────────────────────────────────
-  let fullStack = integrated ? true : (flags.fullStack ?? (forced ? true : false))
-  if (!native && !integrated && flags.fullStack === undefined && !forced) {
+  const fullStackFlagRequested = hasFullStackFlags(flags)
+  let fullStack = integrated ? true : (flags.fullStack ?? (forced || fullStackFlagRequested))
+  if (!native && !integrated && flags.fullStack === undefined && !forced && !fullStackFlagRequested) {
     fullStack = unwrap<boolean>(
       await p.confirm({
         message: 'Full-stack? Adds a backend API, database and ready-made boilerplate.',
@@ -203,6 +236,14 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
       }),
     )
   }
+
+  const architecture: Answers['architecture'] = integrated
+    ? { kind: 'integrated-fullstack', framework: 'nextjs' }
+    : fullStack && !native
+      ? { kind: 'separate-frontend-api' }
+      : native
+        ? { kind: 'native-app', platform: projectType === 'mobile' ? 'mobile' : 'desktop' }
+        : { kind: 'frontend-only' }
 
   let backendRuntime: BackendRuntime = 'node'
   let backendFramework: BackendFramework = 'express'
@@ -217,11 +258,7 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
         ? parseEnumChoice('--runtime', flags.runtime, AVAILABLE.runtime)
         : forced
           ? 'node'
-          : await selectWithSoon<BackendRuntime>('Select a backend runtime:', [
-              { value: 'node', label: BACKEND_RUNTIME_LABELS.node, available: true, hint: 'Express, Fastify, Hono' },
-              { value: 'python', label: BACKEND_RUNTIME_LABELS.python, available: true, hint: 'FastAPI + SQLAlchemy' },
-              { value: 'php', label: BACKEND_RUNTIME_LABELS.php, available: true, hint: 'Laravel + Eloquent' },
-            ])
+          : await selectWithSoon<BackendRuntime>('Select a backend runtime:', runtimeChoices(flags))
 
       const frameworkChoices: Record<BackendRuntime, Choice<BackendFramework>[]> = {
         node: [
@@ -246,7 +283,12 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
           ? AVAILABLE.backend[backendRuntime][0]
           : await selectWithSoon<BackendFramework>(
               'Select a backend framework:',
-              frameworkChoices[backendRuntime],
+              frameworkChoices[backendRuntime].filter(
+                (choice) =>
+                  !choice.available ||
+                  !flags.orm ||
+                  nodeOrmsForFramework(choice.value).includes(flags.orm as 'drizzle' | 'prisma' | 'none'),
+              ),
             )
     } else {
       backendRuntime = 'node'
@@ -281,16 +323,23 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
         ? 'postgres'
         : ((await selectWithSoon<Database>('Select a database:', dbChoices[backendRuntime])) as 'postgres' | 'sqlite' | 'mysql')
 
-    if (backendRuntime === 'node') {
+    if (integrated) {
+      orm = 'none'
+      p.log.info('ORM: none — Next.js uses raw SQL')
+    } else if (backendRuntime === 'node') {
+      const ormChoices: Choice<'drizzle' | 'prisma' | 'none'>[] = [
+        { value: 'drizzle', label: 'Drizzle', available: true, hint: 'SQL-like, lightweight' },
+        { value: 'prisma', label: 'Prisma', available: database === 'postgres', hint: database === 'postgres' ? 'Schema-first, great DX' : 'PostgreSQL only for now' },
+        { value: 'none', label: 'None — raw SQL', available: true, hint: 'Driver + parameterized queries + SQL-file migrations' },
+      ]
       orm = flags.orm
         ? parseEnumChoice('--orm', flags.orm, AVAILABLE.orm.node)
         : forced
           ? 'drizzle'
-          : await selectWithSoon<'drizzle' | 'prisma' | 'none'>('Select an ORM:', [
-              { value: 'drizzle', label: 'Drizzle', available: true, hint: 'SQL-like, lightweight' },
-              { value: 'prisma', label: 'Prisma', available: database === 'postgres', hint: database === 'postgres' ? 'Schema-first, great DX' : 'PostgreSQL only for now' },
-              { value: 'none', label: 'None — raw SQL', available: true, hint: 'Driver + parameterized queries + SQL-file migrations' },
-            ])
+          : await selectWithSoon<'drizzle' | 'prisma' | 'none'>(
+              'Select an ORM:',
+              ormChoices.filter((choice) => nodeOrmsForFramework(backendFramework).includes(choice.value)),
+            )
       p.log.info(orm === 'none' ? 'ORM: none — raw SQL via the driver' : `ORM: ${orm === 'drizzle' ? 'Drizzle' : 'Prisma'}`)
     } else if (backendRuntime === 'python') {
       orm = null
@@ -305,7 +354,13 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
 
   // ── Extras ──────────────────────────────────────────────────────────────
   let extras: { tailwind: boolean; eslintPrettier: boolean; shadcn: boolean }
-  if (flags.extras) {
+  if (native) {
+    extras = { tailwind: false, eslintPrettier: false, shadcn: false }
+  } else if (integrated) {
+    // create-next-app is invoked with --tailwind and --eslint; these are fixed
+    // generator defaults rather than optional Vite overlay choices.
+    extras = { tailwind: true, eslintPrettier: true, shadcn: false }
+  } else if (flags.extras) {
     extras = {
       tailwind: flags.extras.includes('tailwind') || flags.extras.includes('shadcn'),
       eslintPrettier: flags.extras.includes('eslint'),
@@ -314,16 +369,21 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
   } else if (forced) {
     extras = { tailwind: true, eslintPrettier: true, shadcn: false }
   } else {
+    const extraChoices: Choice<'tailwind' | 'eslint' | 'shadcn'>[] = [
+      { value: 'tailwind', label: 'Tailwind CSS', available: true, hint: 'Utility-first styling' },
+      { value: 'eslint', label: 'ESLint + Prettier', available: true, hint: 'Linting + formatting' },
+      { value: 'shadcn', label: 'shadcn/ui', available: true, hint: 'Component library (includes Tailwind) — runs shadcn CLI' },
+    ]
     const picked = unwrapMany(
       await p.multiselect<'tailwind' | 'eslint' | 'shadcn'>({
         message: 'Pick extras:',
         required: false,
         initialValues: ['tailwind', 'eslint'],
-        options: [
-          { value: 'tailwind', label: 'Tailwind CSS', hint: 'Utility-first styling' },
-          { value: 'eslint', label: 'ESLint + Prettier', hint: 'Linting + formatting' },
-          { value: 'shadcn', label: 'shadcn/ui', hint: 'Component library (includes Tailwind) — runs shadcn CLI' },
-        ],
+        options: extraChoices
+          .filter((choice) =>
+            choice.value !== 'shadcn' || supportsShadcn(projectType, frontend, architecture),
+          )
+          .map(({ value, label, hint }) => ({ value, label, hint })),
       }),
     )
     extras = {
@@ -332,6 +392,22 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
       shadcn: picked.includes('shadcn'),
     }
   }
+
+  const answers: Answers = {
+    projectName,
+    targetDir,
+    projectType,
+    frontend,
+    language,
+    fullStack: fullStack && !native,
+    backendRuntime: fullStack && !integrated && !native ? backendRuntime : null,
+    backendFramework: fullStack && !integrated && !native ? backendFramework : null,
+    orm: fullStack && !native ? orm : null,
+    database: fullStack && !native ? database : null,
+    extras: native ? { tailwind: false, eslintPrettier: false, shadcn: false } : extras,
+    architecture,
+  }
+  validateAnswerCompatibility(answers)
 
   // ── Summary ─────────────────────────────────────────────────────────────
   const summary: string[] = [`App:        ${projectName}`]
@@ -385,24 +461,5 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
     if (!ready) throw new CancelledError('Nothing was created.')
   }
 
-  return {
-    projectName,
-    targetDir,
-    projectType,
-    frontend,
-    language,
-    fullStack: fullStack && !native,
-    backendRuntime: fullStack && !integrated && !native ? backendRuntime : null,
-    backendFramework: fullStack && !integrated && !native ? backendFramework : null,
-    orm: fullStack && !native ? orm : null,
-    database: fullStack && !native ? database : null,
-    extras: native ? { tailwind: false, eslintPrettier: false, shadcn: false } : extras,
-    architecture: integrated
-      ? { kind: 'integrated-fullstack', framework: 'nextjs' }
-      : fullStack && !native
-        ? { kind: 'separate-frontend-api' }
-        : native
-          ? { kind: 'native-app', platform: projectType === 'mobile' ? 'mobile' : 'desktop' }
-          : { kind: 'frontend-only' },
-  }
+  return answers
 }

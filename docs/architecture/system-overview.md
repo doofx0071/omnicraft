@@ -42,7 +42,7 @@ OmniCraft does not scaffold that backend in the same native project.
 | --- | --- | --- |
 | Entry/orchestration | `src/index.ts` | Argument validation, TTY guard, generator execution, scaffold/install ordering, and the single cancellation/error path. |
 | CLI surface | `src/args.ts` | Positional project name, flags, and `HELP_TEXT`. The README options block mirrors this text. |
-| Capability choices | `src/prefill.ts` (`AVAILABLE`) and `src/prompts/run-prompts.ts` | Runtime/framework/database/ORM/extra choices, flag validation, `--yes` defaults, and interactive choices. `AVAILABLE` is dimension-level and does not yet encode every compatibility edge. Platform choices and module choices are maintained separately. |
+| Capability choices | `src/prefill.ts` (`AVAILABLE`), `src/compatibility.ts`, and `src/prompts/run-prompts.ts` | Dimension choices, cross-option constraints, flag validation, `--yes` defaults, interactive choices, composition guards, and Better Auth compatibility. |
 | Project types | `src/types.ts` | Type unions and `Answers` shape. Some union values are future values and do not make a choice selectable. |
 | Composition | `src/scaffold/compose.ts` | Pure mapping from `Answers` to ordered layers and template variables; routes Next.js and native adapters separately. |
 | Engine | `src/scaffold/engine.ts` | Recursive template copy, token render, underscore dotfile restoration, protected-name checks, and `package.json` merge. Later template layers overwrite earlier files except manifests, which merge. |
@@ -57,9 +57,9 @@ OmniCraft does not scaffold that backend in the same native project.
 
 ## Cross-cutting behavior and limits
 
-1. **Capability accuracy.** `AVAILABLE` powers much of the prompt and flag surface, but it does not
-   represent every framework/ORM or language/extra compatibility edge. The support matrix records
-   known mismatches and exact verification evidence.
+1. **Capability accuracy.** `AVAILABLE` lists individual choices; `compatibility.ts` shares the
+   cross-option rules used by prompts, flag validation, composition, and the Better Auth guard. The
+   support matrix records selectable combinations and their exact verification evidence.
 2. **Layer overrides.** Repeated files such as framework routes, env files, Vite config, CSS, and
    `.env.example` are intentional. A later layer replaces earlier template output; `package.json`
    objects deep-merge.

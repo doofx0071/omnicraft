@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { parseArgs } from '../args.js'
 
 const script: Array<{ prompt: 'text' | 'select' | 'confirm' | 'multiselect'; answer: unknown }> = []
 const calls: string[] = []
+const optionsSeen: Array<{ prompt: 'select' | 'multiselect'; options: Array<{ value: string }> }> = []
 
 vi.mock('@clack/prompts', () => {
   const takeAnswer = (prompt: string): unknown => {
@@ -20,9 +22,15 @@ vi.mock('@clack/prompts', () => {
     note: vi.fn(),
     log,
     text: vi.fn(() => takeAnswer('text')),
-    select: vi.fn(() => takeAnswer('select')),
+    select: vi.fn((config: { options: Array<{ value: string }> }) => {
+      optionsSeen.push({ prompt: 'select', options: config.options })
+      return takeAnswer('select')
+    }),
     confirm: vi.fn(() => takeAnswer('confirm')),
-    multiselect: vi.fn(() => takeAnswer('multiselect')),
+    multiselect: vi.fn((config: { options: Array<{ value: string }> }) => {
+      optionsSeen.push({ prompt: 'multiselect', options: config.options })
+      return takeAnswer('multiselect')
+    }),
   }
 })
 
@@ -31,6 +39,7 @@ const { runPrompts } = await import('./run-prompts.js')
 beforeEach(() => {
   script.length = 0
   calls.length = 0
+  optionsSeen.length = 0
   vi.clearAllMocks()
 })
 
@@ -90,6 +99,120 @@ describe('runPrompts flow', () => {
     expect(answers.backendFramework).toBeNull() // no backend on frontend-only
     expect(answers.database).toBeNull()
     expect(calls.filter((c) => c === 'select')).toHaveLength(3) // no runtime/framework/orm prompts
+  })
+
+  it('omits Prisma from the ORM choices for Hono', async () => {
+    script.push(
+      { prompt: 'text', answer: 'hono-app' },
+      { prompt: 'select', answer: 'web' },
+      { prompt: 'select', answer: 'react' },
+      { prompt: 'select', answer: 'typescript' },
+      { prompt: 'confirm', answer: true },
+      { prompt: 'select', answer: 'node' },
+      { prompt: 'select', answer: 'hono' },
+      { prompt: 'select', answer: 'postgres' },
+      { prompt: 'select', answer: 'drizzle' },
+      { prompt: 'multiselect', answer: [] },
+      { prompt: 'confirm', answer: true },
+    )
+
+    await runPrompts()
+    const ormOptions = optionsSeen.find((entry) => entry.options.some((option) => option.value === 'drizzle'))
+    expect(ormOptions?.options.map((option) => option.value)).toEqual(['drizzle', 'none'])
+  })
+
+  it('uses raw SQL for Next.js and does not ask for an ORM', async () => {
+    script.push(
+      { prompt: 'text', answer: 'next-app' },
+      { prompt: 'select', answer: 'web' },
+      { prompt: 'select', answer: 'typescript' },
+      { prompt: 'select', answer: 'postgres' },
+      { prompt: 'confirm', answer: true },
+    )
+
+    const answers = await runPrompts(undefined, parseArgs(['--frontend', 'nextjs']))
+    expect(answers.orm).toBe('none')
+    expect(answers.backendRuntime).toBeNull()
+    expect(answers.backendFramework).toBeNull()
+    expect(answers.extras).toEqual({ tailwind: true, eslintPrettier: true, shadcn: false })
+    expect(calls.filter((call) => call === 'confirm')).toHaveLength(1)
+    expect(calls).not.toContain('multiselect')
+    expect(optionsSeen[1]?.options.map((option) => option.value)).toEqual(['typescript'])
+  })
+
+  it('omits Next.js when explicit extras conflict with generator defaults', async () => {
+    script.push(
+      { prompt: 'select', answer: 'web' },
+      { prompt: 'select', answer: 'react' },
+      { prompt: 'select', answer: 'typescript' },
+      { prompt: 'confirm', answer: false },
+      { prompt: 'confirm', answer: true },
+    )
+
+    await runPrompts('extras-app', parseArgs(['--extras', 'none']))
+    expect(optionsSeen[1]?.options.map((option) => option.value)).not.toContain('nextjs')
+  })
+
+  it('keeps backend flags in the full-stack prompt path', async () => {
+    script.push(
+      { prompt: 'select', answer: 'web' },
+      { prompt: 'select', answer: 'react' },
+      { prompt: 'select', answer: 'typescript' },
+      { prompt: 'select', answer: 'node' },
+      { prompt: 'select', answer: 'postgres' },
+      { prompt: 'select', answer: 'drizzle' },
+      { prompt: 'multiselect', answer: [] },
+      { prompt: 'confirm', answer: true },
+    )
+
+    const answers = await runPrompts('hono-app', parseArgs(['--backend', 'hono']))
+    expect(answers.fullStack).toBe(true)
+    expect(answers.backendFramework).toBe('hono')
+    expect(calls.filter((call) => call === 'confirm')).toHaveLength(1)
+    expect(optionsSeen[1]?.options.map((option) => option.value)).not.toContain('nextjs')
+  })
+
+  it('restricts JavaScript to the web React/Vite choices', async () => {
+    script.push(
+      { prompt: 'select', answer: 'web' },
+      { prompt: 'select', answer: 'react' },
+      { prompt: 'confirm', answer: false },
+      { prompt: 'multiselect', answer: [] },
+      { prompt: 'confirm', answer: true },
+    )
+
+    const answers = await runPrompts('js-app', parseArgs(['--lang', 'javascript']))
+    expect(answers.language).toBe('javascript')
+    expect(optionsSeen[0]?.options.map((option) => option.value)).toEqual(['web'])
+    expect(optionsSeen[1]?.options.map((option) => option.value)).toEqual(['react'])
+  })
+
+  it('omits shadcn from the extras for Vue', async () => {
+    script.push(
+      { prompt: 'select', answer: 'web' },
+      { prompt: 'select', answer: 'typescript' },
+      { prompt: 'confirm', answer: false },
+      { prompt: 'multiselect', answer: [] },
+      { prompt: 'confirm', answer: true },
+    )
+
+    await runPrompts('vue-app', parseArgs(['--frontend', 'vue']))
+    const extras = optionsSeen.find((entry) => entry.prompt === 'multiselect')
+    expect(extras?.options.map((option) => option.value)).toEqual(['tailwind', 'eslint'])
+  })
+
+  it('restricts an explicit shadcn choice to the React frontend', async () => {
+    script.push(
+      { prompt: 'select', answer: 'web' },
+      { prompt: 'select', answer: 'react' },
+      { prompt: 'select', answer: 'typescript' },
+      { prompt: 'confirm', answer: false },
+      { prompt: 'confirm', answer: true },
+    )
+
+    const answers = await runPrompts('shadcn-app', parseArgs(['--extras', 'shadcn']))
+    expect(answers.extras).toEqual({ tailwind: true, eslintPrettier: false, shadcn: true })
+    expect(optionsSeen[1]?.options.map((option) => option.value)).toEqual(['react'])
   })
 
   it('re-prompts when a roadmap option is picked', async () => {

@@ -120,7 +120,7 @@ for (const fe of ['vue', 'svelte'] as const) {
       fullStack: true,
       backendRuntime: null,
       backendFramework: null,
-      orm: 'drizzle',
+      orm: 'none',
       database: 'sqlite',
       extras: { tailwind: true, eslintPrettier: true, shadcn: false },
       architecture: { kind: 'integrated-fullstack', framework: 'nextjs' },
