@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
 import { createServer } from 'node:net'
-import { copyFileSync, mkdtempSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
+import { copyFileSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { text } from 'node:stream/consumers'
@@ -474,7 +474,6 @@ async function runDatabaseCase(database: TestDatabase): Promise<void> {
 
     let databaseUrl: string
     if (database === 'sqlite') {
-      mkdirSync(join(serverDir, 'data'), { recursive: true })
       databaseUrl = 'file:./data/auth.sqlite'
     } else {
       container = await startDatabase(database, secrets)

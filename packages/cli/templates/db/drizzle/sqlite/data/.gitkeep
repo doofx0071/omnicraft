@@ -1,0 +1,1 @@
+# Keep the SQLite database directory present so Drizzle can run its first push or migration.

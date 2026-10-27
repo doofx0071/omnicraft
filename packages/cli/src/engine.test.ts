@@ -152,6 +152,7 @@ describe('full-stack combos', () => {
       const envContent = readFileSync(join(dir, 'server', '.env'), 'utf8')
       if (db === 'sqlite') {
         expect(envContent).toContain('DATABASE_URL=file:./data/app.db')
+        expect(existsSync(join(dir, 'server', 'data'))).toBe(true)
       } else if (db === 'mysql') {
         expect(envContent).toContain('DATABASE_URL=mysql://omnicraft:omnicraft@localhost:3306/demo_app')
       } else {
