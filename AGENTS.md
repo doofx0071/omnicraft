@@ -17,10 +17,11 @@ Interactive project-scaffolding CLI. npm package **`create-omnicraft`** → user
 | Which docs change with which code             | [docs/development/documentation-standards.md](docs/development/documentation-standards.md)                                                        |
 | Coding rules (incl. Windows subprocess law)   | [docs/development/coding-standards.md](docs/development/coding-standards.md)                                                                      |
 | Contributing + release process                | [CONTRIBUTING.md](CONTRIBUTING.md)                                                                                                                |
-| Active engineering plan                       | [docs/plans/active/omnicraft-master-plan.md](docs/plans/active/omnicraft-master-plan.md)                                                          |
+| Current release status and priorities         | [ROADMAP.md](ROADMAP.md)                                                                                                                           |
 
-Docs index: [docs/index.md](docs/index.md). Status vocabulary: Supported / Scaffold-verified / Planned —
-never describe a combination as supported without the matrix's evidence.
+Docs index: [docs/index.md](docs/index.md). Status vocabulary: Supported / Scaffold-verified /
+Selectable — unverified / Invalid registry entry / Planned — never describe a combination as Supported
+without the matrix's exact evidence.
 
 ## Commands
 
@@ -31,20 +32,20 @@ All from `packages/cli/` unless noted:
 - Tests: `npx vitest run` (or `npm test` from root)
 - Build (tsup → `dist/index.js` with shebang): `npx tsup`
 - Run CLI from source: `npm run dev` (interactive — needs a real TTY)
-- Scaffold every stack combo without prompts: `npx tsx scripts/smoke-e2e.ts <out-dir>`
+- Scaffold the combinations currently listed in the smoke script without prompts: `npx tsx scripts/smoke-e2e.ts <out-dir>`
 
 ## Architecture
 
 - `src/prompts/run-prompts.ts` — the interactive question flow (clack). Returns a full `Answers` object.
 - `src/scaffold/compose.ts` — maps answers → ordered `Layer[]` (`{src, dest}` relative to `templates/`). **Later layers overwrite earlier files; `package.json` deep-merges** (deps/scripts union). That's why `src/env.ts`, `src/routes/index.ts`, `.env.example`, `vite.config.ts`, `index.css` exist in several template layers — the overrides are intentional. Do not "dedupe" them.
 - `src/scaffold/engine.ts` — copy + `{{token}}` render + dotfile restore + manifest merge. `src/scaffold/merge.ts` — the package.json deep merge.
-- `src/templates/` — the embedded template tree (published in the npm package; also the remote source for `--latest`).
-- `src/config.ts` — `TEMPLATE_REPO` must match the GitHub repo/branch/subdir (`gh:doofx0071/omnicraft/packages/cli/templates#main`, fetched by giget for `--latest`). `TEMPLATES_ROOT` resolves via `import.meta.url` and requires config.ts to stay one level below the package root (works bundled in `dist/` and in `src/`).
+- `templates/` — the embedded template tree at the package root (published with the npm package; also the remote source for `--latest`).
+- `src/config.ts` — `TEMPLATE_REPO` must match the GitHub repo/subdir; `ref` is the release tag `v<CLI_VERSION>` fetched by giget for `--latest`, not `main`. `TEMPLATES_ROOT` resolves via `import.meta.url` and requires config.ts to stay one level below the package root (works bundled in `dist/` and in `src/`).
 
 ## Template rules
 
 - Files starting with `_` (`_gitignore`, `_prettierignore`) are restored to dotfiles on copy — npm won't reliably publish them otherwise. The rule applies to directories too (`_github/` → `.github/`). `.env.example` ships as-is.
-- Tokens: `{{projectName}}`, `{{clientPackageName}}`, `{{serverPackageName}}`, `{{databaseName}}` (underscores, for Postgres). Engine tests assert no token leaks into output.
+- Template variables: `projectName`, `clientPackageName`, `serverPackageName`, `databaseName` (underscores for database identifiers), `backendFramework`, and `orm`; `dbConfig` is defined but not referenced by current templates. Unknown `{{token}}` expressions fail generation in non-`.vue` files; Vue interpolation is intentionally exempt.
 - Dependency versions in templates are chosen for peer-compat, not "latest tag": TypeScript `^5.9.3` (typescript-eslint peers require <6.1 — TS7 breaks it), Prisma `^7.10.1` (npm's `latest` tag currently points at an 8.0 RC). Check peers before bumping.
 - Prisma 7 specifics: schema datasource has **no `url` property** (P1012 error if added) — URL lives in `prisma.config.ts`; `prisma-client` generator with `output = "../src/generated/prisma"`; `@prisma/adapter-pg`; `postinstall: prisma generate` requires `server/.env` to exist, which the CLI creates from `.env.example` **before** installing deps.
 - Ports are standardized: server 3000, client 5173 (Vite dev proxy `/api` → 3000).
@@ -60,6 +61,7 @@ All from `packages/cli/` unless noted:
 
 - Cancel handling: wrap clack prompt results in `unwrap<T>()` / `unwrapMany<T>()` (`src/cancel.ts`) which throw `CancelledError`; `main()` is the single catch site. clack 1.x gotchas: prompt results are typed `T | symbol` (always pass explicit generics to `unwrap`), and `Option<Value>` can't be satisfied by an unresolved generic — constrain to `string` (see `selectWithSoon`).
 - Non-interactive mode: `--yes` + stack flags (`src/prefill.ts`) answer prompts; flags are validated by `validateStackFlags` before any prompt. Non-TTY runs require `--yes`.
-- Engine tests (`src/engine.test.ts`) scaffold all supported combos (express/fastify × drizzle/prisma × postgres/sqlite/mysql, fastapi × postgres/sqlite, laravel overlay + frontend-only) into temp dirs — keep them passing when touching templates or the engine.
+- Engine tests (`src/engine.test.ts`) scaffold selected combinations, not the full registry cross-product. The current smoke script lists 17 output paths; it omits Expo/Tauri and does not install/boot every result. See [testing strategy](docs/development/testing-strategy.md) and [support matrix](docs/templates/stack-support-matrix.md) for exact coverage.
+- `AVAILABLE` is a dimension-level registry; it does not encode every compatibility edge. Check actual template paths and matrix evidence before adding combinations. `HELP_TEXT` in `src/args.ts` and the README Options block must stay aligned.
 - Publish checklist lives in [CONTRIBUTING.md](CONTRIBUTING.md) (bump `packages/cli/package.json` version; templates version-lock to the CLI).
 - `packages/cli/planmo-v3/` is the user's locally generated test project (own git repo) — gitignored, leave it alone.

@@ -8,23 +8,27 @@ the authoring contract. The tree layout is in the [repository structure](../arch
 
 | Kind                  | Path                                 | Contributes                                                                                                                                        | May override                                                                                                |
 | --------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| **Frontend**          | `web/<framework>/client/`            | The whole client app                                                                                                                               | — (always first)                                                                                            |
+| **Frontend**          | `web/<framework>/client/`            | A TypeScript client app; React also has `web/react/client-js/`                                                                                     | — (always first)                                                                                            |
+| **Integrated app**   | `web/nextjs/overlay/`, `web/nextjs/db-<database>/` | Next.js routes, UI, and a raw-SQL database adapter; applied to a `create-next-app` skeleton | selected generator files; `package.json` merges |
+| **Native app**       | `platform/mobile/expo/`, `platform/desktop/tauri/` | API-client and device-pairing overlays applied after official generators | generated client files |
 | **Server base**       | `server/<runtime>/<framework>/base/` | Entry, env validation, health route, tsconfig, package.json, `.env.example`                                                                        | client files only when `dest` overlaps (node: no)                                                           |
 | **Node db adapter**   | `db/<orm>/<database>/`               | deps + `db:*` scripts (package.json fragment), db config (drizzle.config / prisma.config), client, schema, seed, `.env.example` (overrides base's) | server base                                                                                                 |
 | **Node ORM wiring**   | `server/node/<framework>/<orm>/`     | `src/routes/index.ts` + users routes + `src/env.ts` (adds DATABASE_URL)                                                                            | server base                                                                                                 |
 | **Python db adapter** | `db/sqlalchemy/<database>/`          | pyproject.toml deps, `app/database.py`, `.env.example`                                                                                             | —                                                                                                           |
 | **PHP overlay**       | `server/php/laravel/`                | Controller, api routes, bootstrap/app.php, migration, seeder, `.env.example` — applied **after `composer create-project`**                         | composer skeleton files                                                                                     |
-| **Extra**             | `extras/<name>/`                     | Overlays for the chosen dest (tailwind → client, eslint → root); must compose with every stack                                                     | earlier layers                                                                                              |
-| **Root variant**      | `root/fullstack[-python              | -php]/<database>/`                                                                                                                                 | workspaces package.json, `.gitignore`, README, `docker-compose.yml` (containerized DBs only), `_github/` CI | merged last |
+| **Extra**             | `extras/<name>/`                     | Tailwind → Vite client; ESLint/Prettier → root; shadcn → React/Vite client only                                                                     | earlier layers                                                                                                |
+| **Root variant**      | `root/fullstack` runtime/database variants or `root/frontend-only/` | workspace or single-app `package.json`, `.gitignore`, README, database compose file where used, `_github/` CI | merged last |
 
 ## Rules every template must follow
 
 1. **`_`-prefix for dotfiles.** Anything npm won't publish (`_gitignore`, `_prettierignore`) and whole
    directories (`_github/`) use the underscore form; the engine restores the dot on copy.
-2. **Tokens only from the documented set.** `{{projectName}}`, `{{clientPackageName}}`,
-   `{{serverPackageName}}`, `{{databaseName}}`, `{{backendFramework}}`, `{{orm}}`, `{{dbConfig}}`
-   (Laravel-only). Unknown tokens are left intact today — a typo becomes a leak, which tests catch.
-   Don't add new tokens silently; extend `templateVariables` and document them here.
+2. **Tokens only from the documented set.** Current templates use `{{projectName}}`,
+   `{{clientPackageName}}`, `{{serverPackageName}}`, `{{databaseName}}`, `{{backendFramework}}`, and
+   `{{orm}}`. `templateVariables` also contains `dbConfig`, but no current template references it.
+   Unknown expressions in non-`.vue` text files make generation fail with `UnresolvedTokenError`;
+   `.vue` files are excluded because Vue uses `{{ }}` for interpolation. Document any new variable here
+   and in the [template engine guide](../architecture/template-engine.md).
 3. **Partial package.json.** Ship only the deps/scripts the layer adds. The engine deep-merges; script
    names must be namespaced enough to avoid clobbering (`db:*` belongs to db layers).
 4. **`.env.example` (never `.env`).** Real `.env` is created post-scaffold by `createEnvFiles` and
@@ -58,7 +62,7 @@ the authoring contract. The tree layout is in the [repository structure](../arch
   belong to the FastAPI base; adapter swaps engine + deps).
 - **PHP overlay:** `routes/api.php`, `bootstrap/app.php`, `app/Http/Controllers/UserController.php`,
   `app/Models/User.php`, `database/migrations/…_create_users_table.php`,
-  `database/seeders/DatabaseSeeder.php`, `.env.example` (with `{{dbConfig}}`).
+  `database/seeders/DatabaseSeeder.php`, `.env.example`.
 - **Root variant:** `package.json` (workspaces, root scripts incl. `dev:server` for non-node runtimes,
   db passthrough scripts for node), `_gitignore`, `README.md`, `docker-compose.yml` (if containerized DB),
   `_github/workflows/ci.yml`.

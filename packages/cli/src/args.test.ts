@@ -1,7 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { parseArgs } from './args.js'
+import { HELP_TEXT, parseArgs } from './args.js'
+import { readFileSync } from 'node:fs'
 
 describe('parseArgs', () => {
+  it('documents the current selectable values and release-tag behavior', () => {
+    expect(HELP_TEXT).toContain('--frontend <name>    Skip the frontend prompt (react, nextjs, vue, svelte)')
+    expect(HELP_TEXT).toContain('shadcn is React/Vite-only')
+    expect(HELP_TEXT).toContain("this CLI version's release tag")
+
+    const helpOptions = HELP_TEXT.match(/Options:\n([\s\S]*?)\n\nExamples:/)?.[1]
+    const readme = readFileSync(
+      new URL('../../../README.md', import.meta.url),
+      'utf8',
+    ).replace(/\r\n/g, '\n')
+    const readmeOptions = readme.match(/## Options\n\n```\n[^\n]*\n\n([\s\S]*?)\n```/)?.[1]
+    expect(readmeOptions).toBe(helpOptions)
+  })
+
   it('parses boolean flags', () => {
     const args = parseArgs(['--latest', '--skip-install', '--yes'])
     expect(args.latest).toBe(true)

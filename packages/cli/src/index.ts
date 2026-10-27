@@ -5,7 +5,7 @@ import { runAdd } from './add-run.js'
 import { CLI_VERSION, CNA_PACKAGE, SHADCN_COMPONENTS, SHADCN_PRESET, TEMPLATES_ROOT, TEMPLATE_REPO } from './config.js'
 import { printNextSteps } from './next-steps.js'
 import { runPrompts } from './prompts/run-prompts.js'
-import { composeLayers, isPostComposerLayer, templateVariables } from './scaffold/compose.js'
+import { composeLayers, planLayerApplication, templateVariables } from './scaffold/compose.js'
 import { createEnvFiles } from './scaffold/env.js'
 import { applyLayers } from './scaffold/engine.js'
 import { gitInit } from './scaffold/git.js'
@@ -83,7 +83,7 @@ async function main(): Promise<void> {
     return
   }
 
-  p.intro(`⚡ OmniCraft v${CLI_VERSION} — craft any stack`)
+  p.intro(`⚡ OmniCraft v${CLI_VERSION} — compose a project`)
 
   if (!process.stdin.isTTY && !args.yes) {
     p.log.error('OmniCraft is interactive and needs a real terminal to run its prompts.')
@@ -216,9 +216,7 @@ async function main(): Promise<void> {
     const layers = composeLayers(answers)
     const variables = templateVariables(answers)
     const integrated = answers.architecture.kind === 'integrated-fullstack'
-    const isNextOverlay = (layer: { src: string }) => layer.src.startsWith('web/nextjs/')
-    const pre = layers.filter((layer) => !isPostComposerLayer(layer) && !(integrated && isNextOverlay(layer)))
-    const post = layers.filter((layer) => isPostComposerLayer(layer) || (integrated && isNextOverlay(layer)))
+    const layerPlan = planLayerApplication(layers, answers.architecture)
 
     if (integrated) {
       // Next.js is created by the pinned create-next-app (the overlay can
@@ -249,18 +247,18 @@ async function main(): Promise<void> {
         // they differ (nested/renamed target paths).
         renameSync(created, answers.targetDir)
       }
-      applyLayers(templatesRoot, post, variables, answers.targetDir)
+      applyLayers(templatesRoot, layerPlan.afterOfficialGenerator, variables, answers.targetDir)
       spinner.stop('Next.js application created and configured')
     } else {
       spinner.start('Crafting your project...')
       mkdirSync(answers.targetDir, { recursive: true })
-      applyLayers(templatesRoot, pre, variables, answers.targetDir)
+      applyLayers(templatesRoot, layerPlan.beforeComposer, variables, answers.targetDir)
       spinner.stop('Project generated')
     }
 
     // Laravel is created by Composer itself (the overlay can only be applied
     // onto an existing skeleton), then configured by OmniCraft.
-    if (post.length > 0) {
+    if (layerPlan.afterComposer.length > 0) {
       spinner.start('Creating the Laravel application with Composer (this can take a couple of minutes)...')
       const composer = runCommand(
         'composer',
@@ -274,7 +272,7 @@ async function main(): Promise<void> {
           `composer create-project failed — is Composer installed?\n${composer.output.split('\n').slice(-10).join('\n')}`,
         )
       }
-      applyLayers(templatesRoot, post, variables, answers.targetDir)
+      applyLayers(templatesRoot, layerPlan.afterComposer, variables, answers.targetDir)
       copyFileSync(join(answers.targetDir, 'server', '.env.example'), join(answers.targetDir, 'server', '.env'))
       runCommand('php', ['artisan', 'key:generate', '--force'], join(answers.targetDir, 'server'))
       spinner.stop('Laravel application created and configured')

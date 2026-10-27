@@ -18,7 +18,7 @@ The repeatable path from issue to merged change. Depth scales with risk: a typo 
 | New database/ORM/extra      | [adding-an-integration](../templates/adding-an-integration.md), [template contract](../templates/template-contract.md), [testing strategy](testing-strategy.md)                                          |
 | Prompt/flag behavior        | [coding standards](coding-standards.md) (capability rules), `src/prefill.ts`, `src/prompts/run-prompts.ts`                                                                                               |
 | Template-engine change      | [template engine](../architecture/template-engine.md), [template contract](../templates/template-contract.md)                                                                                            |
-| Release/publish             | [CONTRIBUTING.md](../../CONTRIBUTING.md) (release section), master plan §5.4                                                                                                                             |
+| Release/publish             | [CONTRIBUTING.md](../../CONTRIBUTING.md) (release section), [ROADMAP.md](../../ROADMAP.md)                                                                                                                |
 
 ## 2. Plan
 
@@ -35,7 +35,9 @@ For multi-file features, write a short plan into the issue (or `docs/plans/activ
 ## 3. Implement
 
 - Smallest complete change; match existing patterns (see [coding standards](coding-standards.md)).
-- Capability changes start in `AVAILABLE` (`src/prefill.ts`) — prompts and flags consume it.
+- Capability changes update the relevant flag choices, prompt choices, module/platform choices, and
+  composition rules together. `AVAILABLE` (`src/prefill.ts`) is currently a dimension-level registry and
+  does not represent all compatibility constraints; see the [support matrix](../templates/stack-support-matrix.md).
 - Template changes follow the [template contract](../templates/template-contract.md); remember layers
   overwrite (and `package.json` merges) — design for it, don't fight it.
 - Don't refactor unrelated code in the same change.
@@ -64,7 +66,7 @@ Report what you actually ran — never imply a check passed that didn't.
 
 | If you changed…                    | Update                                                                                                         |
 | ---------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Available stacks/combos            | [stack support matrix](../templates/stack-support-matrix.md), README "Supported stacks" + flow diagram         |
+| Available choices/combos           | [stack support matrix](../templates/stack-support-matrix.md), README choice scope + flow diagram                |
 | Flags/help                         | README "Options", `HELP_TEXT` in `src/args.ts` (they must stay identical)                                      |
 | Template structure/engine behavior | [template contract](../templates/template-contract.md) / [template engine](../architecture/template-engine.md) |
 | Dev commands or layout             | [repository structure](../architecture/repository-structure.md), [docs/index.md](../index.md) as needed        |
@@ -79,8 +81,9 @@ between docs, drift between what prompts offer and what docs claim.
 ## 7. Commit, push, let CI finish
 
 - Conventional summary line (e.g. `feat: …`, `fix: …`, `docs: …`), body explaining behavior.
-- CI (windows self-hosted + ubuntu + macos) must be green; it runs typecheck, tests, build, the full
-  scaffold matrix, an install+typecheck e2e, and lint of generated output.
+- CI (Windows self-hosted + Ubuntu + macOS) must be green; it runs typecheck, tests, build, the current
+  smoke list, one generated-project install/typecheck combination, and generated-output lint on the
+  trusted Windows job.
 
 ## 8. Report and close
 

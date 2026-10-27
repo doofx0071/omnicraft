@@ -100,14 +100,26 @@ export function composeLayers(answers: Answers): Layer[] {
   return layers
 }
 
-/** Layers applied after an external official generator ran (composer / create-next-app). */
-export function isPostGeneratorLayer(layer: Layer): boolean {
-  return layer.src.startsWith('server/php/') || layer.src.startsWith('web/nextjs/') || layer.src.startsWith('db/prisma/') || layer.src.startsWith('db/drizzle/') || layer.src.startsWith('db/none/') || layer.src.startsWith('db/sqlalchemy/')
-}
-
 /** Layers applied after `composer create-project` (Laravel). */
 export function isPostComposerLayer(layer: Layer): boolean {
   return layer.src.startsWith('server/php/')
+}
+
+/** Splits template layers around the official generators used by the web flow. */
+export function planLayerApplication(
+  layers: Layer[],
+  architecture: Answers['architecture'],
+): { afterOfficialGenerator: Layer[]; beforeComposer: Layer[]; afterComposer: Layer[] } {
+  if (architecture.kind === 'integrated-fullstack') {
+    return { afterOfficialGenerator: layers, beforeComposer: [], afterComposer: [] }
+  }
+
+  const afterComposer = layers.filter(isPostComposerLayer)
+  return {
+    afterOfficialGenerator: [],
+    beforeComposer: layers.filter((layer) => !isPostComposerLayer(layer)),
+    afterComposer,
+  }
 }
 
 /** Tokens available to every template file. */

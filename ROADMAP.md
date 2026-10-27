@@ -1,6 +1,6 @@
 # 🗺️ OmniCraft Roadmap
 
-> **Versioning model:** `v0.1.0` = public launch (current state) → `v0.2–v0.5` = feature phases → **`v1.0.0` = "everything implemented"** (the full vision) → `v1.1.x+` = ongoing fixes & upgrades after 1.0.
+> **Versioning model:** `v1.0.0` is the first stable release. As checked on 2026-10-27, npm `latest` and the published GitHub release both point to `1.0.0` / `v1.0.0`. Future releases follow semver; `1.0.0` does not mean every possible stack combination or follow-up feature is implemented.
 >
 > Progress is tracked with GitHub issues — this file is the big picture, the issues are the work. Check off here when the linked issue closes.
 
@@ -14,13 +14,13 @@
 | v0.3.1  | Hardening (master-plan PR 2/3/5)     | ✅ tag   | —       |
 | v0.4.0  | Frontend expansion                   | ✅ 4/4   | #17–#20 |
 | v0.5.0  | Platform expansion (mobile, desktop) | ✅ 2/2   | #21–#22 |
-| v1.0.0  | Maturity milestone                   | ✅ 5/5   | #23–#27 |
+| v1.0.0  | First stable release                 | ✅ 5/5   | #23–#27 |
 
 ---
 
 ## v0.1.0 — Public launch
 
-Ship what works today, start the feedback loop. CI runs on a **self-hosted runner** (unlimited free minutes — no hosted-minutes limits on private repos).
+Ship what works today and start the feedback loop. CI now uses hosted runners for public pull requests and also runs trusted push/same-repository jobs on the self-hosted Windows runner; see `.github/workflows/ci.yml`.
 
 - [x] #1 — Set up self-hosted Windows runner for this repo
 - [x] #2 — CI workflow: typecheck, build, test, template e2e smoke
@@ -63,20 +63,28 @@ The "What are you building?" branches become real.
 - [x] #21 — Mobile app scaffolding: React Native + Expo
 - [x] #22 — Desktop app scaffolding: Tauri
 
-## v1.0.0 — Maturity milestone
+## v1.0.0 — First stable release
 
-The flagship features. When these land (plus everything above), the vision is complete and we cut **v1.0.0**.
+Published on 2026-10-27. Issue #27 was delivered early with the template contract, stack/integration guides, support matrix, and test workflow; the issue is closed.
 
 - [x] #23 — Auth boilerplate wired to the users table
 - [x] #24 — `omnicraft add <module>` post-scaffold generator
 - [x] #25 — JavaScript (non-TypeScript) template variants
 - [x] #26 — Multi-OS CI once repo is public _(done early — repo is public, all 3 OS green)_
-- [ ] #27 — Contributor docs: template composition guide
+- [x] #27 — Contributor docs: template composition guide _(delivered across `docs/templates/` and `docs/architecture/template-engine.md`; issue closed)_
 
-## v1.1.x and beyond (unplanned parking lot)
+## v1.1.x and beyond — post-v1 priorities
 
-Community template registry, opt-in telemetry, plugin API for third-party stacks, docs site. Nothing here is committed — revisit after v1.0.0.
+These are follow-up priorities, not release commitments. Track each as an issue before implementation:
+
+- Keep README, changelog, roadmap, CLI help, and the support matrix aligned with implementation evidence.
+- Make stack compatibility explicit in one registry and reject unsupported combinations before writing files.
+- Finish or narrow the JavaScript language contract; current JavaScript templates cover the React/Vite client only.
+- Expand generated-project installation, build, runtime, and database verification for exact combinations.
+- Tighten `omnicraft add` compatibility and regression coverage, including the existing Better Auth path.
+- Add `omnicraft doctor` only after project metadata and diagnostic checks have reliable contracts.
+- Consider a community template registry, telemetry, a third-party plugin API, and a documentation site after core compatibility and verification gaps are closed.
 
 ---
 
-**How to work a phase:** open the issues for the current version, close them one by one (they auto-tick here via the links when someone updates this file — or edit the checkboxes as part of the closing PR), bump the version in `packages/cli/package.json`, publish, then move the next phase to 🚧.
+**How to work a phase:** define its scope and evidence in an issue, complete and verify that work, update the support matrix and related docs in the same change, then bump `packages/cli/package.json` and publish when the phase is a release. Use semver after `1.0.0`; do not treat the roadmap as a claim that all selectable combinations are equally verified.

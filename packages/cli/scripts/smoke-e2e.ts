@@ -1,6 +1,6 @@
 /**
- * Scaffolds every supported stack combination into a target directory
- * without prompts — used to smoke-test the engine and generated projects.
+ * Scaffolds selected stack combinations into a target directory without
+ * prompts — used to smoke-test template composition, not the full catalog.
  *
  *   npx tsx scripts/smoke-e2e.ts <output-dir>
  */

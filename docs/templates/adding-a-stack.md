@@ -1,29 +1,37 @@
 # Adding a stack
 
-The procedure for a new **runtime or backend framework** (e.g. NestJS, Django, Symfony — or a future
-runtime). For a database/ORM/extra, see [adding-an-integration](adding-an-integration.md) instead.
+This procedure covers new **runtime and backend framework** adapters (for example NestJS, Django,
+Symfony, or a future runtime). For a database, ORM, or extra, see
+[adding-an-integration](adding-an-integration.md).
 
-Recent proof it works end-to-end: Hono (v0.3.0) followed exactly these steps.
-
-> Note on architecture: today the matrix is **separate frontend + API** only. An integrated full-stack
-> framework (Next.js, #17) needs the architecture-model work in the
-> [master plan](../plans/active/omnicraft-master-plan.md) §3-B first — this guide covers the
-> separate-API path.
+OmniCraft has separate frontend + API, integrated Next.js, frontend-only, and native Expo/Tauri
+architectures. A client framework, integrated full-stack framework, and native platform need different
+adapter paths; consult the [system overview](../architecture/system-overview.md) and do not assume that
+they share one composition shape.
 
 ## 0. Preconditions
 
-- The [master plan](../plans/active/omnicraft-master-plan.md)'s gate for template work is respected:
-  this stack addition must not regress existing combos.
+- The [feature workflow](../development/feature-development-workflow.md) and
+  [template contract](template-contract.md) are followed; this addition must not regress existing
+  combinations.
 - Official setup researched: runtime/framework version support, prerequisites (is it a shell shim? does
   it need a service install?), non-interactive invocation options, dependency peer ranges.
 
-## 1. Capability registration — `src/prefill.ts`
+## 1. Identify the adapter and its compatibility boundary
+
+Choose whether the change adds a frontend, integrated full-stack framework, native platform, runtime,
+backend framework, database/ORM, or extra. State its architecture kind, prerequisites, valid combinations,
+and the exact combinations that the tests will cover. Keep frontend-level support distinct from a full
+frontend/backend/database combination.
+
+## 2. Capability registration — `src/prefill.ts` and prompt flow
 
 - Add the framework to `AVAILABLE.backend[<runtime>]` (new runtime: add it to `AVAILABLE.runtime` and a
-  `backend`/`db` entry).
+  `backend`/`db` entry). `AVAILABLE` currently lists dimensions and does not encode every cross-dimension
+  constraint; explicitly validate framework × ORM/database compatibility.
 - New runtime → extend `resolveAnswers`' default-framework mapping.
 
-## 2. CLI plumbing
+## 3. CLI plumbing
 
 - `src/types.ts`: extend `BackendFramework` union + `BACKEND_FRAMEWORK_LABELS`.
 - `src/prompts/run-prompts.ts`: add the framework to `frameworkChoices[<runtime>]` (and the runtime row
@@ -31,7 +39,7 @@ Recent proof it works end-to-end: Hono (v0.3.0) followed exactly these steps.
 - New flag values come free via `parseEnumChoice` — update `HELP_TEXT` in `src/args.ts` and the README
   "Options" block **identically**.
 
-## 3. Templates — follow the [template contract](template-contract.md)
+## 4. Templates — follow the [template contract](template-contract.md)
 
 For a **node framework**:
 
@@ -60,7 +68,7 @@ If the framework must be created by its own package manager (like Laravel/Compos
 overlay**: predicate in `compose.ts` (model: `isPostComposerLayer`), CLI step in `index.ts` running the
 generator, overlay applied after, engine tests asserting the overlay files.
 
-## 4. Tests — follow the [testing strategy](../development/testing-strategy.md)
+## 5. Tests — follow the [testing strategy](../development/testing-strategy.md)
 
 1. Engine tests (`src/engine.test.ts`): a new `it` (or matrix rows) scaffolding the combo into a temp
    dir; assert the layer files, rendered tokens, env, root variant, absence of sibling artifacts
@@ -68,20 +76,20 @@ generator, overlay applied after, engine tests asserting the overlay files.
 2. Prefill tests: flag validation for the new values, `resolveAnswers` mapping.
 3. Prompts test: extend the scripted clack mock if the flow shape changed.
 
-## 5. Verify (the support bar)
+## 6. Verify (the support bar)
 
 Level 3 from the [testing strategy](../development/testing-strategy.md), for **every database** you
 claim: scaffold via `smoke-e2e.ts` → install → typecheck both workspaces → boot → `curl /api/health` →
 CRUD cycle on `/api/users` including the duplicate-email error code → (python) `uv sync` +
 `alembic upgrade head` → (php) migrate/seed/artisan serve.
 
-## 6. Wire into CI + smoke
+## 7. Wire into CI + smoke
 
 - Add the combo to `combos` in `scripts/smoke-e2e.ts` (one entry per verified combination).
 - If the runtime needs tooling in CI, add it to the workflow (see `shivammathur/setup-php` for php,
   `astral-sh/setup-uv` for python) on the jobs that need it.
 
-## 7. Documentation (same PR)
+## 8. Documentation (same PR)
 
 - [Stack support matrix](stack-support-matrix.md): new row(s) with status + evidence.
 - README: "Supported stacks" table, flow diagram if a prompt changed, Options if flags changed.
@@ -89,7 +97,7 @@ CRUD cycle on `/api/users` including the duplicate-email error code → (python)
 - The generated READMEs if the stack ships root docs.
 - ROADMAP: tick the issue if it maps to a phase item.
 
-## 8. Close
+## 9. Close
 
 Bump version + publish if releasing (see [CONTRIBUTING.md](../../CONTRIBUTING.md)); close the issue with
 the verification evidence comment.

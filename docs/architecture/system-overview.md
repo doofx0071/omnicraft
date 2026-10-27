@@ -1,68 +1,78 @@
 # System overview
 
-OmniCraft is a single npm package (`create-omnicraft`) inside a private-root monorepo. This page
-describes the components as they exist today (v0.3.0).
+OmniCraft is the `create-omnicraft` npm package. The source package and npm `latest` were both checked
+at `1.0.0` on 2026-10-27. The CLI is interactive by default and can compose web, backend, database,
+extra, and native-platform layers. Exact support and verification vary by combination; see the
+[support matrix](../templates/stack-support-matrix.md).
 
 ## One-run flow
 
-```
+```text
 user runs `npm create omnicraft@latest [name] [flags]`
         │
         ▼
-src/index.ts ── parseArgs (src/args.ts)          validate flags, help/version exits
+src/index.ts ── parseArgs (src/args.ts)          validate flags/help/version
         │
-        ├─ non-TTY guard (requires --yes)        plus update-check notice (src/update-check.ts)
+        ├─ non-TTY guard (requires --yes)        plus update-check notice
         ▼
-runPrompts (src/prompts/run-prompts.ts)          interactive flow; flags answer prompts; --yes skips all
-        │  returns Answers
+runPrompts (src/prompts/run-prompts.ts)          interactive flow or flags/defaults
+        │                                         returns Answers
         ▼
-composeLayers + templateVariables                maps Answers → ordered Layer[] + tokens
-        │  (src/scaffold/compose.ts)
+composeLayers + templateVariables               maps Answers → ordered Layer[] + token variables
+        │
+        ├─ Native app: run create-expo-app or create-tauri-app, then apply platform layer
+        ├─ Next.js: run create-next-app, then apply the integrated app/database overlay
+        ├─ Laravel: run Composer, then apply the Laravel API overlay
+        └─ Other web projects: apply composed client/server/database/extra/root layers
+        │
         ▼
-applyLayers (src/scaffold/engine.ts)             copy → render tokens → restore dotfiles → merge package.json
-        │                                        (per layer, in order)
-        ├─ Laravel only: composer create-project FIRST, then overlay layers
-        ▼
-post-scaffold (src/index.ts + src/scaffold/*)
-        ├─ createEnvFiles   — copy every .env.example → .env
-        ├─ gitInit          — git init -b main (best-effort)
-        ├─ dependency setup — npm/pnpm/yarn/bun install (node) or uv sync (python);
-        │                    php is already installed by composer
-        └─ printNextSteps   — tailored commands + URLs
+post-scaffold                                    create env files + project manifest + git init
+        │
+        ├─ npm/pnpm/yarn/bun install (Node) or uv sync (Python), if selected
+        └─ tailored next steps
 ```
+
+JavaScript changes the React/Vite client layer only; the server remains TypeScript. Next.js is an
+integrated full-stack app. Expo and Tauri create a native client that talks to a separately run backend;
+OmniCraft does not scaffold that backend in the same native project.
 
 ## Components and responsibilities
 
-| Component                   | Files                                             | Responsibility                                                                                                                                                                                                                                                         |
-| --------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Entry / orchestration**   | `src/index.ts`                                    | Arg parsing, TTY guard, update check, the scaffold → git → install → next-steps sequence, single error catch site (`CancelledError` → clean cancel).                                                                                                                   |
-| **CLI surface**             | `src/args.ts`                                     | Parses positional project name and all flags (`--yes`, `--runtime`, `--frontend`, `--backend`, `--db`, `--orm`, `--extras`, `--full-stack`/`--no-full-stack`, `--latest`, `--skip-install`, `--debug`, `--help`, `--version`). Throws on unknown flags/missing values. |
-| **Prompt flow**             | `src/prompts/run-prompts.ts`                      | The interactive wizard. Runtime-scoped framework/database choices, "(soon)" roadmap options that bounce with a notice, summary + confirm. Flags and `--yes` bypass prompts. Returns the full `Answers` object.                                                         |
-| **Capability tables**       | `src/prefill.ts` (`AVAILABLE`)                    | The single place listing available runtimes, per-runtime backends and databases, Node ORMs, extras. Powers flag validation (`validateStackFlags`) and `--yes` defaults (`resolveAnswers`).                                                                             |
-| **Composition**             | `src/scaffold/compose.ts`                         | Pure mapping `Answers → Layer[]` and `Answers → token variables`. Encodes layer order and the Laravel post-Composer split (`isPostComposerLayer`).                                                                                                                     |
-| **Engine**                  | `src/scaffold/engine.ts`                          | Applies layers: recursive copy, token rendering, `_`-prefix dotfile restore, `package.json` deep-merge when the destination file already exists. Throws `MissingLayerError` for absent layers.                                                                         |
-| **Renderer**                | `src/scaffold/renderer.ts`                        | `{{token}}` substitution (unknown tokens left intact), `_file` → `.file` rename, binary-file detection by extension.                                                                                                                                                   |
-| **Manifest merge**          | `src/scaffold/merge.ts`                           | Recursive `package.json` merge; later scalars/arrays replace, objects merge. Lets db/framework/extras/root layers each contribute deps and scripts.                                                                                                                    |
-| **Remote templates**        | `src/scaffold/remote.ts`                          | `--latest`: giget download of the same `packages/cli/templates` tree from GitHub `main`.                                                                                                                                                                               |
-| **Exec helpers**            | `src/exec.ts`                                     | `runCommand` (captured, sync) and `runCommandVisible` (inherited stdio, async). Windows: single command string + `shell: true` — see [coding standards](../development/coding-standards.md).                                                                           |
-| **Post-scaffold utilities** | `src/scaffold/env.ts`, `git.ts`, `pkg-manager.ts` | `.env` bootstrap, git init, package-manager detection/install.                                                                                                                                                                                                         |
-| **Exit UX**                 | `src/next-steps.ts`                               | Tailored next-step panel per stack (docker only for containerized DBs, runtime-specific database line).                                                                                                                                                                |
-| **Templates**               | `src/templates/`                                  | The generated-project tree, published in the npm package. See the [template contract](../templates/template-contract.md).                                                                                                                                              |
-| **Tests**                   | `src/**/*.test.ts`                                | 62 tests across 8 files. See the [testing strategy](../development/testing-strategy.md).                                                                                                                                                                               |
-| **Smoke scaffold**          | `scripts/smoke-e2e.ts`                            | Scaffolds all 11 supported combos + frontend-only into a target dir without prompts. Used by CI and local verification.                                                                                                                                                |
+| Component | Files | Responsibility |
+| --- | --- | --- |
+| Entry/orchestration | `src/index.ts` | Argument validation, TTY guard, generator execution, scaffold/install ordering, and the single cancellation/error path. |
+| CLI surface | `src/args.ts` | Positional project name, flags, and `HELP_TEXT`. The README options block mirrors this text. |
+| Capability choices | `src/prefill.ts` (`AVAILABLE`) and `src/prompts/run-prompts.ts` | Runtime/framework/database/ORM/extra choices, flag validation, `--yes` defaults, and interactive choices. `AVAILABLE` is dimension-level and does not yet encode every compatibility edge. Platform choices and module choices are maintained separately. |
+| Project types | `src/types.ts` | Type unions and `Answers` shape. Some union values are future values and do not make a choice selectable. |
+| Composition | `src/scaffold/compose.ts` | Pure mapping from `Answers` to ordered layers and template variables; routes Next.js and native adapters separately. |
+| Engine | `src/scaffold/engine.ts` | Recursive template copy, token render, underscore dotfile restoration, protected-name checks, and `package.json` merge. Later template layers overwrite earlier files except manifests, which merge. |
+| Renderer | `src/scaffold/renderer.ts` | `{{token}}` replacement, unresolved-token detection, dotfile rename, binary-file detection. Vue `.vue` files are exempt from the unresolved-token scan. |
+| Manifest merge | `src/scaffold/merge.ts` | Recursive `package.json` merge; later scalars and arrays replace earlier values. |
+| Remote templates | `src/config.ts`, `src/scaffold/remote.ts` | `--latest` downloads the release tag matching the CLI version, not the mutable `main` branch. |
+| Module injector | `src/add.ts`, `src/modules/` | `omnicraft add` loads project metadata, checks module compatibility/conflicts, applies patches, and updates the manifest. Current module coverage is summarized in the support matrix. |
+| Process helpers | `src/exec.ts` | Captured and visible subprocess execution; Windows command-shell rules are in [coding standards](../development/coding-standards.md). |
+| Templates | `packages/cli/templates/` | Embedded generated-project files published with the CLI. See the [template contract](../templates/template-contract.md). |
+| Tests | `src/**/*.test.ts` | 80 tests across 9 files in the local 2026-10-27 run. See the [testing strategy](../development/testing-strategy.md). |
+| Smoke generation | `scripts/smoke-e2e.ts` | Currently lists 17 project paths, including a network-backed `create-next-app` step; it does not cover native projects or install/boot every generated app. |
 
-## Cross-cutting invariants
+## Cross-cutting behavior and limits
 
-1. **One catch site.** `main()` catches `CancelledError` (from `unwrap`/`unwrapMany`) and shows a clean
-   cancel; everything else prints the error (`--debug` adds the stack trace) and sets exit code 1.
-2. **Windows-safe subprocesses.** All child processes go through `src/exec.ts`; on win32 the command is a
-   single string with `shell: true` (never an args array — Node 24 DEP0190, and npm/git/composer are shell
-   shims). Callers pass hardcoded literals only.
-3. **Terminal restoration.** `restoreTerminal()` (raw mode off, cursor visible) is registered on
-   `exit`/`SIGINT`/`uncaughtException` — clack leaves the console in raw mode and a hard exit otherwise
-   garbles cmd.exe.
-4. **Capability accuracy.** What prompts offer, flags accept, compose can build, tests verify, and docs
-   claim must agree. The `AVAILABLE` table in `src/prefill.ts` is the source for prompts/flags; the
-   [support matrix](../templates/stack-support-matrix.md) records verification status.
-5. **No TTY → no prompts.** Without `--yes` the CLI refuses to run piped; `--yes` produces the same
-   validated configuration as the interactive defaults.
+1. **Capability accuracy.** `AVAILABLE` powers much of the prompt and flag surface, but it does not
+   represent every framework/ORM or language/extra compatibility edge. The support matrix records
+   known mismatches and exact verification evidence.
+2. **Layer overrides.** Repeated files such as framework routes, env files, Vite config, CSS, and
+   `.env.example` are intentional. A later layer replaces earlier template output; `package.json`
+   objects deep-merge.
+3. **Token behavior.** Tokens with no value cause `UnresolvedTokenError` in non-`.vue` text files.
+   Vue interpolation uses the same braces and is intentionally excluded.
+4. **Destination behavior.** Interactive runs show a conservative collision preview before continuing;
+   it may include files that the final composition does not write. `--yes` refuses any non-empty target.
+   `.env` names are protected, but writes are direct, non-transactional, and do not reject destination
+   symlinks. See the [template engine guide](template-engine.md) for exact limits.
+5. **Windows subprocesses.** All child processes go through `src/exec.ts`; on Windows the helper passes
+   one command string through `shell: true` for npm/git shim compatibility. Callers use hardcoded
+   commands.
+6. **Terminal restoration.** `restoreTerminal()` is registered on exit, SIGINT, and uncaught exceptions
+   because Clack uses raw terminal mode.
+7. **CI evidence.** CI scaffolds the smoke list and installs/typechecks Express + Drizzle + PostgreSQL.
+   It does not boot generated apps or prove database operations for the rest of the matrix.

@@ -21,28 +21,29 @@ export interface ParsedArgs {
 
 export const HELP_TEXT = `Usage: npm create omnicraft@latest [project-name] [options]
 
-Interactive scaffolding for full-stack apps — answer a few prompts and
-OmniCraft generates a ready-to-run project.
+Interactive project scaffolding — answer a few prompts and OmniCraft generates a project from the
+available web, backend, or native-platform choices.
 
 Options:
   --yes                Accept all defaults, skip every prompt (CI-friendly;
                        also allows running without a TTY)
-  --lang <name>        Skip the language prompt (typescript, javascript)
+  --lang <name>        Skip the language prompt (typescript, javascript; JS client template is React/Vite only)
   --platform <name>    Skip the "What are you building?" prompt (web, mobile, desktop)
   --full-stack         Force the full-stack flow (default: yes)
   --no-full-stack      Frontend only
   --runtime <name>     Skip the runtime prompt (node, python, php)
-  --frontend <name>    Skip the frontend prompt (available: react)
+  --frontend <name>    Skip the frontend prompt (react, nextjs, vue, svelte)
   --backend <name>     Skip the framework prompt (node: express, fastify, hono ·
                        python: fastapi · php: laravel)
   --db <name>          Skip the database prompt (node: postgres, sqlite, mysql ·
                        python: postgres, sqlite · php: postgres, sqlite, mysql)
-  --orm <name>         Skip the ORM prompt — Node.js only (drizzle, prisma;
-                       prisma is PostgreSQL-only for now)
-  --extras <list>      Comma-separated extras (available: tailwind, eslint;
-                       default: both). Use --extras none to skip all.
-  --latest             Pull the newest templates from GitHub instead of the
-                       ones embedded in this CLI version
+  --orm <name>         Skip ORM selection (drizzle, prisma, none; Prisma is PostgreSQL-only)
+                       Applies to separate Node APIs; Next.js always generates raw SQL
+  --extras <list>      Comma-separated extras (tailwind, eslint, shadcn;
+                       default: tailwind,eslint). shadcn is React/Vite-only and
+                       implies tailwind. Use --extras none to skip all.
+  --latest             Pull templates from this CLI version's release tag
+                       instead of the embedded templates
   --skip-install       Generate the project without installing dependencies
   --debug              Print stack traces on errors
   -h, --help           Show this help

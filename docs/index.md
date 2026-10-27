@@ -1,9 +1,9 @@
 # OmniCraft Documentation
 
 Engineering documentation for **OmniCraft** (`create-omnicraft`) — an interactive, composable
-full-stack project-scaffolding CLI. Users run `npm create omnicraft@latest`, answer prompts
-(frontend, runtime, framework, database, ORM, extras), and get a ready-to-run workspace with
-the database wired end-to-end.
+project-scaffolding CLI. Users run `npm create omnicraft@latest` and choose from web, native-platform,
+runtime, framework, database, ORM, and tooling options. Verification applies to exact combinations;
+the catalog is not a promise that every cross-product is equally supported.
 
 ## Reading paths
 
@@ -12,7 +12,7 @@ the database wired end-to-end.
 | Understand the repo in one page | [AGENTS.md](../AGENTS.md)                                                             |
 | Install and use the CLI         | [README.md](../README.md)                                                             |
 | See what is supported today     | [Stack support matrix](templates/stack-support-matrix.md)                             |
-| See the plan for what's next    | [ROADMAP.md](../ROADMAP.md) and [active plans](plans/active/omnicraft-master-plan.md) |
+| See the plan for what's next    | [ROADMAP.md](../ROADMAP.md) and the plans under `docs/plans/active/`                      |
 | Contribute                      | [CONTRIBUTING.md](../CONTRIBUTING.md)                                                 |
 
 ## Reference
@@ -35,21 +35,24 @@ the database wired end-to-end.
 - [Template contract](templates/template-contract.md) — what every template layer must provide; layer kinds and rules.
 - [Adding a stack](templates/adding-a-stack.md) — step-by-step procedure for a new runtime/framework.
 - [Adding an integration](templates/adding-an-integration.md) — procedure for a new database, ORM, or extra.
-- [Stack support matrix](templates/stack-support-matrix.md) — every combination with its verification status and evidence.
+- [Stack support matrix](templates/stack-support-matrix.md) — exact combinations with their verification status and evidence.
 
 ## Status vocabulary
 
-- **Supported** — template exists, combination is CI-verified (scaffold + install + typecheck), and startup/functional behavior has been verified at least once per adapter. Documented in the [support matrix](templates/stack-support-matrix.md) with evidence.
-- **Scaffold-verified** — generates and passes CI smoke; install/build or functional behavior not yet verified. Honest status for newer combinations.
+- **Supported** — the exact combination has recorded generated-project install/setup, typecheck or runtime-equivalent validation, boot, and a successful real database operation (where it uses a database). The [support matrix](templates/stack-support-matrix.md) states whether that evidence is CI-backed or a previous manual report.
+- **Scaffold-verified** — an engine test or smoke run generates the exact combination; generated-project install/build or functional behavior is not fully verified.
+- **Selectable — unverified** — the registry and template layers expose the combination, but no exact engine fixture or smoke entry verifies it.
+- **Invalid registry entry** — current prompts/flags accept a combination that is missing a required adapter or compatibility guard. Do not select or describe it as supported.
 - **Planned** — appears in prompts as "(soon)" but has no template yet. Tracked in [ROADMAP.md](../ROADMAP.md).
 
-- [Decision records](decisions/) — durable architecture decisions (starting with [ADR 0001: frontend framework strategy](decisions/0001-frontend-framework-strategy.md)).
+For the current CI coverage and repository-recorded manual results, see the per-combination [support matrix](templates/stack-support-matrix.md). A CI scaffold or typecheck does not by itself establish database/runtime support.
 
 - [Decision records](decisions/0001-frontend-framework-strategy.md) — durable architecture decisions (ADR 0001: frontend framework strategy).
 
 ## Plans
 
-- [Active: master engineering plan](plans/active/omnicraft-master-plan.md) — the combined hardening/expansion plan; §20 is the authoritative PR checklist.
+- [Completed: master engineering plan](plans/completed/omnicraft-master-plan.md) — preserved as the historical plan based on the 0.3.0 baseline.
+- Current release status is summarized in [ROADMAP.md](../ROADMAP.md); active implementation plans live under `docs/plans/active/`.
 
 ## Related non-doc directories
 

@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { TEMPLATES_ROOT } from './config.js'
 import { createEnvFiles } from './scaffold/env.js'
 import { applyLayers } from './scaffold/engine.js'
-import { composeLayers, templateVariables } from './scaffold/compose.js'
+import { composeLayers, planLayerApplication, templateVariables } from './scaffold/compose.js'
 import type { Answers } from './types.js'
 
 function makeAnswers(overrides: Partial<Answers> = {}): Answers {
@@ -44,6 +44,43 @@ function makeTempDir(prefix: string): string {
 
 afterAll(() => {
   for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true })
+})
+
+describe('official-generator layer order', () => {
+  it('applies every Next.js layer after create-next-app and skips Composer', () => {
+    const answers = makeAnswers({
+      frontend: 'nextjs',
+      backendRuntime: null,
+      backendFramework: null,
+      orm: 'drizzle',
+      database: 'sqlite',
+      architecture: { kind: 'integrated-fullstack', framework: 'nextjs' },
+    })
+    const layers = composeLayers(answers)
+    const plan = planLayerApplication(layers, answers.architecture)
+
+    expect(plan.afterOfficialGenerator).toEqual(layers)
+    expect(plan.afterOfficialGenerator.map(({ src }) => src)).toContain('web/nextjs/db-sqlite')
+    expect(plan.afterOfficialGenerator.map(({ src }) => src)).toContain('root/fullstack-next/sqlite')
+    expect(plan.beforeComposer).toEqual([])
+    expect(plan.afterComposer).toEqual([])
+  })
+
+  it('applies the Laravel overlay after Composer and the other layers before it', () => {
+    const answers = makeAnswers({
+      backendRuntime: 'php',
+      backendFramework: 'laravel',
+      orm: null,
+      database: 'sqlite',
+    })
+    const layers = composeLayers(answers)
+    const plan = planLayerApplication(layers, answers.architecture)
+
+    expect(plan.afterOfficialGenerator).toEqual([])
+    expect(plan.beforeComposer.map(({ src }) => src)).toContain('web/react/client')
+    expect(plan.beforeComposer.map(({ src }) => src)).toContain('root/fullstack-php/sqlite')
+    expect(plan.afterComposer.map(({ src }) => src)).toEqual(['server/php/laravel'])
+  })
 })
 
 describe('full-stack combos', () => {
@@ -301,7 +338,11 @@ describe('frontend expansion (v0.4)', () => {
       architecture: { kind: 'integrated-fullstack', framework: 'nextjs' },
     })
     nextAnswers.targetDir = dir
-    applyLayers(TEMPLATES_ROOT, composeLayers(nextAnswers), templateVariables(nextAnswers), dir)
+    const layerPlan = planLayerApplication(composeLayers(nextAnswers), nextAnswers.architecture)
+    expect(layerPlan.afterOfficialGenerator.length).toBeGreaterThan(0)
+    expect(layerPlan.beforeComposer).toEqual([])
+    expect(layerPlan.afterComposer).toEqual([])
+    applyLayers(TEMPLATES_ROOT, layerPlan.afterOfficialGenerator, templateVariables(nextAnswers), dir)
     createEnvFiles(dir)
 
     // overlay: route handlers + users page (create-next-app generates the rest)
