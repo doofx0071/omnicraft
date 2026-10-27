@@ -6,10 +6,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [1.0.2] — 2026-10-28
+
 ### Fixed
 
-- Prompt options, flag validation, and module IDs now derive from the typed capability registry; Better
-  Auth rejects unsupported frontend/runtime/ORM/database manifests before writing files.
+- `omnicraft add auth` now rejects unsupported frontend/runtime/ORM/database manifests before writing
+  files.
 - Module additions restore all changed files if a filesystem write fails after validation.
 - FastAPI + SQLite Alembic migrations create the generated database directory on a clean scaffold.
 
