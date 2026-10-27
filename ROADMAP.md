@@ -14,7 +14,7 @@
 | v0.3.1  | Hardening (master-plan PR 2/3/5)     | ✅ tag   | —       |
 | v0.4.0  | Frontend expansion                   | ✅ 4/4   | #17–#20 |
 | v0.5.0  | Platform expansion (mobile, desktop) | ✅ 2/2   | #21–#22 |
-| v1.0.0  | Maturity milestone                   | 🚧 1/5   | #23–#27 |
+| v1.0.0  | Maturity milestone                   | ✅ 5/5   | #23–#27 |
 
 ---
 
@@ -67,9 +67,9 @@ The "What are you building?" branches become real.
 
 The flagship features. When these land (plus everything above), the vision is complete and we cut **v1.0.0**.
 
-- [ ] #23 — Auth boilerplate wired to the users table
-- [ ] #24 — `omnicraft add <module>` post-scaffold generator
-- [ ] #25 — JavaScript (non-TypeScript) template variants
+- [x] #23 — Auth boilerplate wired to the users table
+- [x] #24 — `omnicraft add <module>` post-scaffold generator
+- [x] #25 — JavaScript (non-TypeScript) template variants
 - [x] #26 — Multi-OS CI once repo is public _(done early — repo is public, all 3 OS green)_
 - [ ] #27 — Contributor docs: template composition guide
 
