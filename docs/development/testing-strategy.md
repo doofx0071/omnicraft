@@ -115,15 +115,18 @@ The current workflow:
    runs database/API feature tests.
 7. Runs `support-evidence` to check matrix row ids, registered test scenarios, job commands, and the
    release aggregate. `supported-matrix` fails unless the OS/Node matrix, runtime jobs, support evidence,
-   and package artifact all pass. It runs for PRs, main pushes, and nightly; `workflow_dispatch` supports
-   an explicit pre-release run. The scheduled run uses GitHub-hosted jobs; the persistent self-hosted
-   Windows job is limited to pushes and same-repository pull requests.
+   and package artifact all pass. It runs for PRs, main pushes, nightly, and version-tag pushes;
+   `workflow_dispatch` supports an explicit pre-release run. The scheduled run uses GitHub-hosted jobs.
+8. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
+   the release job publishes to npm using OIDC, creates the GitHub Release from the version's changelog
+   section, and updates the release snapshots in `ROADMAP.md` and `docs/architecture/system-overview.md`.
+   The self-hosted Windows job runs only for main-branch pushes and same-repository pull requests.
 
 These hosted runtime jobs add real database and API checks for those exact combinations; they do not
 verify other framework/database combinations. The matrix marks a stack Supported only when its row
 links to a concrete scenario in `src/support-evidence.ts` and the corresponding CI target passes. The
-self-hosted Windows runner is restricted to pushes and same-repository pull requests; fork pull requests
-use hosted runners only.
+self-hosted Windows runner is restricted to main-branch pushes and same-repository pull requests; fork
+pull requests, release tags, and scheduled runs use hosted runners only.
 
 ## Support statuses
 

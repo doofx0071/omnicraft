@@ -9,6 +9,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
   schedule:
@@ -142,7 +143,9 @@ jobs:
 
   # Trusted events only: the self-hosted runner never executes fork PR code.
   windows-self-hosted:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, windows]
     defaults:
       run:
@@ -244,3 +247,85 @@ jobs:
             fi
           done
           echo "All Supported stack evidence and package checks passed."
+
+  publish-release:
+    name: Publish npm package and GitHub Release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: supported-matrix
+    runs-on: ubuntu-latest
+    concurrency:
+      group: release-${{ github.ref }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Install npm version with trusted publishing support
+        run: npm install --global npm@12.2.1
+
+      - name: Validate release tag and prepare notes
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          CURRENT_LATEST="$(npm view create-omnicraft version)"
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          node .github/scripts/release-metadata.mjs notes \
+            "$VERSION" "$RUNNER_TEMP/release-notes.md" "$CURRENT_LATEST"
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Publish package with npm trusted publishing
+        working-directory: packages/cli
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          VERSION="${VERSION#v}"
+          if npm view "create-omnicraft@$VERSION" version >/dev/null 2>&1; then
+            PUBLISHED_GIT_HEAD="$(npm view "create-omnicraft@$VERSION" gitHead --json | tr -d '"')"
+            if [ "$PUBLISHED_GIT_HEAD" != "$GITHUB_SHA" ]; then
+              echo "Version $VERSION already exists on npm from $PUBLISHED_GIT_HEAD, expected $GITHUB_SHA."
+              exit 1
+            fi
+            echo "Version $VERSION is already published from this exact commit; skipping duplicate publish."
+          else
+            npm publish --access public
+          fi
+
+      - name: Create GitHub Release from CHANGELOG
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "GitHub Release $GITHUB_REF_NAME already exists; leaving it unchanged."
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "create-omnicraft $GITHUB_REF_NAME" \
+              --notes-file "$RUNNER_TEMP/release-notes.md"
+          fi
+
+      - name: Update published release documentation
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          git fetch origin main
+          git checkout --force -B main origin/main
+          node .github/scripts/release-metadata.mjs mark-published "$VERSION" "$GITHUB_SHA"
+          if git diff --quiet -- ROADMAP.md docs/architecture/system-overview.md; then
+            echo "Release documentation already records $GITHUB_REF_NAME as published."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add ROADMAP.md docs/architecture/system-overview.md
+            git commit -m "docs: record $GITHUB_REF_NAME release"
+            git push origin HEAD:main
+          fi

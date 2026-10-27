@@ -1,7 +1,7 @@
 # System overview
 
 OmniCraft is the `create-omnicraft` npm package. The source package and npm `latest` were both checked
-at `1.0.0` on 2026-10-27. The CLI is interactive by default and can compose web, backend, database,
+at `1.0.2` on 2026-10-28. The CLI is interactive by default and can compose web, backend, database,
 extra, and native-platform layers. Exact support and verification vary by combination; see the
 [support matrix](../templates/stack-support-matrix.md).
 

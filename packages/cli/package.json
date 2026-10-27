@@ -3,6 +3,10 @@
   "version": "1.0.2",
   "description": "Craft any stack — interactive project scaffolding for full-stack apps. React + Node (Express/Fastify) + PostgreSQL (Drizzle/Prisma) in v1.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/doofx0071/omnicraft.git"
+  },
   "type": "module",
   "bin": {
     "create-omnicraft": "dist/index.js",

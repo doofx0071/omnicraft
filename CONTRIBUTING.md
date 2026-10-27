@@ -84,10 +84,28 @@ Follow the dedicated procedures — they exist so new code looks like the existi
 
 ## Releases (maintainers)
 
-1. Confirm ROADMAP phase complete; all issues closed with evidence.
-2. Bump `packages/cli/package.json` version (semver; templates ship with the CLI).
-3. `npm test && npm run build` green; `npm pack --dry-run` shows `dist/` + `templates/`.
-4. Confirm `supported-stack-release-gate` passed on the exact commit to publish (use `workflow_dispatch`
-   for an explicit pre-release run), then `cd packages/cli && npm publish` (browser auth / EOTP).
-5. Verify `npm view create-omnicraft version` and `npm view create-omnicraft dist-tags --json`.
-6. Tag `v<version>`, push the tag, tick the ROADMAP.
+1. Confirm the ROADMAP phase is complete and its support claims have the required evidence.
+2. In the release PR, bump `packages/cli/package.json` (semver; templates ship with the CLI), update
+   `package-lock.json`, add the dated `CHANGELOG.md` section, and mark that version as a release candidate
+   in `ROADMAP.md`.
+3. Merge only after the `supported-stack-release-gate` is green for the exact release commit. The tag run
+   repeats this complete gate before it can publish.
+4. Create and push the matching `v<version>` tag from that commit. The `CI` workflow then publishes the
+   package to npm with OIDC trusted publishing, creates the GitHub Release from the matching changelog
+   section, and commits the published version and source commit to `ROADMAP.md` and the system overview.
+5. Verify `npm view create-omnicraft version dist-tags --json` and `gh release view v<version>`.
+
+Before the first automated npm publish, configure the `create-omnicraft` package's npm **Trusted
+Publisher** for GitHub Actions with owner `doofx0071`, repository `omnicraft`, workflow filename `ci.yml`,
+and permission to run `npm publish`. The package manifest's `repository.url` must match the GitHub repo.
+Trusted publishing requires a GitHub-hosted runner, Node 22.14 or newer, npm 11.5.1 or newer, and
+`id-token: write`; do not add a long-lived npm publish token to GitHub secrets. Configure it shortly
+before the first automated release: npm requires the new trusted publisher to complete its first
+successful publish within two days. With npm 11.15 or newer, the CLI command is
+
+```bash
+npx --yes npm@11.21.1 trust github create-omnicraft --file ci.yml \
+  --repository doofx0071/omnicraft --allow-publish
+```
+
+The first request requires npm account 2FA.
