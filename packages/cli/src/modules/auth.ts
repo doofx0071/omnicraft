@@ -116,7 +116,7 @@ export const accountRelations = relations(account, ({ one }) => ({
 }));
 `
 
-const AUTH_SCHEMA_POSTGRES = `import { relations, sql } from "drizzle-orm";
+const AUTH_SCHEMA_POSTGRES = `import { relations } from "drizzle-orm";
 import { pgTable, text, boolean, timestamp, index } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
@@ -196,7 +196,7 @@ export const accountRelations = relations(account, ({ one }) => ({
 }));
 `
 
-const AUTH_SCHEMA_MYSQL = `import { relations, sql } from "drizzle-orm";
+const AUTH_SCHEMA_MYSQL = `import { relations } from "drizzle-orm";
 import { mysqlTable, varchar, text, boolean, timestamp, index } from "drizzle-orm/mysql-core";
 
 export const user = mysqlTable("user", {
@@ -321,7 +321,12 @@ export const authModule: ModuleDefinition = {
     return null
   },
   files(_ctx, manifest) {
-    const provider = manifest.stack.database === 'mysql' ? 'mysql' : manifest.stack.database === 'sqlite' ? 'sqlite' : 'pg'
+    const provider =
+      manifest.stack.database === 'mysql'
+        ? 'mysql'
+        : manifest.stack.database === 'sqlite'
+          ? 'sqlite'
+          : 'pg'
     const schema =
       manifest.stack.database === 'mysql'
         ? AUTH_SCHEMA_MYSQL
