@@ -4,6 +4,13 @@ All notable, user-visible changes to `create-omnicraft` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is semver
 (breaking changes may occur in `0.x`; from `1.0.0`, public changes follow semver).
 
+## [Unreleased]
+
+### Fixed
+
+- SQLite-backed Drizzle scaffolds include `server/data`, so the first migration can create the
+  database before the API server starts.
+
 ## [1.0.0] — 2026-10-27
 
 First stable release. The selectable catalog includes 3 runtimes, 4 web frontends, 2 Node ORMs
