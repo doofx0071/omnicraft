@@ -1,6 +1,6 @@
 # 🗺️ OmniCraft Roadmap
 
-> **Versioning model:** `v1.0.0` is the first stable release. As checked on 2026-10-28, npm `latest` is `1.0.1`; its published metadata points to Git commit `7bd8868`, and GitHub tag `v1.0.1` points to that same commit. Version `1.0.2` is prepared but remains unpublished until its release gate passes and the package is published. Future releases follow semver; `1.0.1` does not mean every selectable stack combination is fully verified.
+> **Versioning model:** `v1.0.0` is the first stable release. As checked on 2026-10-28, npm `latest` is `1.0.2`, published from Git commit `b359b91`, and GitHub tag `v1.0.2` points to that same commit. Future releases follow semver; release versions do not mean every selectable stack combination is fully verified.
 >
 > Progress is tracked with GitHub issues — this file is the big picture, the issues are the work. Check off here when the linked issue closes.
 
@@ -16,7 +16,7 @@
 | v0.5.0  | Platform expansion (mobile, desktop) | ✅ 2/2   | #21–#22 |
 | v1.0.0  | First stable release                 | ✅ 5/5   | #23–#27 |
 | v1.0.1  | SQLite first-run fix                 | ✅ published | — |
-| v1.0.2  | Reliability fixes and runtime evidence | ⏳ release candidate | — |
+| v1.0.2  | Reliability fixes and runtime evidence | ✅ published | — |
 
 ---
 

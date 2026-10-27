@@ -152,12 +152,18 @@ packages/cli/
 
 ## Publishing checklist
 
-1. Update `TEMPLATE_REPO.owner` in `packages/cli/src/config.ts` if the repo moves to a different GitHub org/user (needed for `--latest`).
-2. `npm test && npm run build` — must be green.
-3. Bump `version` in `packages/cli/package.json` (semver; templates and CLI version together).
-4. `cd packages/cli && npm pack` — inspect the tarball (templates + dist included).
-5. `npm publish` (public registry; `create-*` packages publish public by default).
-6. Tag the repo: `git tag v<version> && git push --tags` — `--latest` fetches the matching release tag.
+1. Update `TEMPLATE_REPO.owner` in `packages/cli/src/config.ts` if the repo moves to another GitHub
+   org/user (needed for `--latest`).
+2. In a release PR, bump `packages/cli/package.json`, update `package-lock.json` and `CHANGELOG.md`,
+   and mark the version as a release candidate in `ROADMAP.md`.
+3. Merge after `supported-stack-release-gate` passes for the release commit, then push its matching
+   `v<version>` tag.
+4. The `CI` tag workflow reruns the release gate, publishes to npm, creates the GitHub Release from
+   `CHANGELOG.md`, and updates `ROADMAP.md` and the [system overview](docs/architecture/system-overview.md).
+   Configure npm Trusted Publishing
+   once for `doofx0071/omnicraft` and workflow `ci.yml` before the first automated release.
+5. Verify `npm view create-omnicraft version dist-tags --json` and `gh release view v<version>`.
+   `--latest` fetches the matching release tag.
 
 ## Inspiration & credits
 
