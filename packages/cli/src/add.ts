@@ -8,6 +8,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { authModule, authPatches } from './modules/auth.js'
 import type { ProjectManifest } from './manifest.js'
+import { AVAILABLE, type ModuleId } from './capabilities.js'
 
 const MANIFEST_DIR = '.omnicraft'
 const MANIFEST_FILE = 'project.json'
@@ -42,13 +43,14 @@ export function saveManifest(targetDir: string, manifest: ProjectManifest): void
 export interface ModuleContext {
   projectName: string
   databaseName: string
+  targetDir: string
 }
 
 export interface ModuleDefinition {
   id: string
   description: string
   /** Combinations this module cannot be applied to. Return a reason string to reject. */
-  incompatible?(manifest: ProjectManifest): string | null
+  incompatible?(manifest: ProjectManifest, targetDir?: string): string | null
   /** Files to write (relative to the project root), rendered with module vars. */
   files(ctx: ModuleContext, manifest: ProjectManifest): Record<string, string>
   /** package.json fragments merged into the project's root manifest. */
@@ -133,9 +135,9 @@ describe("App", () => {
 });
 `
 
-export const MODULES: ModuleDefinition[] = [
-  { ...authModule, patches: authPatches },
-  {
+const MODULE_DEFINITIONS: Record<ModuleId, ModuleDefinition> = {
+  auth: { ...authModule, patches: authPatches },
+  docker: {
     id: 'docker',
     description: 'docker-compose for the project database (PostgreSQL/MySQL)',
     incompatible(manifest) {
@@ -158,21 +160,21 @@ export const MODULES: ModuleDefinition[] = [
     },
     nextSteps: ['docker compose up -d', 'then run your db:push / db:migrate flow'],
   },
-  {
+  testing: {
     id: 'testing',
     description: 'Vitest for the client (jsdom + testing-library) with a sample test',
-    incompatible(manifest) {
+    incompatible(manifest, targetDir = process.cwd()) {
       if (manifest.stack.architecture.kind === 'native-app') {
         return 'native apps use their own test runners (not covered yet)'
       }
       const clientDir = manifest.stack.architecture.kind === 'separate-frontend-api' ? 'client' : '.'
-      if (existsSync(join(process.cwd(), clientDir, 'vitest.config.ts'))) {
+      if (existsSync(join(targetDir, clientDir, 'vitest.config.ts'))) {
         return 'a vitest config already exists'
       }
       return null
     },
-    files() {
-      const isWorkspaces = existsSync(join(process.cwd(), 'client'))
+    files(ctx) {
+      const isWorkspaces = existsSync(join(ctx.targetDir, 'client'))
       const prefix = isWorkspaces ? 'client/' : ''
       return {
         [`${prefix}vitest.config.ts`]: VITEST_CONFIG,
@@ -189,9 +191,11 @@ export const MODULES: ModuleDefinition[] = [
       },
       scripts: { test: 'vitest run' },
     },
-    nextSteps: [`${existsSync(join(process.cwd(), 'client')) ? 'cd client && ' : ''}npm install`, 'npm run test'],
+    nextSteps: ['install dependencies', 'run npm test'],
   },
-]
+}
+
+export const MODULES: ModuleDefinition[] = AVAILABLE.modules.map((id) => MODULE_DEFINITIONS[id])
 
 export function renderModuleContent(content: string, vars: Record<string, string>): string {
   return content.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, key: string) =>

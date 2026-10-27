@@ -5,12 +5,72 @@ import {
   moduleVars,
   renderModuleContent,
   resolveTarget,
-  saveManifest,
 } from './add.js'
 import { deepMergePackageJson } from './scaffold/merge.js'
 import { unwrap } from './cancel.js'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, rmdirSync, unlinkSync, writeFileSync } from 'node:fs'
+import { dirname, join, resolve, sep } from 'node:path'
+
+function applyChangesTransactionally(targetDir: string, changes: Map<string, string>): void {
+  const targetRoot = resolve(targetDir)
+  const targetPrefix = targetRoot.endsWith(sep) ? targetRoot : `${targetRoot}${sep}`
+  const snapshots = new Map<string, string | null>()
+  const directoriesMissingBeforeWrite = new Set<string>()
+  for (const relativePath of changes.keys()) {
+    const absolutePath = resolve(targetRoot, relativePath)
+    if (!absolutePath.startsWith(targetPrefix)) {
+      throw new Error(`Module path "${relativePath}" resolves outside the project directory.`)
+    }
+    snapshots.set(
+      absolutePath,
+      existsSync(absolutePath) ? readFileSync(absolutePath, 'utf8') : null,
+    )
+    let parent = dirname(absolutePath)
+    while (parent.startsWith(targetPrefix) && !existsSync(parent)) {
+      directoriesMissingBeforeWrite.add(parent)
+      parent = dirname(parent)
+    }
+  }
+
+  try {
+    for (const [relativePath, content] of changes) {
+      const absolutePath = resolve(targetRoot, relativePath)
+      mkdirSync(dirname(absolutePath), { recursive: true })
+      writeFileSync(absolutePath, content)
+    }
+  } catch (writeError) {
+    const rollbackErrors: unknown[] = []
+    for (const [absolutePath, previousContent] of [...snapshots].reverse()) {
+      try {
+        if (previousContent === null) {
+          if (existsSync(absolutePath)) unlinkSync(absolutePath)
+        } else {
+          writeFileSync(absolutePath, previousContent)
+        }
+      } catch (rollbackError) {
+        rollbackErrors.push(rollbackError)
+      }
+    }
+    for (const directory of [...directoriesMissingBeforeWrite].sort(
+      (left, right) => right.length - left.length,
+    )) {
+      try {
+        rmdirSync(directory)
+      } catch (rollbackError) {
+        const code = (rollbackError as NodeJS.ErrnoException).code
+        if (code !== 'ENOENT' && code !== 'ENOTEMPTY') rollbackErrors.push(rollbackError)
+      }
+    }
+
+    if (rollbackErrors.length > 0) {
+      throw new AggregateError(
+        [writeError, ...rollbackErrors],
+        'Module changes failed and one or more rollback operations also failed.',
+      )
+    }
+    throw writeError
+  }
+}
 
 export async function runAdd(moduleArg: string | undefined, targetArg: string | undefined, dryRun: boolean): Promise<void> {
   const targetDir = resolveTarget(targetArg)
@@ -40,7 +100,7 @@ export async function runAdd(moduleArg: string | undefined, targetArg: string | 
     return
   }
 
-  const incompatibility = module.incompatible?.(manifest) ?? null
+  const incompatibility = module.incompatible?.(manifest, targetDir) ?? null
   if (incompatibility) {
     p.log.error(`Module "${module.id}" cannot be added: ${incompatibility}`)
     process.exitCode = 1
@@ -48,7 +108,11 @@ export async function runAdd(moduleArg: string | undefined, targetArg: string | 
   }
 
   const vars = moduleVars(manifest)
-  const files = Object.entries(module.files({ projectName: manifest.projectName, databaseName: manifest.projectName.replace(/-/g, '_') }, manifest)).map(([path, content]) => [
+  const files = Object.entries(module.files({
+    projectName: manifest.projectName,
+    databaseName: manifest.projectName.replace(/-/g, '_'),
+    targetDir,
+  }, manifest)).map(([path, content]) => [
     path,
     renderModuleContent(content, vars),
   ] as const)
@@ -111,15 +175,15 @@ export async function runAdd(moduleArg: string | undefined, targetArg: string | 
     return
   }
 
-  const spinner = p.spinner()
+  const changes = new Map<string, string>()
   for (const patch of renderedPatches) {
     const abs = join(targetDir, patch.file)
-    writeFileSync(abs, readFileSync(abs, 'utf8').replace(patch.find, patch.replace))
+    const current = changes.get(patch.file) ?? readFileSync(abs, 'utf8')
+    changes.set(patch.file, current.replace(patch.find, patch.replace))
   }
   for (const [path, content] of files) {
-    const abs = join(targetDir, path)
-    mkdirSync(dirname(abs), { recursive: true })
-    writeFileSync(abs, content)
+    if (changes.has(path)) throw new Error(`Module definition writes "${path}" more than once.`)
+    changes.set(path, content)
   }
 
   // Merge package.json fragment into the ROOT manifest (single-manifest rule
@@ -128,11 +192,14 @@ export async function runAdd(moduleArg: string | undefined, targetArg: string | 
   if (module.packageJson && existsSync(rootPkgPath)) {
     const pkg = JSON.parse(readFileSync(rootPkgPath, 'utf8'))
     const merged = deepMergePackageJson(pkg, module.packageJson)
-    writeFileSync(rootPkgPath, `${JSON.stringify(merged, null, 2)}\n`)
+    changes.set('package.json', `${JSON.stringify(merged, null, 2)}\n`)
   }
 
-  manifest.modules.push(module.id)
-  saveManifest(targetDir, manifest)
+  const updatedManifest = { ...manifest, modules: [...manifest.modules, module.id] }
+  changes.set('.omnicraft/project.json', `${JSON.stringify(updatedManifest, null, 2)}\n`)
+
+  const spinner = p.spinner()
+  applyChangesTransactionally(targetDir, changes)
 
   spinner.stop(`Module "${module.id}" added`)
   if (module.packageJson) {

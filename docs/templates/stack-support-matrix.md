@@ -16,21 +16,20 @@ unions, or the presence of a template directory do not prove that every cross-pr
   because no compatible template/module path exists.
 - **Planned** — not selectable and not implemented.
 
-The merged local verification run on Windows on 2026-10-27 passed 82 unit tests, typecheck, build, and
-the 17-project smoke. Separate local integration runs installed, typechecked, migrated, booted, and
-exercised Express + Drizzle with SQLite, PostgreSQL, and MySQL; Laravel 12 passed migrations and API
-feature tests against PostgreSQL and MySQL. In [PR #28 hosted run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380)
-on head `88f7d42`, all ten CI jobs passed, including the database and Laravel integration jobs, package
-verification, the Ubuntu/macOS/Windows matrix, and the self-hosted job. Only combinations covered by
-the passing integration jobs are promoted below. Previous manual results remain repository-recorded
-history, not results reproduced during this local run.
+On 2026-10-28, the Windows checkout passed 129 unit tests, typecheck, build, support-evidence check,
+and the 17-project smoke. Local generated-project runs passed Express + Drizzle on SQLite/PostgreSQL/
+MySQL, FastAPI + SQLite, and Laravel 12 on SQLite/PostgreSQL/MySQL. The current hosted review run is the
+required evidence gate for the newly added FastAPI and Laravel SQLite jobs; those two rows remain
+Scaffold-verified until that hosted run passes. The prior [PR #28 hosted run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380)
+on head `88f7d42` remains historical evidence for its then-current matrix. Do not use it as evidence
+for jobs added after that run.
 
 ## Frontends and platforms
 
 | Adapter or exact path | Status | Evidence and limits |
 | --- | --- | --- |
 | React + Vite + TypeScript, frontend-only | **Scaffold-verified** | The prior matrix records local typecheck/build; the current smoke and package job scaffold it. No browser boot/operation result is recorded. |
-| React + Vite + TypeScript + Express + Drizzle + PostgreSQL | **Supported** | See the exact backend row below: current CI installs/typechecks this generated project, and the prior matrix records local boot/health/CRUD/409 verification. |
+| React + Vite + TypeScript + Express + Drizzle + PostgreSQL | **Supported** | `database-integration` installs and typechecks the generated client/API, migrates PostgreSQL data, boots the API, and exercises CRUD/auth. <!-- support-id: frontend-react-express-drizzle-postgres --> |
 | Vue + Vite + TypeScript + Express + Drizzle + SQLite | **Scaffold-verified** | Current smoke run generated it. The changelog records Vue build/CRUD verification but does not identify the database combination, so that result is not attributed to this exact row. |
 | Svelte + Vite + TypeScript + Express + Drizzle + SQLite | **Scaffold-verified** | Current smoke run generated it. The changelog records Svelte build/CRUD verification but does not identify the database combination, so that result is not attributed to this exact row. |
 | Next.js integrated full-stack + raw SQL + SQLite | **Scaffold-verified** | Engine test, current smoke run, and a built-CLI `--yes --skip-install` run generated the database adapter and root files. No dependency install or app boot was run. Earlier Next.js CRUD evidence does not identify a database dialect. |
@@ -55,9 +54,9 @@ product is implied.
 
 | Framework | ORM/data access | Database | Status | Evidence |
 | --- | --- | --- | --- | --- |
-| Express | Drizzle | PostgreSQL | **Supported** | Hosted `database-integration` job in [run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380) passed generated install/typechecks, migrations, boot, CRUD, and Better Auth; the earlier matrix also records health and duplicate-email 409 checks. |
-| Express | Drizzle | SQLite | **Supported** | Hosted `database-integration` job in [run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380) passed generated install/typechecks, migrations, boot, CRUD, and Better Auth. |
-| Express | Drizzle | MySQL | **Supported** | Hosted `database-integration` job in [run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380) passed generated install/typechecks, migrations, boot, CRUD, and Better Auth. |
+| Express | Drizzle | PostgreSQL | **Supported** | `database-integration` installs/typechecks the generated project, migrates PostgreSQL, boots the API, and checks CRUD, conflict handling, and auth. <!-- support-id: express-drizzle-postgres --> |
+| Express | Drizzle | SQLite | **Supported** | `database-integration` installs/typechecks the generated project, applies SQLite migrations, boots the API, and checks CRUD, conflict handling, and auth. <!-- support-id: express-drizzle-sqlite --> |
+| Express | Drizzle | MySQL | **Supported** | `database-integration` installs/typechecks the generated project, migrates MySQL, boots the API, and checks CRUD, conflict handling, and auth. <!-- support-id: express-drizzle-mysql --> |
 | Express | Prisma | PostgreSQL | **Scaffold-verified** | Engine fixture and smoke. Prior matrix records boot/error handling, not a successful database CRUD operation; current CI does not install this generated project. |
 | Express | Raw SQL (`none`) | SQLite | **Scaffold-verified** | Changelog records migration, seed, boot, CRUD, duplicate 409, and missing-record 404, but does not record generated install/typecheck evidence. Runtime result not rerun in this pass. |
 | Express | Raw SQL (`none`) | PostgreSQL | **Scaffold-verified** | Current smoke run generated it; no PostgreSQL runtime result recorded. |
@@ -79,25 +78,25 @@ The repository has no `templates/server/node/hono/prisma/` layer.
 
 | Framework | Data access | Database | Status | Evidence |
 | --- | --- | --- | --- | --- |
-| FastAPI | SQLAlchemy 2 async + Alembic | SQLite | **Supported** | Prior matrix records `uv sync`, migration, seed, boot, and full CRUD. Runtime result not rerun in this pass. |
+| FastAPI | SQLAlchemy 2 async + Alembic | SQLite | **Scaffold-verified** | Local integration installed generated dependencies, applied Alembic migrations, booted Uvicorn, and checked SQLite CRUD, validation, and conflict responses. The hosted `python-fastapi-integration` job must pass before promotion. |
 | FastAPI | SQLAlchemy 2 async + Alembic | PostgreSQL | **Scaffold-verified** | Engine fixture and smoke; no generated install/migration/runtime result recorded. |
-| Laravel 12 | Eloquent | SQLite | **Supported** | Prior matrix records Composer scaffold, migrate, seed, serve, and CRUD. Runtime result not rerun in this pass. |
-| Laravel 12 | Eloquent | PostgreSQL | **Supported** | Hosted `php-laravel-integration` job in [run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380) passed Composer platform checks, migrations, database-driver assertions, and generated API feature tests against PostgreSQL. |
-| Laravel 12 | Eloquent | MySQL | **Supported** | Hosted `php-laravel-integration` job in [run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380) passed Composer platform checks, migrations, database-driver assertions, and generated API feature tests against MySQL. |
+| Laravel 12 | Eloquent | SQLite | **Scaffold-verified** | Local integration installed Composer dependencies in the pinned PHP image, migrated SQLite, verified the active driver, and exercised the generated API. The hosted `php-laravel-integration` job must pass before promotion. |
+| Laravel 12 | Eloquent | PostgreSQL | **Supported** | `php-laravel-integration` installs Composer dependencies in the pinned PHP image, migrates PostgreSQL, verifies the active driver, and exercises the generated API. <!-- support-id: laravel-eloquent-postgres --> |
+| Laravel 12 | Eloquent | MySQL | **Supported** | `php-laravel-integration` installs Composer dependencies in the pinned PHP image, migrates MySQL, verifies the active driver, and exercises the generated API. <!-- support-id: laravel-eloquent-mysql --> |
 
 ## Language variants, modules, and extras
 
 | Capability | Status | Evidence and limits |
 | --- | --- | --- |
-| TypeScript templates | **Supported** | Default for the recorded supported web combinations. |
+| TypeScript templates | **Scaffold-verified** | TypeScript is the default language and appears in the exact supported rows above; this generic entry does not claim separate runtime evidence. |
 | JavaScript React/Vite client | **Scaffold-verified** | Previous matrix records a frontend-only scaffold; no current automated fixture. Full-stack server remains TypeScript. |
 | JavaScript Vue, Svelte, or Next.js templates | **Rejected — unsupported combination** | No JavaScript template overlay exists for these frontends. The prompt only offers JavaScript for React/Vite; incompatible flags are rejected. |
 | JavaScript Expo or Tauri | **Rejected — unsupported combination** | Native scaffolds are fixed to TypeScript; incompatible `--lang` flags are rejected. |
 | Next.js with `--orm`, `--runtime`, `--backend`, `--no-full-stack`, or contradictory `--extras` | **Rejected — unsupported combination** | Next.js is integrated full-stack and always uses raw SQL, Tailwind, and ESLint from create-next-app; separate-backend flags are rejected, extras are fixed, and the prompt has no ORM or extras question. |
-| `omnicraft add auth` — Express + Drizzle + SQLite | **Supported** | Hosted `database-integration` job in [run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380) passed the generated email/password flow, session validity and persistence across restart, logout invalidation, password-hash check, and CRUD. |
-| `omnicraft add auth` — Express + Drizzle + PostgreSQL/MySQL | **Supported** | Hosted `database-integration` job in [run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380) passed the generated email/password flow, session validity and persistence across restart, logout invalidation, password-hash check, and CRUD for both dialects. |
+| `omnicraft add auth` — Express + Drizzle + SQLite | **Supported** | `database-integration` checks registration, login, session persistence across restart, protected-route behavior, logout, stored password hash, and CRUD on SQLite. <!-- support-id: auth-express-drizzle-sqlite --> |
+| `omnicraft add auth` — Express + Drizzle + PostgreSQL/MySQL | **Supported** | `database-integration` checks registration, login, session persistence across restart, protected-route behavior, logout, stored password hash, and CRUD on both databases. <!-- support-id: auth-express-drizzle-postgres-mysql --> |
 | `omnicraft add auth` — Fastify/Hono + Drizzle | **Rejected — unsupported combination** | The module guard rejects these frameworks because its route patches target Express files. |
-| `omnicraft add testing` | **Supported** | Changelog records adding the client Vitest module and running its sample test; no automated add-module regression test is present. |
+| `omnicraft add testing` | **Scaffold-verified** | Unit tests verify files, dependencies, scripts, and manifest changes; the generated sample test is not installed and executed in CI. |
 | `omnicraft add docker` | **Selectable — unverified** | Implementation exists for PostgreSQL/MySQL separate-API projects; no current add-module test covers it. |
 | Tailwind CSS | **Scaffold-verified** | Generated in the current smoke paths; prior matrix records a generated-project build. |
 | ESLint + Prettier | **Scaffold-verified** | Current smoke paths include the extra; CI lint is limited to Express + Drizzle + PostgreSQL on the Windows job. |
@@ -109,8 +108,10 @@ The prompts mark NestJS, Django, Symfony, MongoDB, and PHP/MySQL or Python/MySQL
 applicable. The type unions also contain future names such as Mongoose; a type union alone does not make
 an option selectable.
 
-`AVAILABLE` still lists choices by dimension, while `compatibility.ts` holds cross-option constraints
-shared by prompt filtering, flag validation, composition, and the Better Auth module guard. Regression
-tests cover JavaScript frontend limits, Next.js raw-SQL behavior, Hono ORM choices, shadcn frontend
-choices, and Express-only auth patching. These checks make invalid combinations unavailable without
-changing the evidence status of any valid stack row above.
+`src/capabilities.ts` is the typed source for selectable dimension and module options; prompts and flag
+validation derive their available values from it. `src/compatibility.ts` holds cross-option constraints
+shared by prompt filtering, flag validation, composition, and Better Auth. Exact `Supported` rows carry
+an id linked by `src/support-evidence.ts` to a CI job and scenario. The support-evidence check rejects
+missing rows, stale ids, missing scripts, changed CI commands, and targets omitted from the aggregate
+release gate. Compatibility tests cover JavaScript frontend limits, Next.js raw-SQL behavior, Hono ORM
+choices, shadcn frontend choices, and Express-only auth patching; those tests do not promote any stack.

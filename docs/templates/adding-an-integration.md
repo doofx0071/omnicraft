@@ -50,8 +50,10 @@ sqlite ships none), `_github/workflows/ci.yml`, `_gitignore` (sqlite adds the da
 
 ### 5. Registration + flow
 
-- `AVAILABLE.db[<runtime>]` in `src/prefill.ts` (+ guard rules in `validateStackFlags`).
-- Prompt choice in `dbChoices[<runtime>]` (`run-prompts.ts`); update `HELP_TEXT` + README Options.
+- The typed option entry in `src/capabilities.ts`; prompt values and non-interactive flag values are
+  derived from the same registry. Put cross-option rules in `src/compatibility.ts` and test prompt,
+  flag, and composition behavior.
+- Update README/help documentation only when selectable choices change.
 - If the database changes the post-scaffold flow (like sqlite skipping docker), update
   `printNextSteps`.
 
@@ -69,7 +71,11 @@ compose with every stack that can select it. `--extras` accepts the name; `none`
 3. Level 3 per [testing strategy](../development/testing-strategy.md): install, typecheck, boot, and at
    least one real DB operation per database claimed. For extras: generated project lints/prettiers clean
    and the extra is actually active (tailwind styles applied, eslint rules enforced).
-4. New combos go into CI's scaffold matrix by virtue of the smoke script.
+4. Give each exact Supported combination a scenario in `src/support-evidence.ts`. Its integration
+   target must point to an existing script and workflow job; the `supported-matrix` aggregate must
+   require that job. The support-evidence check rejects Supported rows without a matching id/target.
+5. New combos go into CI's scaffold matrix by virtue of the smoke script, but smoke evidence alone does
+   not promote a row to Supported.
 
 ## Documentation
 

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
 import { createServer } from 'node:net'
-import { copyFileSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { text } from 'node:stream/consumers'
@@ -17,13 +17,14 @@ import { buildManifest } from '../src/manifest.js'
 import { createEnvFiles } from '../src/scaffold/env.js'
 import { applyLayers } from '../src/scaffold/engine.js'
 import { composeLayers, templateVariables } from '../src/scaffold/compose.js'
+import { integrationScenarios } from '../src/support-evidence.js'
 import type { Answers, Database } from '../src/types.js'
 
 const POSTGRES_IMAGE = 'postgres:17.11-alpine3.24'
 const MYSQL_IMAGE = 'mysql:8.4.13'
 type TestDatabase = Extract<Database, 'sqlite' | 'postgres' | 'mysql'>
 
-const DATABASES: TestDatabase[] = ['sqlite', 'postgres', 'mysql']
+const DATABASES = integrationScenarios('node-express-drizzle') as readonly TestDatabase[]
 const AUTH_PASSWORD = 'OmniCraft-test-password-2026'
 const AUTH_SECRET_BYTES = 32
 const CHILD_TIMEOUT_MS = 10 * 60 * 1000
@@ -33,7 +34,7 @@ type StartedDatabaseContainer = StartedPostgreSqlContainer | StartedMySqlContain
 
 function requestedDatabases(argv: string[]): TestDatabase[] {
   const databaseArgs = argv.filter((arg) => arg === '--database' || arg.startsWith('--database='))
-  if (databaseArgs.length === 0) return DATABASES
+  if (databaseArgs.length === 0) return [...DATABASES]
   if (databaseArgs.length > 1) throw new Error('Pass --database only once.')
 
   const index = argv.indexOf('--database')
@@ -208,6 +209,24 @@ async function reservePort(): Promise<number> {
 function assertNoSecrets(value: string, secrets: string[], label: string): void {
   for (const secret of secrets) {
     if (secret.length >= 5) assert(!value.includes(secret), `${label} exposed a test secret.`)
+  }
+}
+
+function assertAuthSecretNotPersisted(projectRoot: string, authSecret: string): void {
+  for (const relativePath of [
+    'server/.env',
+    'server/.env.example',
+    'server/src/auth.ts',
+    'client/src/lib/auth-client.ts',
+    '.omnicraft/project.json',
+  ]) {
+    const path = join(projectRoot, relativePath)
+    if (existsSync(path)) {
+      assert(
+        !readFileSync(path, 'utf8').includes(authSecret),
+        `Generated file ${relativePath} persisted BETTER_AUTH_SECRET.`,
+      )
+    }
   }
 }
 
@@ -483,6 +502,7 @@ async function runDatabaseCase(database: TestDatabase): Promise<void> {
 
     const authSecret = randomBytes(AUTH_SECRET_BYTES).toString('base64url')
     secrets.push(authSecret, AUTH_PASSWORD)
+    assertAuthSecretNotPersisted(projectRoot, authSecret)
     const installEnv = isolatedEnvironment({})
     const migrationEnv = isolatedEnvironment({ DATABASE_URL: databaseUrl })
 

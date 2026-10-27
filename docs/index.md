@@ -53,6 +53,10 @@ For the current CI coverage and repository-recorded manual results, see the per-
 ## Plans
 
 - [Completed: master engineering plan](plans/completed/omnicraft-master-plan.md) — preserved as the historical plan based on the 0.3.0 baseline.
+- [Active: post-masterplan audit](plans/active/omnicraft-post-masterplan-audit.md) — current closeout ledger and evidence for the documentation/release audit.
+- [Active: testing infrastructure](plans/active/omnicraft-testing-infrastructure-plan.md) — runtime-test and CI-gate closeout; waiting for the hosted release gate.
+- [Active: existing-stack runtime evidence](plans/active/omnicraft-stack-runtime-evidence-plan.md) — remaining runtime verification gaps without support-status promotions before CI evidence.
+- [Active: auth provider and PHP stack expansion](plans/active/omnicraft-auth-provider-php-stack-expansion-plan.md) — future auth/provider and PHP work; start after the audit and testing plans close.
 - Current release status is summarized in [ROADMAP.md](../ROADMAP.md); active implementation plans live under `docs/plans/active/`.
 
 ## Related non-doc directories

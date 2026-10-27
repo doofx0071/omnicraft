@@ -1,6 +1,6 @@
 # 🗺️ OmniCraft Roadmap
 
-> **Versioning model:** `v1.0.0` is the first stable release. As checked on 2026-10-27, npm `latest` and the published GitHub release both point to `1.0.0` / `v1.0.0`. Future releases follow semver; `1.0.0` does not mean every possible stack combination or follow-up feature is implemented.
+> **Versioning model:** `v1.0.0` is the first stable release. As checked on 2026-10-28, npm `latest` is `1.0.1`; its published metadata points to Git commit `7bd8868`, and GitHub tag `v1.0.1` points to that same commit. Future releases follow semver; `1.0.1` does not mean every selectable stack combination is fully verified.
 >
 > Progress is tracked with GitHub issues — this file is the big picture, the issues are the work. Check off here when the linked issue closes.
 
@@ -15,6 +15,7 @@
 | v0.4.0  | Frontend expansion                   | ✅ 4/4   | #17–#20 |
 | v0.5.0  | Platform expansion (mobile, desktop) | ✅ 2/2   | #21–#22 |
 | v1.0.0  | First stable release                 | ✅ 5/5   | #23–#27 |
+| v1.0.1  | SQLite first-run fix                 | ✅ published | — |
 
 ---
 
@@ -75,13 +76,14 @@ Published on 2026-10-27. Issue #27 was delivered early with the template contrac
 
 ## v1.1.x and beyond — post-v1 priorities
 
-These are follow-up priorities, not release commitments. Track each as an issue before implementation:
+These are follow-up priorities, not release commitments. The post-masterplan audit and testing-infrastructure plans are in closeout and will move to `docs/plans/completed/` after the hosted release gate passes. Exact remaining runtime-evidence work is tracked in [the stack runtime evidence plan](docs/plans/active/omnicraft-stack-runtime-evidence-plan.md). Track roadmap-only features as issues before implementation:
 
-- Keep README, changelog, roadmap, CLI help, and the support matrix aligned with implementation evidence.
-- Make stack compatibility explicit in one registry and reject unsupported combinations before writing files.
-- Finish or narrow the JavaScript language contract; current JavaScript templates cover the React/Vite client only.
-- Expand generated-project installation, build, runtime, and database verification for exact combinations.
-- Tighten `omnicraft add` compatibility and regression coverage, including the existing Better Auth path.
+- [x] Keep README, changelog, roadmap, CLI help, and the support matrix aligned with implementation evidence.
+- [x] Derive prompt and flag choices from the typed capability registry; reject unsupported combinations before writing files.
+- [x] Require evidence mappings for Supported rows and gate release on the complete supported runtime matrix.
+- [ ] Expand generated-project runtime evidence for existing selectable combinations that remain Scaffold-verified or unverified; do not promote them before hosted CI passes. See the linked runtime evidence plan.
+- [x] Narrow the JavaScript language contract to the implemented React/Vite client and reject unsupported frontend/platform choices.
+- [x] Tighten `omnicraft add auth` compatibility and regression coverage for the existing Better Auth path.
 - Add `omnicraft doctor` only after project metadata and diagnostic checks have reliable contracts.
 - Consider a community template registry, telemetry, a third-party plugin API, and a documentation site after core compatibility and verification gaps are closed.
 

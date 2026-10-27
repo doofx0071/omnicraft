@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
-import { copyFileSync, mkdtempSync, mkdirSync, rmSync } from 'node:fs'
+import { copyFileSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -11,11 +11,25 @@ import { buildManifest } from '../src/manifest.js'
 import { createEnvFiles } from '../src/scaffold/env.js'
 import { applyLayers } from '../src/scaffold/engine.js'
 import { composeLayers, isPostComposerLayer, templateVariables } from '../src/scaffold/compose.js'
+import { integrationScenarios } from '../src/support-evidence.js'
 import type { Answers, Database } from '../src/types.js'
 
 const COMPOSE_TIMEOUT_MS = 15 * 60 * 1000
-const DATABASES = ['postgres', 'mysql'] as const
-type TestDatabase = (typeof DATABASES)[number]
+type TestDatabase = Extract<Database, 'sqlite' | 'postgres' | 'mysql'>
+const DATABASES = integrationScenarios('php-laravel') as readonly TestDatabase[]
+
+function requestedDatabases(argv: string[]): TestDatabase[] {
+  const databaseArgs = argv.filter((arg) => arg === '--database' || arg.startsWith('--database='))
+  if (databaseArgs.length === 0) return [...DATABASES]
+  if (databaseArgs.length > 1) throw new Error('Pass --database only once.')
+
+  const index = argv.indexOf('--database')
+  const value = index >= 0 ? argv[index + 1] : databaseArgs[0]?.split('=', 2)[1]
+  if (!value || !DATABASES.includes(value as TestDatabase)) {
+    throw new Error(`Unknown database "${value ?? ''}". Choose: ${DATABASES.join(', ')}.`)
+  }
+  return [value as TestDatabase]
+}
 
 function isolatedEnvironment(overrides: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const env = { ...process.env }
@@ -122,15 +136,17 @@ function phpServiceEnv(
 ): NodeJS.ProcessEnv {
   const uid = process.getuid?.() ?? 1000
   const gid = process.getgid?.() ?? 1000
+  const connection = database === 'postgres' ? 'pgsql' : database
   return isolatedEnvironment({
     OMNICRAFT_TEST_PROJECT_DIR: projectRoot.replaceAll('\\', '/'),
     OMNICRAFT_TEST_UID: `${uid}`,
     OMNICRAFT_TEST_GID: `${gid}`,
-    OMNICRAFT_EXPECTED_DB_DRIVER: database === 'postgres' ? 'pgsql' : 'mysql',
-    OMNICRAFT_DB_CONNECTION: database === 'postgres' ? 'pgsql' : 'mysql',
-    OMNICRAFT_DB_HOST: database,
-    OMNICRAFT_DB_PORT: database === 'postgres' ? '5432' : '3306',
-    OMNICRAFT_DB_DATABASE: databaseName,
+    OMNICRAFT_EXPECTED_DB_DRIVER: connection,
+    OMNICRAFT_DB_CONNECTION: connection,
+    OMNICRAFT_DB_HOST: database === 'sqlite' ? 'localhost' : database,
+    OMNICRAFT_DB_PORT: database === 'postgres' ? '5432' : database === 'mysql' ? '3306' : '0',
+    OMNICRAFT_DB_DATABASE:
+      database === 'sqlite' ? '/workspace/server/database/database.sqlite' : databaseName,
     OMNICRAFT_DB_USERNAME: username,
     OMNICRAFT_DB_PASSWORD: password,
     OMNICRAFT_DB_ROOT_PASSWORD: rootPassword,
@@ -138,14 +154,14 @@ function phpServiceEnv(
 }
 
 function composeArgs(projectName: string, database: TestDatabase, args: string[]): string[] {
+  const profile = database === 'sqlite' ? [] : ['--profile', database]
   return [
     'compose',
     '--project-name',
     projectName,
     '--file',
     'compose.yaml',
-    '--profile',
-    database,
+    ...profile,
     ...args,
   ]
 }
@@ -231,11 +247,13 @@ async function runDatabaseCase(database: TestDatabase, composeDir: string): Prom
     assert(postComposerLayers.length > 0, 'The Laravel post-Composer overlay was not selected.')
 
     run('Build PHP and Composer test image', ['build', 'php-test'], 10 * 60 * 1000)
-    run(
-      'Start isolated database',
-      ['up', '-d', '--wait', '--wait-timeout', '180', database],
-      4 * 60 * 1000,
-    )
+    if (database !== 'sqlite') {
+      run(
+        'Start isolated database',
+        ['up', '-d', '--wait', '--wait-timeout', '180', database],
+        4 * 60 * 1000,
+      )
+    }
     run('Create Laravel 12 application', [
       'run',
       '--rm',
@@ -249,6 +267,9 @@ async function runDatabaseCase(database: TestDatabase, composeDir: string): Prom
       '--prefer-dist',
       '--no-progress',
     ])
+    if (database === 'sqlite') {
+      writeFileSync(join(projectRoot, 'server', 'database', 'database.sqlite'), '')
+    }
 
     applyLayers(TEMPLATES_ROOT, postComposerLayers, templateVariables(answers), projectRoot)
     copyFileSync(join(projectRoot, 'server', '.env.example'), join(projectRoot, 'server', '.env'))
@@ -319,10 +340,11 @@ async function runDatabaseCase(database: TestDatabase, composeDir: string): Prom
   console.log(`[laravel:${database}] cleanup passed`)
 }
 
-async function main(): Promise<void> {
+async function main(argv = process.argv.slice(2)): Promise<void> {
+  const databases = requestedDatabases(argv)
   const composeDir = composeWorkingDirectory()
   await ensureDockerAvailable(composeDir)
-  for (const database of DATABASES) await runDatabaseCase(database, composeDir)
+  for (const database of databases) await runDatabaseCase(database, composeDir)
 }
 
 main().catch((error: unknown) => {
