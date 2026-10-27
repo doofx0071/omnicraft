@@ -2,18 +2,21 @@
 
 All notable, user-visible changes to `create-omnicraft` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is semver
-(0.x = rapid iteration, breaking changes allowed).
+(breaking changes may occur in `0.x`; from `1.0.0`, public changes follow semver).
 
 ## [1.0.0] — 2026-10-27
 
-First stable release. The scaffolding core (3 runtimes, 4 frontends, 3 node ORMs,
-3 databases, 3 extras, 2 native platforms) and the module system are stable, verified
-contracts; breaking changes from here follow semver.
+First stable release. The selectable catalog includes 3 runtimes, 4 web frontends, 2 Node ORMs
+plus a raw-SQL option, 3 database choices with runtime-specific compatibility, 3 extras, and 2 native
+platforms. These are catalog counts, not a claim that every combination has the same verification.
+See the [support matrix](docs/templates/stack-support-matrix.md) for exact combinations and evidence.
 
 ### Added
 
-- **`omnicraft add auth` (#23)** — better-auth email/password boilerplate for express +
-  drizzle stacks (first supported auth stack). Ships `auth.ts` (betterAuth config with
+- **`omnicraft add auth` (#23)** — Better Auth email/password boilerplate. Its first end-to-end
+  verified path is Express + Drizzle + SQLite. The code includes PostgreSQL and MySQL schema variants,
+  but those database paths do not have equivalent recorded end-to-end evidence; Fastify and Hono are
+  outside the verified scope. See the support matrix. Ships `auth.ts` (betterAuth config with
   drizzle adapter, trustedOrigins from CORS_ORIGIN), the full better-auth drizzle schema
   (user/session/account/verification, per-database variants), a protected `/api/me` route
   example, and `auth-client.ts` for the frontend. Patches index.ts (mounts the handler
@@ -22,7 +25,6 @@ contracts; breaking changes from here follow semver.
   on mismatch. env additions (BETTER_AUTH_SECRET) are printed, never written into .env.
   Verified end-to-end on SQLite: register 200, login 200, session with cookie, wrong
   password 401, protected route 401/200, sign-out 200, session invalid after sign-out.
-  Hono/Fastify auth wiring is the next increment (matrix documents this).
 
 ## [0.6.0] — 2026-10-27
 
@@ -39,12 +41,13 @@ contracts; breaking changes from here follow semver.
 - **JavaScript client variant** (#25, first increment) — "Select a language" prompt +
   `--lang <typescript|javascript>` flag. `javascript` ships the React/Vite client as
   `main.jsx`/`App.jsx`/`api.js` (no TypeScript tooling). Verified: frontend-only JS scaffold.
-  Node-server JS overlays and vue/svelte JS are the next increment.
+  In a full-stack React project the server remains TypeScript. Node-server JS overlays and Vue/Svelte
+  JavaScript templates are not included in this release.
 
 ### Notes
 
-- Auth boilerplate (#23) is the remaining v1.0.0 item — tracked for the next release; the
-  module system it will use (this release's `omnicraft add`) is now in place.
+- At the time of v0.6.0, auth (#23) was the remaining v1.0.0 item. It shipped in v1.0.0 above;
+  this note is retained as the v0.6.0 release state.
 
 ## [0.5.0] — 2026-10-26
 

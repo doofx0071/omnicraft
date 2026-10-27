@@ -8,17 +8,24 @@ For the layer kinds, required files, and what belongs where, see the [template c
 ## 1. Composition: Answers → ordered layers
 
 `composeLayers(answers)` returns an ordered `Layer[]`, where a layer is `{ src, dest }` — `src` relative
-to the templates root, `dest` relative to the target directory.
+to the templates root, `dest` relative to the target directory. Supported architecture kinds are
+frontend-only, separate frontend + API, integrated Next.js, and native Expo/Tauri.
 
-Layer order (each stage may overwrite or merge into earlier output):
+For separate frontend + API projects, layers are applied in this order:
 
-1. **Client** — `web/react/client` → `client/` (full-stack) or `.` (frontend-only).
-2. **Server base** — `server/node/<framework>/base` → `server/` (node only).
-3. **Database adapter** — `db/<orm>/<database>` (node) or `db/sqlalchemy/<database>` (python) → `server/`.
-4. **Framework×ORM wiring** — `server/node/<framework>/<orm>` → `server/` (node only; routes/env that
-   reference the chosen ORM).
-5. **Extras** — `extras/tailwind` → client dest, `extras/eslint` → `.`.
-6. **Root variant** — `root/fullstack[-python|-php]/<database>` or `root/frontend-only` → `.`.
+1. **Client** — `web/<framework>/client` → `client/` (or `web/react/client-js` for the React/Vite
+   JavaScript client).
+2. **Server base** — `server/node/<framework>/base` → `server/`, or the FastAPI base.
+3. **Database adapter** — `db/<orm>/<database>` for Node, or `db/sqlalchemy/<database>` for FastAPI.
+4. **Framework/ORM wiring** — `server/node/<framework>/<orm>` → `server/` for Node.
+5. **Extras** — Tailwind client overlay, ESLint/Prettier root overlay, and the React/Vite-only shadcn
+   overlay when selected.
+6. **Root variant** — database/runtime-specific workspace or frontend-only root files.
+
+Integrated Next.js runs `create-next-app` first, then applies its UI/API overlay, selected database
+adapter, optional root tooling, and the Next.js root variant. Native choices run the official Expo or
+Tauri generator and apply a platform API-client/notes layer. Laravel runs Composer before applying its
+PHP overlay; see the exception below.
 
 ### The Laravel exception
 
@@ -43,27 +50,34 @@ For each layer, the engine lists `templatesRoot/<src>` **recursively** and, for 
 5. **Manifest merge** — if the destination file is `package.json` **and already exists**, the rendered
    content is deep-merged into it (see §4) instead of overwriting.
 
-A missing layer directory throws `MissingLayerError` (fail fast, before any later layer runs).
+A missing layer directory throws `MissingLayerError` before that layer is copied. Earlier layers may
+already have written files.
 
-**Overwrite semantics (current):** same-path files from later layers silently replace earlier ones
-(except `package.json`, which merges). This is a **feature the template tree relies on** — e.g.
+**Template-layer overwrite semantics (current):** same-path files from later layers silently replace
+earlier template output (except `package.json`, which merges). This is a **feature the template tree
+relies on** — e.g.
 `src/routes/index.ts`, `src/env.ts`, `vite.config.ts`, `src/index.css`, and `.env.example` are
 intentionally provided by a base layer and _overridden_ by an ORM/db/extras layer. Do not "dedupe" them.
 
-Two safety rails bound this behavior (added in 0.3.1, master plan §4.1/§4.3):
+The current destination safeguards are limited:
 
-1. **Protected paths** — the engine skips any destination file named `.env`, matching `.env.*`
-   (except `.env.example`), or `.git`. User secrets and VCS state are never overwritten by generation,
-   even when the user accepts scaffolding into a non-empty directory.
-2. **Unresolved-token failure** — after rendering, any remaining `{{token}}` throws
-   `UnresolvedTokenError` (file + token names) instead of leaking into the generated project.
+1. **Protected names** — the engine skips files whose basename is `.env`, `.env.*` (except
+   `.env.example`), or exactly `.git`. The guard is not a recursive `.git` directory boundary; current
+   templates do not contain `.git` files.
+2. **Collision prompt** — before stack choices are known, `findCollisions` scans the target, `client`,
+   and `server` paths. Because it is not derived from the final layer plan, it can list unrelated files
+   as potential collisions; it is a conservative preview, not an exact write plan. `--yes` refuses any
+   non-empty destination.
+3. **Unresolved-token failure** — after rendering, remaining `{{token}}` expressions in non-`.vue`
+   files throw `UnresolvedTokenError` instead of being written to the generated project.
 
-And at the prompt layer: scaffolding into a non-empty directory shows a **collision summary** (the
-exact file list that would be overwritten, via `findCollisions`) before the confirm; `--yes` mode
-refuses non-empty destinations outright.
+Generation writes directly into the target. It has no staging directory or rollback if a later layer,
+external generator, or post-scaffold step fails. Destination symlinks are not resolved or rejected, so
+the engine does not guarantee that writes stay within the apparent target directory. These limits mean
+the current collision/protected-file behavior is not a filesystem sandbox.
 
-The master plan (§4.2) proposes going further — declared per-file collision strategies and
-manifest field-level merge policies; that remains future work.
+Per-file collision strategies, a complete write plan, path/symlink containment, and rollback remain
+future safety work.
 
 ## 3. Token rendering
 
@@ -77,13 +91,14 @@ manifest field-level merge policies; that remains future work.
 | `{{serverPackageName}}` | `<name>-server`                                            | server package.json name               |
 | `{{databaseName}}`      | name with dashes → underscores                             | Postgres/MySQL DB identifiers, compose |
 | `{{backendFramework}}`  | `express` \| `fastify` \| `hono` \| `fastapi` \| `laravel` | generated README tables                |
-| `{{orm}}`               | `drizzle` \| `prisma` \| (empty)                           | generated README tables                |
-| `{{dbConfig}}`          | Laravel-only multi-line DB env block                       | `server/php/laravel/.env.example`      |
+| `{{orm}}`               | `drizzle` \| `prisma` \| `none` \| empty when null          | generated README tables                |
+| `{{dbConfig}}`          | Laravel-only multi-line DB env block                       | Available from `templateVariables`; no current template references it |
 
-**Unknown tokens are left untouched by `renderString` itself**, but the engine then runs
-`assertNoUnresolvedTokens` on the rendered content — generation **fails** with `UnresolvedTokenError`
-if any token didn't resolve. Tests assert no known token leaks into any generated file. New tokens:
-extend `templateVariables` and document them here.
+The current template tree uses `projectName`, `clientPackageName`, `serverPackageName`, `databaseName`,
+`backendFramework`, and `orm`. Vue `.vue` files also contain `{{ error }}` as Vue mustache syntax; the
+engine intentionally skips unresolved-token scanning for `.vue` files. Unknown expressions are left
+untouched by `renderString` itself, then rejected by `applyLayer` in other text files. New template
+variables must be documented here and in the template contract.
 
 ## 4. Manifest merging
 
@@ -95,7 +110,8 @@ extend `templateVariables` and document them here.
 This is why every layer can ship a _partial_ `package.json` — e.g. the db layer adds
 `dependencies.drizzle-orm` and `scripts.db:push`, the root layer adds workspaces + `concurrently`, the
 extras layer adds eslint deps + lint scripts — and the final manifest is the union. `npm ci` consumes the
-result; CI's e2e step proves the merged manifests actually install and typecheck.
+result. Current CI installs and typechecks the Express + Drizzle + PostgreSQL generated project; other
+merged manifests are not thereby proven to install.
 
 Known sharp edge (documented, currently accepted): the generic merge means a later layer can silently
 replace a script with the same name. Template authors must pick distinct script names or intend the
@@ -103,14 +119,15 @@ override (the db layers' `db:*` scripts are the convention).
 
 ## 5. Failure handling
 
-- `MissingLayerError` — composition referenced a template that doesn't exist (broken `compose.ts` or
-  renamed directory). Surfaces immediately with the layer name.
+- `MissingLayerError` — composition referenced a template that doesn't exist (broken compatibility
+  choice or renamed directory). Surfaces with the layer name; earlier layers may already be on disk.
 - `UnresolvedTokenError` — a template referenced a token with no variable; generation fails with the
   file and token names (0.3.1).
-- Destination is a non-empty directory → collision summary + interactive confirm; `--yes` refuses
-  outright (never scaffolds over existing files non-interactively).
-- Protected paths (`.env*` except `.env.example`, `.git`) are skipped by the engine — user secrets and
-  VCS state are never written.
-- Install/uv/composer failures are non-fatal to the generated files: the CLI reports the failure, prints
-  the manual command, and still shows next steps.
+- Destination is non-empty → conservative collision preview + interactive confirm; `--yes` refuses.
+- Protected file names (`.env`, `.env.*` except `.env.example`, and exact `.git`) are skipped; this is
+  not recursive `.git` protection or symlink containment.
+- npm/uv dependency-install failures are non-fatal and print manual commands. External starter-generator
+  failures (create-next-app, Expo, Tauri, Composer) abort generation; files already written are not
+  rolled back.
+- A later template/render error does not roll back files written by earlier layers.
 - `restoreTerminal()` runs on every exit path so clack's raw mode can't garble the terminal.

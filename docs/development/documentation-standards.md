@@ -15,7 +15,7 @@ the docs trustworthy. Meta-doc: this page governs the docs tree itself.
 | `docs/architecture/*`                    | How the CLI actually works (flow, layout, engine)                                               | Describe intended-but-unbuilt behavior                   |
 | `docs/development/*`                     | Standards and workflows for changing the CLI                                                    |                                                          |
 | `docs/templates/*`                       | Template contract, extension procedures, [support matrix](../templates/stack-support-matrix.md) | List combos that haven't met the verification bar        |
-| `docs/plans/active/`                     | Working plans (the master plan)                                                                 | Pretend to be current-state docs                         |
+| `docs/plans/active/`                     | Current working plans                                                                           | Pretend to be current-state docs                         |
 | `docs/demo.*`                            | Generated demo assets (via `npm run demo`)                                                      | Be hand-edited                                           |
 
 ## Change-coupling rules
@@ -23,8 +23,10 @@ the docs trustworthy. Meta-doc: this page governs the docs tree itself.
 Docs update **in the same PR** as the code they describe:
 
 1. **Capability change** (new/changed runtime, framework, database, ORM, extra) →
-   [support matrix](../templates/stack-support-matrix.md) + README "Supported stacks"/flow diagram +
-   `AVAILABLE`-driven surfaces. Status moves forward only with evidence (see the matrix's rules).
+   [support matrix](../templates/stack-support-matrix.md) + README choice scope/flow diagram + the
+   relevant flag registry, prompt choices, module registry, and composition rules. `AVAILABLE` is
+   currently a dimension-level registry, not the complete capability source. Status moves forward only
+   with evidence (see the matrix's rules).
 2. **CLI surface change** (flag, prompt, default) → README "Options" **and** `HELP_TEXT` in `src/args.ts`
    together — they must be identical.
 3. **Engine/composition change** → [template engine](../architecture/template-engine.md) +
@@ -36,11 +38,12 @@ Docs update **in the same PR** as the code they describe:
 ## Accuracy rules
 
 - **Actual, not aspirational.** Present-tense statements describe shipped, verified behavior. Everything
-  else is "planned"/"experimental" — the [status vocabulary](index.md#status-vocabulary) is canonical.
+  else is "planned"/"experimental" — the [status vocabulary](../index.md#status-vocabulary) is canonical.
 - **Scaffolded ≠ verified ≠ supported.** The [testing strategy](testing-strategy.md) defines the bar;
   the matrix records who met it.
-- **One authoritative home per fact.** Capability availability → `src/prefill.ts` + matrix; layer/merge
-  rules → template-engine doc; token list → template-engine doc. Other pages link, never copy.
+- **One authoritative home per fact.** Verification status → support matrix; capability choices and
+  compatibility → current flag/prompt/module registry plus composition code; layer/merge rules →
+  template-engine doc; token list → template-engine doc. Other pages link, never copy.
 - **Commands must be runnable as written.** Every command in docs is something a contributor can paste
   into a shell from the stated directory.
 - **Examples match help.** README option examples are copy-consistent with `node dist/index.js --help`.
@@ -56,6 +59,6 @@ Docs update **in the same PR** as the code they describe:
 ## When documentation itself is the change
 
 - Check internal links (they're relative; move = update every referent).
-- If a doc contradicts the master plan's governance section (§17), the master plan wins on process
-  questions; raise the conflict rather than forking the rule.
+- The completed master plan is historical. For current process rules, follow `AGENTS.md` and the active
+  development guides; record conflicts there instead of treating an archived plan as current policy.
 - Update [docs/index.md](../index.md) when adding, moving, or renaming any page in `docs/`.

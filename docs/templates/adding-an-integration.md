@@ -78,7 +78,8 @@ compose with every stack that can select it. `--extras` accepts the name; `none`
 - Generated README troubleshooting table if the integration adds new failure modes.
 - ROADMAP tick if it closes a phase item.
 
-## Known follow-ups (from the master plan)
+## Known follow-ups
 
 - Per-database prisma adapters (mysql/sqlite) — blocked on driver-adapter support + verification.
-- MongoDB/Mongoose — new ORM path (no SQL schema); see master plan §14 Phase E.
+- MongoDB/Mongoose — new ORM path (no SQL schema); see the completed
+  [master plan](../plans/completed/omnicraft-master-plan.md) §14 Phase E for its historical proposal.

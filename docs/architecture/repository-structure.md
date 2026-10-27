@@ -20,7 +20,7 @@ omnicraft/
 │   ├── architecture/             # how the CLI works
 │   ├── development/              # how to work on it
 │   ├── templates/                # how to extend the stack matrix
-│   └── plans/active/             # active implementation plans (master plan lives here)
+│   └── plans/                    # active plans and completed historical plans
 └── packages/
     └── cli/                      # the npm package `create-omnicraft` — all product source
         ├── package.json          # bin: create-omnicraft + omnicraft; files: dist, templates
@@ -28,7 +28,7 @@ omnicraft/
         ├── tsup.config.ts        # bundles src/index.ts → dist/index.js with a node shebang
         ├── vitest.config.ts
         ├── scripts/
-        │   └── smoke-e2e.ts      # scaffolds all supported combos without prompts
+        │   └── smoke-e2e.ts      # scaffolds the combinations currently listed in the script
         ├── src/
         │   ├── index.ts          # entry: orchestration + single catch site
         │   ├── args.ts           # flag parsing + help text
@@ -44,7 +44,7 @@ omnicraft/
         │   ├── prompts/
         │   │   └── run-prompts.ts  # the interactive wizard (one file; split when it grows)
         │   ├── scaffold/
-        │   │   ├── compose.ts    # Answers → Layer[] (+ Laravel post-composer split)
+        │   │   ├── compose.ts    # Answers → Layer[] (+ external generator adapters)
         │   │   ├── engine.ts     # layer application: copy/render/rename/merge
         │   │   ├── renderer.ts   # tokens, dotfile rename, binary detection
         │   │   ├── merge.ts      # package.json deep merge
@@ -54,20 +54,24 @@ omnicraft/
         │   │   └── pkg-manager.ts# pm detection + install
         │   └── *.test.ts         # unit/engine tests (vitest) — co-located with source
         └── templates/            # generated-project template tree (published)
-            ├── web/react/client/           # shared Vite+React client
+            ├── web/{react,vue,svelte}/client/ # Vite client adapters; React also has client-js/
+            ├── web/nextjs/                 # integrated full-stack overlays + database adapters
+            ├── platform/{mobile,desktop}/  # Expo/Tauri overlays
             ├── server/node/{express,fastify,hono}/base/   # framework bases
-            ├── server/node/{express,fastify,hono}/{drizzle,prisma}/  # framework×ORM wiring
+            ├── server/node/{express,fastify,hono}/{drizzle,prisma,none}/ # framework×data wiring (not every path exists)
             ├── server/python/fastapi/base/  # FastAPI app + alembic (initial migration included)
             ├── server/php/laravel/          # overlay applied after composer create-project
             ├── db/{drizzle}/{postgres,sqlite,mysql}/   # node db adapters (config, client, schema, seed)
             ├── db/prisma/postgres/          # prisma 7 adapter (postgres only)
+            ├── db/none/{postgres,sqlite,mysql}/ # Node raw-SQL adapters
             ├── db/sqlalchemy/{postgres,sqlite}/         # python db adapters (pyproject + database.py)
-            ├── extras/{tailwind,eslint}/    # opt-in overlays
+            ├── extras/{tailwind,eslint,shadcn}/ # opt-in overlays; shadcn is React/Vite-only
             └── root/
                 ├── frontend-only/           # root files when fullStack = false
                 ├── fullstack/{postgres,sqlite,mysql}/   # node+laravel root variants
                 ├── fullstack-python/{postgres,sqlite}/   # python root variants
-                └── fullstack-php/{postgres,sqlite,mysql}/ # php root variants
+                ├── fullstack-php/{postgres,sqlite,mysql}/ # php root variants
+                └── fullstack-next/{postgres,sqlite,mysql}/ # integrated Next.js root variants
 ```
 
 ## Placement rules
@@ -76,14 +80,14 @@ omnicraft/
 | ------------------------------ | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
 | CLI source module              | `packages/cli/src/` (grouped: `prompts/`, `scaffold/`) | Co-locate its test as `<name>.test.ts`.                                                              |
 | New prompt                     | `src/prompts/run-prompts.ts`                           | Split into `src/prompts/<topic>.ts` if the flow grows; keep `run-prompts.ts` as the orchestrator.    |
-| Capability/availability change | `src/prefill.ts` (`AVAILABLE`)                         | Never hardcode availability in prompts or flags.                                                     |
+| Capability/availability change | `src/prefill.ts` (`AVAILABLE`) and prompt/validation code | `AVAILABLE` is currently dimension-level; verify compatibility and test prompt/flag behavior.     |
 | Framework base template        | `templates/server/<runtime>/<framework>/base/`         | Entry, env validation, health route, tsconfig, package.json, .env.example.                           |
 | Node ORM wiring                | `templates/server/node/<framework>/<orm>/`             | Route registrations + ORM-specific users routes.                                                     |
 | Node db adapter                | `templates/db/<orm>/<database>/`                       | package.json (deps+scripts), db config, client, schema, seed, .env.example.                          |
 | Python db adapter              | `templates/db/sqlalchemy/<database>/`                  | pyproject.toml (deps), app/database.py, .env.example.                                                |
 | Runtime root files             | `templates/root/fullstack[-<runtime>]/<database>/`     | Workspaces package.json, .gitignore, README, docker-compose (containerized DBs only), `_github/` CI. |
 | Extra overlay                  | `templates/extras/<name>/`                             | Merged files only; must compose cleanly with any stack.                                              |
-| Smoke combo                    | `packages/cli/scripts/smoke-e2e.ts` (`combos`)         | One entry per verified combination.                                                                  |
+| Smoke combo                    | `packages/cli/scripts/smoke-e2e.ts` (`combos`)         | Add exact scaffold coverage; smoke generation alone does not establish Supported status.             |
 | Generated demo                 | `scripts/make-demo.mjs` (root)                         | Writes `docs/demo.gif` + `docs/demo.html`; never hand-edit those.                                    |
 | Engineering doc                | `docs/<area>/<topic>.md`                               | Linked from `docs/index.md`.                                                                         |
 | Plan                           | `docs/plans/active/`                                   | Move to `completed/` when done.                                                                      |
@@ -92,5 +96,5 @@ omnicraft/
 ## Not in this repository
 
 - `packages/cli/planmo-v3/` — a locally generated test project (own git repo); gitignored. Leave it alone.
-- `.zcode/` — session data; gitignored. Note: the master plan was originally generated as a session plan
-  there and has been preserved at `docs/plans/active/omnicraft-master-plan.md`.
+- `.zcode/` — session data; gitignored. Note: the original master plan has been preserved at
+  `docs/plans/completed/omnicraft-master-plan.md`.
