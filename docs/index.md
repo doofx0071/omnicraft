@@ -28,6 +28,7 @@ the catalog is not a promise that every cross-product is equally supported.
 - [Coding standards](development/coding-standards.md) — TypeScript, subprocess, and error-handling rules for this codebase.
 - [Feature development workflow](development/feature-development-workflow.md) — the repeatable path from issue to merged change.
 - [Testing strategy](development/testing-strategy.md) — the four test levels and what each change type must run.
+- [Database and authentication integration tests](development/database-auth-integration-testing.md) — real PostgreSQL/MySQL and Laravel test commands, prerequisites, and cleanup.
 - [Documentation standards](development/documentation-standards.md) — which docs must change with which code.
 
 ### Templates — how to extend the stack matrix
