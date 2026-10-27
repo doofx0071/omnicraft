@@ -26,6 +26,25 @@ async function readChangelogSection(releaseVersion) {
   return body;
 }
 
+async function readRoadmapReleaseRow(releaseVersion) {
+  const roadmap = await readFile('ROADMAP.md', 'utf8');
+  const lines = roadmap.split(/\r?\n/);
+  const rowIndexes = lines.flatMap((line, index) => {
+    const cells = line.split('|');
+    return cells[1]?.trim() === `v${releaseVersion}` ? [index] : [];
+  });
+  if (rowIndexes.length !== 1) {
+    fail(`Expected exactly one ROADMAP.md row for v${releaseVersion}; found ${rowIndexes.length}.`);
+  }
+
+  const rowIndex = rowIndexes[0];
+  const cells = lines[rowIndex].split('|');
+  if (cells.length !== 6) {
+    fail(`ROADMAP.md row for v${releaseVersion} does not have four columns.`);
+  }
+  return { lines, rowIndex, cells };
+}
+
 function compareStableVersions(left, right) {
   const parse = (value) => {
     const match = value.match(/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/);
@@ -63,22 +82,10 @@ if (action === 'notes') {
   await readChangelogSection(version);
 
   const roadmapPath = 'ROADMAP.md';
-  let roadmap = await readFile(roadmapPath, 'utf8');
-  const lines = roadmap.split(/\r?\n/);
-  const rowIndexes = lines.flatMap((line, index) => {
-    const cells = line.split('|');
-    return cells[1]?.trim() === `v${version}` ? [index] : [];
-  });
-  if (rowIndexes.length !== 1) {
-    fail(`Expected exactly one ROADMAP.md row for v${version}; found ${rowIndexes.length}.`);
-  }
-
-  const rowIndex = rowIndexes[0];
-  const cells = lines[rowIndex].split('|');
-  if (cells.length !== 6) fail(`ROADMAP.md row for v${version} does not have four columns.`);
+  const { lines, rowIndex, cells } = await readRoadmapReleaseRow(version);
   cells[3] = ' ✅ published ';
   lines[rowIndex] = cells.join('|');
-  roadmap = lines.join('\n');
+  let roadmap = lines.join('\n');
 
   const introLinePattern = /^> \*\*Versioning model:\*\*.*$/m;
   if (!introLinePattern.test(roadmap)) fail('ROADMAP.md versioning model line was not found.');
@@ -107,6 +114,10 @@ if (action === 'notes') {
 
   await writeFile(roadmapPath, roadmap, 'utf8');
   await writeFile(overviewPath, overview, 'utf8');
+} else if (action === 'title') {
+  if (!version) fail('Usage: release-metadata.mjs title <version>');
+  const { cells } = await readRoadmapReleaseRow(version);
+  console.log(`${cells[1].trim()} — ${cells[2].trim()}`);
 } else {
-  fail('Usage: release-metadata.mjs <notes|mark-published> ...');
+  fail('Usage: release-metadata.mjs <notes|mark-published|title> ...');
 }

@@ -306,11 +306,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          RELEASE_TITLE="$(node .github/scripts/release-metadata.mjs title "$VERSION")"
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            echo "GitHub Release $GITHUB_REF_NAME already exists; leaving it unchanged."
+            gh release edit "$GITHUB_REF_NAME" --title "$RELEASE_TITLE"
           else
             gh release create "$GITHUB_REF_NAME" \
-              --title "create-omnicraft $GITHUB_REF_NAME" \
+              --title "$RELEASE_TITLE" \
               --notes-file "$RUNNER_TEMP/release-notes.md"
           fi
 
