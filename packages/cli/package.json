@@ -1,6 +1,6 @@
 {
   "name": "create-omnicraft",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Craft any stack — interactive project scaffolding for full-stack apps. React + Node (Express/Fastify) + PostgreSQL (Drizzle/Prisma) in v1.",
   "license": "MIT",
   "type": "module",

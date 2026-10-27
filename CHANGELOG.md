@@ -6,8 +6,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-10-28
+
 ### Fixed
 
+- Prompt choices and CLI flag validation now match the template layers that composition generates,
+  rejecting unsupported combinations before writing files.
 - SQLite-backed Drizzle scaffolds include `server/data`, so the first migration can create the
   database before the API server starts.
 
