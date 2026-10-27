@@ -6,6 +6,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Fixed
+
+- Prompt options, flag validation, and module IDs now derive from the typed capability registry; Better
+  Auth rejects unsupported frontend/runtime/ORM/database manifests before writing files.
+- Module additions restore all changed files if a filesystem write fails after validation.
+- FastAPI + SQLite Alembic migrations create the generated database directory on a clean scaffold.
+
+### Testing
+
+- The release matrix now runs FastAPI + SQLite and Laravel + SQLite runtime checks and verifies every
+  Supported matrix row against its exact CI scenario and release aggregate. The complete gate runs on
+  pull requests, main pushes, nightly, and manual pre-release dispatch.
+
 ## [1.0.1] — 2026-10-28
 
 ### Fixed

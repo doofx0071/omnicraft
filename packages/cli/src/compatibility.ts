@@ -2,37 +2,25 @@ import type { ParsedArgs } from './args.js'
 import type {
   Answers,
   BackendFramework,
-  Database,
   Frontend,
   Language,
   Orm,
   ProjectType,
 } from './types.js'
+import { AVAILABLE, CAPABILITY_REGISTRY } from './capabilities.js'
 
-export const RUNTIME_BACKENDS = {
-  node: ['express', 'fastify', 'hono'],
-  python: ['fastapi'],
-  php: ['laravel'],
-} as const satisfies Record<'node' | 'python' | 'php', readonly BackendFramework[]>
-
-export const RUNTIME_DATABASES = {
-  node: ['postgres', 'sqlite', 'mysql'],
-  python: ['postgres', 'sqlite'],
-  php: ['postgres', 'sqlite', 'mysql'],
-} as const satisfies Record<'node' | 'python' | 'php', readonly Database[]>
-
-export const NODE_FRAMEWORK_ORMS = {
-  express: ['drizzle', 'prisma', 'none'],
-  fastify: ['drizzle', 'prisma', 'none'],
-  hono: ['drizzle', 'none'],
-} as const satisfies Record<'express' | 'fastify' | 'hono', readonly Orm[]>
+export const RUNTIME_BACKENDS = AVAILABLE.backend
+export const RUNTIME_DATABASES = AVAILABLE.db
+export const NODE_FRAMEWORK_ORMS = CAPABILITY_REGISTRY.ormsByNodeBackend
 
 export const MODULE_COMPATIBILITY = {
   auth: {
+    frontend: 'react',
     backendRuntime: 'node',
     backendFramework: 'express',
     orm: 'drizzle',
     architecture: 'separate-frontend-api',
+    databases: ['postgres', 'sqlite', 'mysql'],
   },
 } as const
 

@@ -10,6 +10,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 2 * * *'
 
 jobs:
   # Hosted runners on 3 OSes x Node {20 (declared minimum), 24}.
@@ -92,8 +95,50 @@ jobs:
       - name: Install workspace dependencies
         run: npm ci
 
-      - name: Test generated Laravel API against PostgreSQL and MySQL
+      - name: Test generated Laravel API against SQLite, PostgreSQL, and MySQL
         run: npm run test:integration:php --workspace=create-omnicraft
+
+  python-fastapi-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: "0.13.5"
+          enable-cache: true
+
+      - name: Install Python 3.12
+        run: uv python install 3.12
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Test generated FastAPI + SQLAlchemy + SQLite project
+        run: npm run test:integration:python --workspace=create-omnicraft
+
+  support-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Check Supported rows, evidence targets, and release gate
+        run: npm run check:support-matrix --workspace=create-omnicraft
 
   # Trusted events only: the self-hosted runner never executes fork PR code.
   windows-self-hosted:
@@ -170,3 +215,32 @@ jobs:
           test -f my-pkg-app/server/.env
           test -f my-pkg-app/.github/workflows/ci.yml
           echo "package e2e OK"
+
+  supported-matrix:
+    name: supported-stack-release-gate
+    if: ${{ always() }}
+    needs:
+      - unix
+      - database-integration
+      - python-fastapi-integration
+      - php-laravel-integration
+      - support-evidence
+      - package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all release checks
+        env:
+          UNIX_MATRIX: ${{ needs.unix.result }}
+          NODE_DATABASE: ${{ needs.database-integration.result }}
+          PYTHON_DATABASE: ${{ needs.python-fastapi-integration.result }}
+          PHP_DATABASE: ${{ needs.php-laravel-integration.result }}
+          SUPPORT_EVIDENCE: ${{ needs.support-evidence.result }}
+          PACKAGE_ARTIFACT: ${{ needs.package.result }}
+        run: |
+          for result in "$UNIX_MATRIX" "$NODE_DATABASE" "$PYTHON_DATABASE" "$PHP_DATABASE" "$SUPPORT_EVIDENCE" "$PACKAGE_ARTIFACT"; do
+            if [ "$result" != "success" ]; then
+              echo "A required release check finished with status: $result"
+              exit 1
+            fi
+          done
+          echo "All Supported stack evidence and package checks passed."

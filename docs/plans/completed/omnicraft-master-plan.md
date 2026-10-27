@@ -5,9 +5,11 @@
 > guides, project manifest and `omnicraft add`, release-tag template fetching, multi-OS/package CI, the
 > Next.js/Vue/Svelte frontends, Expo/Tauri projects, Better Auth, and the React/Vite JavaScript client.
 > The current implementation and exact verification levels are in the [support matrix](../../templates/stack-support-matrix.md)
-> and [testing strategy](../../development/testing-strategy.md). Remaining work includes compatibility
-> metadata, broader generated-project runtime/database coverage, JavaScript scope enforcement, module
-> regression tests, and safe staging/rollback; these are follow-ups, not completed items in this plan.
+> and [testing strategy](../../development/testing-strategy.md). Selectable choices and module ids now
+> come from `packages/cli/src/capabilities.ts`; compatibility rules and module-write safety have
+> regression tests. Remaining existing-stack runtime gaps are tracked in
+> [the active runtime evidence plan](../active/omnicraft-stack-runtime-evidence-plan.md), not treated as
+> completed work in this historical plan.
 
 - **Prepared:** 26 October 2026
 - **Repository reviewed:** https://github.com/doofx0071/omnicraft
@@ -332,6 +334,12 @@ Before publishing:
 - Consider npm trusted publishing/provenance when the workflow and account support it; avoid long-lived tokens where possible.
 
 **Acceptance criteria:** release CI fails if a required advertised stack is broken, the package lacks templates, metadata is inconsistent, or a published artifact smoke test fails.
+
+**Current release-evidence policy (2026-10-28):** `src/support-evidence.ts` maps each `Supported`
+matrix row to exact generated-project scenarios and CI jobs. The support-evidence check verifies those
+links and the `supported-stack-release-gate` aggregates the cross-platform, package-artifact, and full
+Supported runtime checks. The gate runs on pull requests, main pushes, nightly, and manual pre-release
+dispatch. See [CONTRIBUTING.md](../../../CONTRIBUTING.md) for the release checklist.
 
 ---
 

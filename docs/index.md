@@ -53,6 +53,9 @@ For the current CI coverage and repository-recorded manual results, see the per-
 ## Plans
 
 - [Completed: master engineering plan](plans/completed/omnicraft-master-plan.md) — preserved as the historical plan based on the 0.3.0 baseline.
+- [Completed: post-masterplan audit](plans/completed/omnicraft-post-masterplan-audit.md) — release, compatibility, support evidence, and explicit deferrals.
+- [Completed: testing infrastructure](plans/completed/omnicraft-testing-infrastructure-plan.md) — database/auth integration coverage and the ten-row CI release gate.
+- [Active: existing-stack runtime evidence](plans/active/omnicraft-stack-runtime-evidence-plan.md) — remaining runtime verification and capability-to-matrix consistency work.
 - Current release status is summarized in [ROADMAP.md](../ROADMAP.md); active implementation plans live under `docs/plans/active/`.
 
 ## Related non-doc directories

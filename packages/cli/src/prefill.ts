@@ -1,26 +1,13 @@
 import type { Answers, BackendFramework, Frontend, Orm } from './types.js'
 import type { ParsedArgs } from './args.js'
+import { AVAILABLE } from './capabilities.js'
 import {
-  RUNTIME_BACKENDS,
-  RUNTIME_DATABASES,
   validateAnswerCompatibility,
   validateFlagCompatibility,
 } from './compatibility.js'
 
-/**
- * Stack choices that exist in the current release — the prompts show more
- * options as "(soon)". Availability is runtime-scoped: only Node.js uses a
- * user-selected ORM; Python ships SQLAlchemy + Alembic; PHP ships Eloquent.
- */
-export const AVAILABLE = {
-  runtime: ['node', 'python', 'php'] as const,
-  frontend: ['react', 'nextjs', 'vue', 'svelte'] as const,
-  lang: ['typescript', 'javascript'] as const,
-  backend: RUNTIME_BACKENDS,
-  db: RUNTIME_DATABASES,
-  orm: { node: ['drizzle', 'prisma', 'none'] as const },
-  extras: ['tailwind', 'eslint', 'shadcn'] as const,
-}
+/** Available prompt and flag values, derived from the typed capability registry. */
+export { AVAILABLE } from './capabilities.js'
 
 export type Runtime = (typeof AVAILABLE.runtime)[number]
 

@@ -77,7 +77,7 @@ The prompt and flags expose these choices. A choice in one row does not imply ev
 | Data access | Separate Node API: Drizzle, Prisma, or raw SQL · Next.js route handlers: raw SQL · Python: SQLAlchemy + Alembic · PHP: Eloquent | Prisma is PostgreSQL-only and unavailable for Hono. Raw SQL is not an ORM. |
 | Database | PostgreSQL, SQLite, MySQL (availability varies by runtime) | The matrix lists which combinations have scaffold or runtime evidence. |
 | Extras | Tailwind CSS, ESLint + Prettier, shadcn/ui | Next.js always includes Tailwind + ESLint from create-next-app; shadcn/ui is web React/Vite-only and implies Tailwind. |
-| `omnicraft add` modules | `docker`, `testing`, Better Auth email/password (`auth`) | Auth accepts Node + Express + Drizzle in a separate API project; hosted end-to-end evidence covers SQLite, PostgreSQL, and MySQL. |
+| `omnicraft add` modules | `docker`, `testing`, Better Auth email/password (`auth`) | Auth requires a React frontend with a separate Node + Express + Drizzle API; hosted end-to-end evidence covers SQLite, PostgreSQL, and MySQL. Incompatible auth manifests are rejected before files are changed. |
 
 ## Options
 
@@ -120,7 +120,7 @@ npm create omnicraft@latest api -- --no-full-stack --extras none
 
 ## How it works
 
-- **Composable templates** — the React client, each server base, and each ORM adapter are separate layers. OmniCraft assembles them at scaffold time (later layers may overwrite files; `package.json` manifests deep-merge), so `Express + Drizzle` and `Fastify + Prisma` share one source of truth.
+- **Composable templates** — the React client, each server base, and each ORM adapter are separate layers. OmniCraft assembles them at scaffold time (later layers may overwrite files; `package.json` manifests deep-merge). `src/capabilities.ts` supplies selectable choices, `src/compatibility.ts` rejects unsupported combinations, and the support matrix links exact Supported claims to CI evidence.
 - **Hybrid template delivery** — templates ship embedded in the CLI package. `--latest` fetches the release tag matching this CLI version via [giget](https://github.com/unjs/giget), so it does not silently follow `main`.
 - **Destination behavior** — interactive runs show a collision preview and ask before continuing; `--yes` refuses any non-empty destination. Existing environment files are preserved. See the [template engine notes](docs/architecture/template-engine.md) for overwrite and failure limits.
 - **Install handling** — Ctrl+C cancels cleanly; dependency installation failures are non-fatal and print a manual command.
@@ -132,6 +132,7 @@ npm install            # install the monorepo
 npm run dev -w create-omnicraft   # run the CLI from source
 npm test               # vitest — engine, prompts, validators
 npm run build          # tsup → packages/cli/dist
+npm run check:support-matrix -w create-omnicraft  # verify every Supported row has a CI target
 
 # scaffold the combinations listed in the smoke script
 npx tsx packages/cli/scripts/smoke-e2e.ts ../omnicraft-smoke

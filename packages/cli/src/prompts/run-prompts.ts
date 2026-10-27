@@ -3,10 +3,8 @@ import type { Option } from '@clack/prompts'
 import { CancelledError, unwrap, unwrapMany } from '../cancel.js'
 import {
   BACKEND_FRAMEWORK_LABELS,
-  BACKEND_RUNTIME_LABELS,
   DATABASE_LABELS,
   FRONTEND_LABELS,
-  PROJECT_TYPE_LABELS,
   type Answers,
   type BackendFramework,
   type BackendRuntime,
@@ -17,6 +15,7 @@ import {
 } from '../types.js'
 import { checkRawProjectName, findCollisions, isNonEmptyDirectory, resolveTargetDir } from '../validators.js'
 import { CLIENT_PORT, SERVER_PORT } from '../config.js'
+import { CAPABILITY_REGISTRY } from '../capabilities.js'
 import { AVAILABLE, parseEnumChoice, validateStackFlags } from '../prefill.js'
 import type { ParsedArgs } from '../args.js'
 import {
@@ -35,6 +34,20 @@ interface Choice<T extends string> {
   label: string
   hint?: string
   available: boolean
+}
+
+function registryChoices<const Options extends readonly {
+  value: string
+  label: string
+  available: boolean
+  hint?: string
+}[]>(options: Options): Choice<Options[number]['value']>[] {
+  return options.map(({ value, label, available, hint }) => ({
+    value,
+    label,
+    available,
+    ...(hint === undefined ? {} : { hint }),
+  }))
 }
 
 /**
@@ -72,30 +85,17 @@ async function selectWithSoonLoop(message: string, choices: Choice<string>[]): P
 }
 
 function projectTypeChoices(flags: ParsedArgs): Choice<ProjectType>[] {
-  const choices: Choice<ProjectType>[] = [
-    { value: 'web', label: PROJECT_TYPE_LABELS.web, available: true, hint: 'Browser app' },
-    { value: 'mobile', label: PROJECT_TYPE_LABELS.mobile, available: true, hint: 'Expo + TypeScript (iOS/Android)' },
-    { value: 'desktop', label: PROJECT_TYPE_LABELS.desktop, available: true, hint: 'Tauri 2 + React UI' },
-  ]
+  const choices = registryChoices(CAPABILITY_REGISTRY.projectType)
   return choices.filter((choice) => isProjectTypeAllowedByFlags(choice.value, flags))
 }
 
 function frontendChoices(flags: ParsedArgs): Choice<Frontend>[] {
-  const choices: Choice<Frontend>[] = [
-    { value: 'react', label: FRONTEND_LABELS.react, available: true, hint: 'Vite + TypeScript' },
-    { value: 'nextjs', label: FRONTEND_LABELS.nextjs, available: true, hint: 'Integrated full-stack — Next.js IS the server' },
-    { value: 'vue', label: FRONTEND_LABELS.vue, available: true, hint: 'Vite + TypeScript' },
-    { value: 'svelte', label: FRONTEND_LABELS.svelte, available: true, hint: 'Vite + TypeScript' },
-  ]
+  const choices = registryChoices(CAPABILITY_REGISTRY.frontend)
   return choices.filter((choice) => isFrontendAllowedByFlags(choice.value, flags))
 }
 
 function runtimeChoices(flags: ParsedArgs): Choice<BackendRuntime>[] {
-  const choices: Choice<BackendRuntime>[] = [
-    { value: 'node', label: BACKEND_RUNTIME_LABELS.node, available: true, hint: 'Express, Fastify, Hono' },
-    { value: 'python', label: BACKEND_RUNTIME_LABELS.python, available: true, hint: 'FastAPI + SQLAlchemy' },
-    { value: 'php', label: BACKEND_RUNTIME_LABELS.php, available: true, hint: 'Laravel + Eloquent' },
-  ]
+  const choices = registryChoices(CAPABILITY_REGISTRY.runtime)
   return choices.filter((choice) => isRuntimeAllowedByFlags(choice.value, flags))
 }
 
@@ -179,7 +179,7 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
   // ── What for? ───────────────────────────────────────────────────────────
   let projectType: ProjectType = 'web'
   if (flags.platform) {
-    projectType = parseEnumChoice('--platform', flags.platform, ['web', 'mobile', 'desktop'])
+    projectType = parseEnumChoice('--platform', flags.platform, AVAILABLE.projectType)
   } else if (forced) {
     projectType = 'web'
   } else {
@@ -216,12 +216,12 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
     : forced
       ? 'typescript'
       : !native
-        ? await selectWithSoon<Language>('Select a language:', [
-            { value: 'typescript', label: 'TypeScript', available: true, hint: 'Recommended' },
-            ...(supportsLanguage(projectType, frontend, 'javascript')
-              ? [{ value: 'javascript' as const, label: 'JavaScript', available: true, hint: 'React/Vite client ships as JS; a selected server remains TypeScript' }]
-              : []),
-          ])
+        ? await selectWithSoon<Language>(
+            'Select a language:',
+            registryChoices(CAPABILITY_REGISTRY.language).filter((choice) =>
+              supportsLanguage(projectType, frontend, choice.value),
+            ),
+          )
         : 'typescript'
   if (!native) p.log.info(`Language: ${language === 'typescript' ? 'TypeScript' : 'JavaScript'}`)
 
@@ -261,20 +261,9 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
           : await selectWithSoon<BackendRuntime>('Select a backend runtime:', runtimeChoices(flags))
 
       const frameworkChoices: Record<BackendRuntime, Choice<BackendFramework>[]> = {
-        node: [
-          { value: 'express', label: BACKEND_FRAMEWORK_LABELS.express, available: true, hint: 'The classic, huge ecosystem' },
-          { value: 'fastify', label: BACKEND_FRAMEWORK_LABELS.fastify, available: true, hint: 'Fast, schema-first' },
-          { value: 'hono', label: BACKEND_FRAMEWORK_LABELS.hono, available: true, hint: 'Ultra-light' },
-          { value: 'nestjs', label: BACKEND_FRAMEWORK_LABELS.nestjs, available: false },
-        ],
-        python: [
-          { value: 'fastapi', label: BACKEND_FRAMEWORK_LABELS.fastapi, available: true, hint: 'SQLAlchemy + Alembic' },
-          { value: 'django', label: BACKEND_FRAMEWORK_LABELS.django, available: false },
-        ],
-        php: [
-          { value: 'laravel', label: BACKEND_FRAMEWORK_LABELS.laravel, available: true, hint: 'Laravel 12 + Eloquent' },
-          { value: 'symfony', label: BACKEND_FRAMEWORK_LABELS.symfony, available: false },
-        ],
+        node: registryChoices(CAPABILITY_REGISTRY.backend.node),
+        python: registryChoices(CAPABILITY_REGISTRY.backend.python),
+        php: registryChoices(CAPABILITY_REGISTRY.backend.php),
       }
 
       backendFramework = flags.backend
@@ -297,24 +286,9 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
 
     // Shared across runtimes (Next.js reuses the node choices — it runs on Node).
     const dbChoices: Record<BackendRuntime, Choice<Database>[]> = {
-      node: [
-        { value: 'postgres', label: DATABASE_LABELS.postgres, available: true, hint: 'Drizzle or Prisma' },
-        { value: 'sqlite', label: DATABASE_LABELS.sqlite, available: true, hint: 'Zero setup — file-based (Drizzle)' },
-        { value: 'mysql', label: DATABASE_LABELS.mysql, available: true, hint: 'Drizzle' },
-        { value: 'mongodb', label: DATABASE_LABELS.mongodb, available: false },
-      ],
-      python: [
-        { value: 'postgres', label: DATABASE_LABELS.postgres, available: true, hint: 'asyncpg + Alembic' },
-        { value: 'sqlite', label: DATABASE_LABELS.sqlite, available: true, hint: 'Zero setup — file-based (aiosqlite)' },
-        { value: 'mysql', label: DATABASE_LABELS.mysql, available: false },
-        { value: 'mongodb', label: DATABASE_LABELS.mongodb, available: false },
-      ],
-      php: [
-        { value: 'postgres', label: DATABASE_LABELS.postgres, available: true, hint: 'Eloquent' },
-        { value: 'sqlite', label: DATABASE_LABELS.sqlite, available: true, hint: 'Zero setup — file-based (Eloquent)' },
-        { value: 'mysql', label: DATABASE_LABELS.mysql, available: true, hint: 'Eloquent' },
-        { value: 'mongodb', label: DATABASE_LABELS.mongodb, available: false },
-      ],
+      node: registryChoices(CAPABILITY_REGISTRY.database.node),
+      python: registryChoices(CAPABILITY_REGISTRY.database.python),
+      php: registryChoices(CAPABILITY_REGISTRY.database.php),
     }
 
     database = flags.db
@@ -327,11 +301,20 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
       orm = 'none'
       p.log.info('ORM: none — Next.js uses raw SQL')
     } else if (backendRuntime === 'node') {
-      const ormChoices: Choice<'drizzle' | 'prisma' | 'none'>[] = [
-        { value: 'drizzle', label: 'Drizzle', available: true, hint: 'SQL-like, lightweight' },
-        { value: 'prisma', label: 'Prisma', available: database === 'postgres', hint: database === 'postgres' ? 'Schema-first, great DX' : 'PostgreSQL only for now' },
-        { value: 'none', label: 'None — raw SQL', available: true, hint: 'Driver + parameterized queries + SQL-file migrations' },
-      ]
+      const ormChoices = registryChoices(CAPABILITY_REGISTRY.orm)
+        .filter(
+          (choice): choice is Choice<'drizzle' | 'prisma' | 'none'> =>
+            choice.value !== 'mongoose',
+        )
+        .map((choice) =>
+          choice.value === 'prisma'
+            ? {
+                ...choice,
+                available: database === 'postgres',
+                hint: database === 'postgres' ? 'Schema-first, great DX' : 'PostgreSQL only for now',
+              }
+            : choice,
+        )
       orm = flags.orm
         ? parseEnumChoice('--orm', flags.orm, AVAILABLE.orm.node)
         : forced
@@ -369,11 +352,7 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
   } else if (forced) {
     extras = { tailwind: true, eslintPrettier: true, shadcn: false }
   } else {
-    const extraChoices: Choice<'tailwind' | 'eslint' | 'shadcn'>[] = [
-      { value: 'tailwind', label: 'Tailwind CSS', available: true, hint: 'Utility-first styling' },
-      { value: 'eslint', label: 'ESLint + Prettier', available: true, hint: 'Linting + formatting' },
-      { value: 'shadcn', label: 'shadcn/ui', available: true, hint: 'Component library (includes Tailwind) — runs shadcn CLI' },
-    ]
+    const extraChoices = registryChoices(CAPABILITY_REGISTRY.extras)
     const picked = unwrapMany(
       await p.multiselect<'tailwind' | 'eslint' | 'shadcn'>({
         message: 'Pick extras:',

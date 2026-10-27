@@ -314,6 +314,9 @@ export const authModule: ModuleDefinition = {
   description: 'better-auth email/password boilerplate (express + drizzle stacks)',
   incompatible(manifest) {
     const supported = MODULE_COMPATIBILITY.auth
+    if (manifest.stack.frontend !== supported.frontend) {
+      return `Better Auth currently requires the React frontend; ${manifest.stack.frontend} is not covered yet.`
+    }
     if (
       manifest.stack.backendRuntime !== supported.backendRuntime ||
       manifest.stack.backendFramework !== supported.backendFramework ||
@@ -323,6 +326,9 @@ export const authModule: ModuleDefinition = {
     }
     if (manifest.stack.architecture.kind !== supported.architecture) {
       return `architecture "${manifest.stack.architecture.kind}" is not covered yet`
+    }
+    if (!(supported.databases as readonly string[]).includes(manifest.stack.database ?? '')) {
+      return `Better Auth currently supports SQLite, PostgreSQL, and MySQL; ${manifest.stack.database ?? 'no database'} is not covered yet.`
     }
     return null
   },
