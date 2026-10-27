@@ -81,6 +81,18 @@ export const SUPPORTED_CAPABILITIES = [
     scenarios: ['mysql'],
   },
   {
+    id: 'fastapi-sqlalchemy-sqlite',
+    matrixRowPrefix: '| FastAPI | SQLAlchemy 2 async + Alembic | SQLite | **Supported** |',
+    target: 'python-fastapi-sqlite',
+    scenarios: ['sqlite'],
+  },
+  {
+    id: 'laravel-eloquent-sqlite',
+    matrixRowPrefix: '| Laravel 12 | Eloquent | SQLite | **Supported** |',
+    target: 'php-laravel',
+    scenarios: ['sqlite'],
+  },
+  {
     id: 'auth-express-drizzle-sqlite',
     matrixRowPrefix: '| `omnicraft add auth` — Express + Drizzle + SQLite | **Supported** |',
     target: 'node-express-drizzle',

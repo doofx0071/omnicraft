@@ -1,8 +1,10 @@
 # OmniCraft Post-Master-Plan Audit and Next Steps
 
-> **Closeout status (2026-10-28):** Implementation and local evidence are ready; final archival is
-> waiting for the hosted `supported-stack-release-gate` on the review commit. The original review below
-> is a dated snapshot and its live-registry limitation has since been resolved.
+> **Closeout status (2026-10-28):** Published-package verification, compatibility/module work, local
+> checks, and the initial hosted runtime jobs are complete. FastAPI + SQLite and Laravel + SQLite now
+> have hosted runtime evidence. The final PR run must validate the expanded ten-row matrix before
+> archival. The original review below is a dated snapshot and its live-registry limitation has since
+> been resolved.
 
 ## Current closeout ledger
 
@@ -16,19 +18,24 @@
   expected files.
 - **Registry and compatibility:** prompts/flags derive selectable values from `src/capabilities.ts`;
   compatibility validation covers prompt, flags, composition, and Better Auth pre-write checks.
-  `src/support-evidence.ts` maps each currently Supported matrix row to its exact test scenario; CI
-  checks the mappings and fails the aggregate release gate on missing/failed evidence.
+  `src/support-evidence.ts` maps each Supported matrix row to its exact test scenario; CI checks the
+  mappings and fails the aggregate release gate on missing/failed evidence. The matrix is still
+  hand-authored and is not yet cross-checked against the selectable capability/compatibility
+  definitions. That focused consistency task is recorded in Phase 3 of the [existing-stack runtime
+  evidence plan](omnicraft-stack-runtime-evidence-plan.md).
 - **Module and auth verification:** Better Auth rejects incompatible stacks before writing; module-add
   tests cover dry-run, idempotency, collisions, missing anchors, rollback, and output paths. Existing
   Express + Drizzle Better Auth flows run against SQLite, PostgreSQL, and MySQL in the DB integration
   suite.
-- **Runtime coverage added in this closeout:** FastAPI + SQLite and Laravel + SQLite generated-project
-  integration jobs passed locally. Their matrix rows remain `Scaffold-verified` until the new hosted
-  jobs pass; no other support status is promoted.
-- **Deferred work:** remaining selectable runtime paths and native build evidence are tracked in the
-  [existing-stack runtime evidence plan](omnicraft-stack-runtime-evidence-plan.md). `doctor`, project
-  inspection, and upgrade ideas remain in the roadmap. Auth-provider/PHP expansion remains in its
-  separate active plan.
+- **Runtime coverage added in this closeout:** the hosted [closeout run #40558971071](https://github.com/doofx0071/omnicraft/actions/runs/40558971071)
+  passed the FastAPI + SQLite and Laravel + SQLite generated-project integration jobs, along with
+  package, database, OS/Node, support-evidence, and aggregate release-gate jobs. Those two exact rows
+  are now `Supported`; the final PR run must revalidate their evidence mappings with the expanded
+  ten-row matrix.
+- **Deferred work:** remaining selectable runtime paths, native build evidence, and the matrix-to-
+  capability consistency check are tracked in the [existing-stack runtime evidence
+  plan](omnicraft-stack-runtime-evidence-plan.md). `doctor`, project inspection, and upgrade ideas
+  remain in the roadmap. Auth-provider/PHP expansion remains in its separate active plan.
 - **Remote template reproducibility:** `--latest` resolves to the immutable `v<CLI_VERSION>` tag and
   fails with a specific missing-tag instruction. The audit found and fixed the missing `v1.0.1` tag;
   the exact tagged remote scaffold passed.

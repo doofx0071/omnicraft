@@ -9,7 +9,8 @@ result applies only to the exact generated combinations exercised; source checks
 do not prove that every generated project installs or runs.
 
 The 2026-10-28 closeout branch passed `npx vitest run` (**129 tests in 14 files**), `npx tsc --noEmit`,
-`npx tsup`, and `npm run check:support-matrix`. The smoke command generated all 17 listed paths.
+`npx tsup`, and `npm run check:support-matrix` (10 Supported rows). The smoke command generated all
+17 listed paths.
 Generated-project integration commands also passed locally:
 
 ```text
@@ -18,9 +19,13 @@ npm run test:integration:python   # FastAPI + SQLite, Python 3.12
 npm run test:integration:php      # Laravel 12: SQLite, PostgreSQL, MySQL, pinned PHP/Composer image
 ```
 
-These local results do not replace the hosted evidence gate. FastAPI + SQLite and Laravel + SQLite
-remain Scaffold-verified until their new hosted jobs pass on the review commit. Record the hosted run
-below after CI completes.
+The hosted [closeout run #40558971071](https://github.com/doofx0071/omnicraft/actions/runs/40558971071)
+passed on commit `4c4f9d02cd0559149ca31edce6b0a98678a87f14`, including the full OS/Node matrix, package
+smoke, evidence checker, database integrations, FastAPI + SQLite, Laravel + SQLite/PostgreSQL/MySQL,
+and the aggregate supported-stack release gate. The FastAPI + SQLite and Laravel + SQLite rows are
+Supported based on their generated-project install, migration, boot, and database-operation checks in
+that run. The subsequent PR run validates the expanded ten-row evidence registry on the final review
+commit.
 
 ## Test levels
 

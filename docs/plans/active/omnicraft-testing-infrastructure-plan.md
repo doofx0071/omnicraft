@@ -1,6 +1,6 @@
 # OmniCraft — Database, Authentication, PHP/Composer, and Generated-Project Testing Plan
 
-**Status:** Closeout in progress; final hosted CI evidence pending
+**Status:** Closeout in progress; initial hosted runtime jobs passed, final expanded-matrix PR gate pending
 **Prepared:** 2026-10-27
 **Repository:** <https://github.com/doofx0071/omnicraft>
 **Current repository path:** `docs/plans/active/omnicraft-testing-infrastructure-plan.md`
@@ -20,15 +20,16 @@
   wrong credentials, stored hash, and secret/log checks.
 - **Phase 4:** creation-time auth is **not applicable** because the CLI has no creation-time auth
   feature. The existing `omnicraft add auth` path is tested in the generated-project database suite.
-- **Phase 5:** FastAPI + SQLite and Laravel + SQLite were added to the runtime suite and pass locally;
-  hosted evidence is pending. Laravel PostgreSQL/MySQL are already exercised. The remaining existing
-  selectable combinations are intentionally not promoted and are itemized in the [runtime evidence
-  follow-up](omnicraft-stack-runtime-evidence-plan.md). Laravel Livewire/Inertia starter modes are
-  **not applicable** because the current CLI exposes no such modes.
+- **Phase 5:** FastAPI + SQLite and Laravel + SQLite generated-project jobs passed in hosted run
+  [#40558971071](https://github.com/doofx0071/omnicraft/actions/runs/40558971071); their exact matrix
+  rows are now Supported. Laravel PostgreSQL/MySQL are also exercised. Remaining existing selectable
+  combinations are not promoted and are itemized in the [runtime evidence follow-up](omnicraft-stack-runtime-evidence-plan.md).
+  Laravel Livewire/Inertia starter modes are **not applicable** because the current CLI exposes no
+  such modes.
 - **Phase 6:** CI maps Supported rows to scripts/scenarios/jobs, gates releases on the full supported
   matrix and package artifact, and supports pull requests, main pushes, nightly runs, and explicit
-  pre-release dispatch. Documentation contains exact commands and runtime boundaries. The final hosted
-  run is still required before this plan is archived.
+  pre-release dispatch. Documentation contains exact commands and runtime boundaries. The final PR run
+  must validate the expanded ten-row matrix before this plan is archived.
 - **Phase 7:** future browser, mail-catcher, and external-service work remains conditional on those
   features being implemented; it is not a blocker for this plan.
 

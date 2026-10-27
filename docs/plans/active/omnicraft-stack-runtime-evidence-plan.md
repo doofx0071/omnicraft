@@ -2,11 +2,13 @@
 
 **Status:** Active
 **Created:** 2026-10-28
-**Source:** Explicit deferrals from the [post-masterplan audit](omnicraft-post-masterplan-audit.md) and [testing-infrastructure plan](omnicraft-testing-infrastructure-plan.md).
+**Source:** Explicit runtime and registry-to-documentation deferrals from the
+[post-masterplan audit](omnicraft-post-masterplan-audit.md) and
+[testing-infrastructure plan](omnicraft-testing-infrastructure-plan.md).
 
 ## Goal
 
-Close the remaining generated-project verification gaps for combinations that OmniCraft already exposes. Do not add frameworks, template variants, providers, or stack combinations in this plan. Keep each row at its current support status until the exact generated project passes the required hosted CI evidence.
+Close the remaining generated-project verification gaps for combinations that OmniCraft already exposes, and make the support matrix's exact combinations consistent with the authoritative selectable capability and compatibility definitions. Do not add frameworks, template variants, providers, or stack combinations in this plan. Keep each row at its current support status until the exact generated project passes the required hosted CI evidence.
 
 The current release gate covers the `Supported` rows in the [stack support matrix](../../templates/stack-support-matrix.md). The work below concerns existing `Scaffold-verified` and `Selectable — unverified` paths, plus auxiliary project modules and native toolchains.
 
@@ -52,11 +54,37 @@ For each completed exact path:
 
 Do not change the supported-stack release gate to accept skipped, cancelled, or missing required jobs as success.
 
+## Phase 3 — Capability and support-matrix consistency
+
+The typed `CAPABILITY_REGISTRY` drives selectable values and prompt metadata; `compatibility.ts`
+defines cross-option constraints. The exact `Supported` status and CI scenario live in
+`support-evidence.ts`, and `check:support-matrix` verifies matrix support IDs, scenarios, scripts,
+workflow commands, and aggregate job dependencies. The Markdown matrix remains hand-authored, and this
+checker does not yet verify each documented combination against the selectable capability and
+compatibility definitions.
+
+Close this remaining documentation-consistency gap without duplicating selectable values or making
+selectability imply support:
+
+- Establish a narrow machine-checkable representation for each exact Supported combination that can
+  be evaluated through the existing capability and compatibility definitions.
+- Reject a matrix Supported row if its combination is unavailable or rejected by prompt/flag/composition
+  rules, while preserving its independent runtime-evidence requirement.
+- Keep explanatory evidence text human-readable and ensure documentation changes cannot silently
+  diverge from the exact registered combination.
+- Add focused tests to the existing support-evidence test structure; do not create a second catalog of
+  selectable frontend/runtime/backend/database values.
+
+**Acceptance criteria:** every exact Supported matrix combination is both selectable/compatible and
+has a passing generated-project evidence target in the release gate; unsupported combinations remain
+rejected or provisional.
+
 ## Definition of done
 
 - [ ] Every path in Phase 1 has an explicit status and a tested/not-tested reason in the support matrix.
 - [ ] Each path promoted to `Supported` passes generated install/setup, runtime, and real-operation checks in hosted CI for its exact combination.
 - [ ] Every `Supported` row maps to an existing script, scenario, workflow job, and aggregate release check.
+- [ ] Every exact `Supported` row is checked against the selectable capability and compatibility definitions without duplicating the selectable catalog.
 - [ ] The full Supported matrix passes on the exact commit before release.
 - [ ] Deferred paths remain accurately labeled, with no support claim inferred from an adjacent framework, frontend, ORM, database, or platform.
 - [ ] Native platform evidence distinguishes scaffold, web build, native build, and device/simulator launch.
