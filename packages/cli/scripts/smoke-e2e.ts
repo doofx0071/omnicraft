@@ -9,7 +9,9 @@ import { resolve } from 'node:path'
 import { createEnvFiles } from '../src/scaffold/env.js'
 import { applyLayers } from '../src/scaffold/engine.js'
 import { composeLayers, templateVariables } from '../src/scaffold/compose.js'
-import { TEMPLATES_ROOT } from '../src/config.js'
+import { TEMPLATES_ROOT, CLI_VERSION } from '../src/config.js'
+import { buildManifest } from '../src/manifest.js'
+import { saveManifest } from '../src/add.js'
 import type { Answers } from '../src/types.js'
 
 const outRoot = resolve(process.argv[2] ?? 'smoke-out')
@@ -35,6 +37,7 @@ function scaffold(answers: Answers): string {
   mkdirSync(dir, { recursive: true })
   applyLayers(TEMPLATES_ROOT, composeLayers(answers), templateVariables(answers), dir)
   createEnvFiles(dir)
+  saveManifest(dir, buildManifest(answers, CLI_VERSION, 'npm'))
   console.log(`scaffolded ${dir}`)
   return dir
 }

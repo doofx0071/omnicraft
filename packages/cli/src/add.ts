@@ -6,6 +6,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { authModule, authPatches } from './modules/auth.js'
 import type { ProjectManifest } from './manifest.js'
 
 const MANIFEST_DIR = '.omnicraft'
@@ -58,6 +59,10 @@ export interface ModuleDefinition {
   }
   /** Next-steps lines shown after a successful add. */
   nextSteps?: string[]
+  /** Exact-string patches applied to EXISTING files (find/replace, rendered
+   * with module vars). Fail-safe: a missing anchor aborts the whole add
+   * before any file is written. */
+  patches?: { file: string; find: string; replace: string }[]
 }
 
 const DOCKER_COMPOSE_POSTGRES = `services:
@@ -129,6 +134,7 @@ describe("App", () => {
 `
 
 export const MODULES: ModuleDefinition[] = [
+  { ...authModule, patches: authPatches },
   {
     id: 'docker',
     description: 'docker-compose for the project database (PostgreSQL/MySQL)',

@@ -4,6 +4,26 @@ All notable, user-visible changes to `create-omnicraft` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is semver
 (0.x = rapid iteration, breaking changes allowed).
 
+## [1.0.0] — 2026-10-27
+
+First stable release. The scaffolding core (3 runtimes, 4 frontends, 3 node ORMs,
+3 databases, 3 extras, 2 native platforms) and the module system are stable, verified
+contracts; breaking changes from here follow semver.
+
+### Added
+
+- **`omnicraft add auth` (#23)** — better-auth email/password boilerplate for express +
+  drizzle stacks (first supported auth stack). Ships `auth.ts` (betterAuth config with
+  drizzle adapter, trustedOrigins from CORS_ORIGIN), the full better-auth drizzle schema
+  (user/session/account/verification, per-database variants), a protected `/api/me` route
+  example, and `auth-client.ts` for the frontend. Patches index.ts (mounts the handler
+  before the body parser — express 5 `*splat` syntax) and drizzle.config.ts (schema array)
+  via the new named patch strategy: anchors validated before any write, aborting cleanly
+  on mismatch. env additions (BETTER_AUTH_SECRET) are printed, never written into .env.
+  Verified end-to-end on SQLite: register 200, login 200, session with cookie, wrong
+  password 401, protected route 401/200, sign-out 200, session invalid after sign-out.
+  Hono/Fastify auth wiring is the next increment (matrix documents this).
+
 ## [0.6.0] — 2026-10-27
 
 ### Added

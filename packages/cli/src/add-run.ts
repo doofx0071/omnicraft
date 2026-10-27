@@ -63,10 +63,37 @@ export async function runAdd(moduleArg: string | undefined, targetArg: string | 
     return
   }
 
+  // Patch anchors are validated BEFORE any write — a missing anchor means the
+  // project doesn't match the template the module expects, so the whole add
+  // aborts cleanly.
+  const renderedPatches = (module.patches ?? []).map((patch) => ({
+    ...patch,
+    find: renderModuleContent(patch.find, vars),
+    replace: renderModuleContent(patch.replace, vars),
+  }))
+  const patchFailures: string[] = []
+  for (const patch of renderedPatches) {
+    const abs = join(targetDir, patch.file)
+    if (!existsSync(abs)) {
+      patchFailures.push(`${patch.file} (file missing)`)
+      continue
+    }
+    if (!readFileSync(abs, 'utf8').includes(patch.find)) {
+      patchFailures.push(`${patch.file} (anchor not found: "${patch.find.slice(0, 60)}")`)
+    }
+  }
+  if (patchFailures.length > 0) {
+    p.log.error(`Patches cannot be applied — aborting before any write:`)
+    for (const failure of patchFailures) p.log.error(`  - ${failure}`)
+    process.exitCode = 1
+    return
+  }
+
   if (dryRun) {
     p.note(
       [
         ...files.map(([path, content]) => `create  ${path}  (${content.length} bytes)`),
+        ...renderedPatches.map((patch) => `patch   ${patch.file}  ("${patch.find.slice(0, 40)}")`),
         module.packageJson?.dependencies
           ? `deps    ${Object.keys(module.packageJson.dependencies).join(', ')}`
           : null,
@@ -85,6 +112,10 @@ export async function runAdd(moduleArg: string | undefined, targetArg: string | 
   }
 
   const spinner = p.spinner()
+  for (const patch of renderedPatches) {
+    const abs = join(targetDir, patch.file)
+    writeFileSync(abs, readFileSync(abs, 'utf8').replace(patch.find, patch.replace))
+  }
   for (const [path, content] of files) {
     const abs = join(targetDir, path)
     mkdirSync(dirname(abs), { recursive: true })

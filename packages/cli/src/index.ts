@@ -48,8 +48,9 @@ async function main(): Promise<void> {
   // everything else (or no args) is the create flow.
   const argv = process.argv.slice(2)
   if (argv[0] === 'add') {
-    const [moduleName, targetArg] = argv.slice(1)
+    const addArgs = argv.slice(1).filter((arg) => !arg.startsWith('--'))
     const dryRun = argv.includes('--dry-run')
+    const [moduleName, targetArg] = addArgs
     try {
       await runAdd(moduleName, targetArg, dryRun)
     } catch (err) {

@@ -45,6 +45,8 @@ the database wired end-to-end.
 
 - [Decision records](decisions/) — durable architecture decisions (starting with [ADR 0001: frontend framework strategy](decisions/0001-frontend-framework-strategy.md)).
 
+- [Decision records](decisions/0001-frontend-framework-strategy.md) — durable architecture decisions (ADR 0001: frontend framework strategy).
+
 ## Plans
 
 - [Active: master engineering plan](plans/active/omnicraft-master-plan.md) — the combined hardening/expansion plan; §20 is the authoritative PR checklist.
