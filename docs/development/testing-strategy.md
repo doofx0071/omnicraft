@@ -88,11 +88,10 @@ The current workflow:
 
 The hosted Linux integration jobs add real database and API checks for those exact combinations; they
 do not verify other framework/database combinations. On PR #28 head
-`3caf3e897a6fa6e5f15dd131e138c3164836666c`, both integration jobs passed in [run #40529892092](https://github.com/doofx0071/omnicraft/actions/runs/40529892092),
-and the matrix records Supported only for the exact combinations they exercised. The macOS Node 20 and
-Node 24 jobs remained queued, so cross-platform CI was still incomplete when recorded. The self-hosted
-Windows runner is restricted to pushes and same-repository pull requests; fork pull requests use hosted
-runners only.
+`88f7d4261087f97ac909ded92c41dd407a6c4f25`, all ten jobs passed in [run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380),
+and the matrix records Supported only for the exact combinations exercised by its integration jobs. The
+self-hosted Windows runner is restricted to pushes and same-repository pull requests; fork pull requests
+use hosted runners only.
 
 ## Support statuses
 

@@ -99,9 +99,8 @@ loads; the Dockerfile now adds only missing extensions. The final PHP runs passe
 
 ## Hosted CI and status boundary
 
-On PR #28 head `3caf3e897a6fa6e5f15dd131e138c3164836666c`, [hosted run #40529892092](https://github.com/doofx0071/omnicraft/actions/runs/40529892092)
-passed `database-integration` for Express + Drizzle + SQLite/PostgreSQL/MySQL, including the generated
-Better Auth flow, and `php-laravel-integration` for Laravel 12 + Eloquent + PostgreSQL/MySQL. The
-support matrix promotes only these exact combinations. The macOS Node 20 and Node 24 jobs were still
-queued when recorded, so the full cross-platform workflow remains pending; that does not change the
-targeted integration results. Other matrix rows and auth providers remain unchanged.
+On PR #28 head `88f7d4261087f97ac909ded92c41dd407a6c4f25`, [hosted run #40532522380](https://github.com/doofx0071/omnicraft/actions/runs/40532522380)
+passed all ten CI jobs. `database-integration` passed for Express + Drizzle + SQLite/PostgreSQL/MySQL,
+including the generated Better Auth flow, and `php-laravel-integration` passed Laravel 12 (Eloquent)
+with PostgreSQL and MySQL. The support matrix promotes only these exact combinations. Other matrix rows and auth
+providers remain unchanged.
