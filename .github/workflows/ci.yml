@@ -211,7 +211,7 @@ jobs:
       matrix:
         include:
           - scenario: expo-ios-simulator
-            runner: macos-15
+            runner: macos-26
           - scenario: tauri-linux-desktop
             runner: ubuntu-24.04
     steps:

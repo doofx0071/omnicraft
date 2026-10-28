@@ -15,7 +15,6 @@ import type { Answers } from '../src/types.js'
 const PREPARATION_TIMEOUT_MS = 8 * 60 * 1000
 const BUILD_TIMEOUT_MS = 25 * 60 * 1000
 const MAX_OUTPUT_BYTES = 64 * 1024 * 1024
-const IOS_RUNTIME = 'com.apple.CoreSimulator.SimRuntime.iOS-18-5'
 
 function tail(value: string, length = 12_000): string {
   return value.length > length ? value.slice(-length) : value
@@ -142,16 +141,35 @@ interface SimulatorInventory {
   devices: Record<string, SimulatorDevice[]>
 }
 
+interface SelectedSimulator extends SimulatorDevice {
+  runtimeIdentifier: string
+  runtimeVersion: number[]
+}
+
 interface IosAppTarget {
   targetName: string
   targetBuildDir: string
   fullProductName: string
 }
 
-function selectIosSimulator(inventory: SimulatorInventory): SimulatorDevice {
-  const devices = inventory.devices[IOS_RUNTIME] ?? []
-  const device = devices.find((candidate) => candidate.isAvailable && candidate.name.includes('iPhone'))
-  if (!device) throw new Error(`No available iPhone simulator exists for ${IOS_RUNTIME}.`)
+function selectIosSimulator(inventory: SimulatorInventory): SelectedSimulator {
+  const devices = Object.entries(inventory.devices).flatMap(([runtimeIdentifier, runtimeDevices]) => {
+    const version = /^com\.apple\.CoreSimulator\.SimRuntime\.iOS-(\d+)-(\d+)$/.exec(runtimeIdentifier)
+    if (!version) return []
+    const runtimeVersion = [Number(version[1]), Number(version[2])]
+    return runtimeDevices
+      .filter((device) => device.isAvailable && device.name.includes('iPhone'))
+      .map((device) => ({ ...device, runtimeIdentifier, runtimeVersion }))
+  })
+  devices.sort((left, right) => {
+    for (let index = 0; index < Math.max(left.runtimeVersion.length, right.runtimeVersion.length); index += 1) {
+      const difference = (right.runtimeVersion[index] ?? 0) - (left.runtimeVersion[index] ?? 0)
+      if (difference !== 0) return difference
+    }
+    return left.name.localeCompare(right.name)
+  })
+  const device = devices[0]
+  if (!device) throw new Error('No available iPhone simulator exists in the Xcode simulator inventory.')
   return device
 }
 
@@ -425,6 +443,7 @@ async function runExpoIosSimulator(): Promise<void> {
     )
     const simulator = selectIosSimulator(inventory)
     simulatorId = simulator.udid
+    console.log(`[native] Selected ${simulator.name} on ${simulator.runtimeIdentifier}.`)
     runCommand('xcrun', ['simctl', 'shutdown', simulatorId], projectRoot, { timeoutMs: 30_000 })
     runRequired('Boot the iOS simulator', 'xcrun', ['simctl', 'boot', simulatorId], projectRoot, 60_000)
     runRequired('Wait for iOS simulator startup', 'xcrun', ['simctl', 'bootstatus', simulatorId, '-b'], projectRoot, 180_000)
