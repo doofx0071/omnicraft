@@ -340,6 +340,19 @@ export const SUPPORTED_CAPABILITIES = [
     target: 'docker-module',
     scenarios: ['mysql'],
   },
+  {
+    id: 'testing-module-react-vite-ts-frontend-only',
+    matrixRowPrefix:
+      '| `omnicraft add testing` — React/Vite TypeScript frontend-only | **Supported** |',
+    target: 'module-runtime',
+    scenarios: ['add-testing-react-vite-ts'],
+  },
+  {
+    id: 'shadcn-react-vite-ts-frontend-only',
+    matrixRowPrefix: '| shadcn/ui — React/Vite TypeScript frontend-only | **Supported** |',
+    target: 'module-runtime',
+    scenarios: ['shadcn-react-vite-ts-frontend-only'],
+  },
 ] as const satisfies readonly SupportedCapability[]
 
 export function integrationScenarios(target: IntegrationTargetId): readonly string[] {
