@@ -23,6 +23,7 @@ import type { Answers, Database } from '../src/types.js'
 const POSTGRES_IMAGE = 'postgres:17.11-alpine3.24'
 const MYSQL_IMAGE = 'mysql:8.4.13'
 type TestDatabase = Extract<Database, 'sqlite' | 'postgres' | 'mysql'>
+type AuthFlow = 'creation' | 'add'
 
 const DATABASES = integrationScenarios('node-express-drizzle') as readonly TestDatabase[]
 const AUTH_PASSWORD = 'OmniCraft-test-password-2026'
@@ -125,15 +126,32 @@ function makeAnswers(projectRoot: string, database: TestDatabase): Answers {
   }
 }
 
-function scaffoldWithAuth(projectRoot: string, database: TestDatabase): void {
+async function scaffoldWithAuth(
+  projectRoot: string,
+  database: TestDatabase,
+  authFlow: AuthFlow,
+): Promise<void> {
   const answers = makeAnswers(projectRoot, database)
-  answers.authentication = 'better-auth'
+  if (authFlow === 'creation') answers.authentication = 'better-auth'
   applyLayers(TEMPLATES_ROOT, composeLayers(answers), templateVariables(answers), projectRoot)
   createEnvFiles(projectRoot)
   const manifest = buildManifest(answers, CLI_VERSION, 'npm')
-  saveManifest(projectRoot, { ...manifest, authentication: 'none' })
-  const result = applyModuleToProject('auth', projectRoot, { recordModule: false })
-  assert.equal(result.status, 'applied', 'Creation-time Better Auth should apply the existing auth module.')
+  saveManifest(
+    projectRoot,
+    authFlow === 'creation' ? { ...manifest, authentication: 'none' } : manifest,
+  )
+
+  if (authFlow === 'creation') {
+    const result = applyModuleToProject('auth', projectRoot, { recordModule: false })
+    assert.equal(result.status, 'applied', 'Creation-time Better Auth should apply the existing auth module.')
+  } else {
+    assert.equal(
+      existsSync(join(projectRoot, 'server/src/auth.ts')),
+      false,
+      'Fresh add-auth flow should start without generated auth files.',
+    )
+    await runAdd('auth', projectRoot, false)
+  }
 }
 
 async function startDatabase(
@@ -472,8 +490,8 @@ async function startServer(
   return startCommand('npm', ['run', 'dev', '--workspace=server'], projectRoot, { env })
 }
 
-async function runDatabaseCase(database: TestDatabase): Promise<void> {
-  const projectRoot = mkdtempSync(join(tmpdir(), `omnicraft-${database}-integration-`))
+async function runDatabaseCase(database: TestDatabase, authFlow: AuthFlow): Promise<void> {
+  const projectRoot = mkdtempSync(join(tmpdir(), `omnicraft-${database}-${authFlow}-integration-`))
   const serverDir = join(projectRoot, 'server')
   const secrets: string[] = []
   const diagnostics: string[] = []
@@ -482,8 +500,8 @@ async function runDatabaseCase(database: TestDatabase): Promise<void> {
   let serverOutput = ''
 
   try {
-    console.log(`[database:${database}] preparing generated project`)
-    scaffoldWithAuth(projectRoot, database)
+    console.log(`[database:${database}][auth:${authFlow}] preparing generated project`)
+    await scaffoldWithAuth(projectRoot, database, authFlow)
 
     const manifest = JSON.parse(
       readFileSync(join(projectRoot, '.omnicraft', 'project.json'), 'utf8'),
@@ -493,14 +511,18 @@ async function runDatabaseCase(database: TestDatabase): Promise<void> {
     }
     assert(
       manifest.authentication === 'better-auth',
-      'Creation-time auth configuration should be recorded separately from add-module history.',
+      `${authFlow} auth configuration should be recorded separately from its application path.`,
     )
-    assert.deepEqual(manifest.modules, [])
+    assert.deepEqual(manifest.modules, authFlow === 'creation' ? [] : ['auth'])
     await runAdd('auth', projectRoot, false)
     const afterAdd = JSON.parse(
       readFileSync(join(projectRoot, '.omnicraft', 'project.json'), 'utf8'),
     ) as { modules?: string[] }
-    assert.deepEqual(afterAdd.modules, [], 'omnicraft add auth should be idempotent after creation-time auth.')
+    assert.deepEqual(
+      afterAdd.modules,
+      authFlow === 'creation' ? [] : ['auth'],
+      'Repeating omnicraft add auth should be idempotent for both application paths.',
+    )
 
     let databaseUrl: string
     if (database === 'sqlite') {
@@ -573,7 +595,7 @@ async function runDatabaseCase(database: TestDatabase): Promise<void> {
     let origin = `http://127.0.0.1:${port}`
     child = await startServer(projectRoot, port, databaseUrl, authSecret)
     await waitForHealth(origin, child)
-    console.log(`[database:${database}] API healthy; checking CRUD and authentication`)
+    console.log(`[database:${database}][auth:${authFlow}] API healthy; checking CRUD and authentication`)
     await verifyUserCrud(origin)
     const auth = await verifyAuth(origin, secrets)
     verifyStoredPassword(database, serverDir, databaseUrl, AUTH_PASSWORD, secrets, diagnostics)
@@ -608,7 +630,7 @@ async function runDatabaseCase(database: TestDatabase): Promise<void> {
       }
     }
     const report = [
-      `[database:${database}] failed`,
+      `[database:${database}][auth:${authFlow}] failed`,
       redact(detail, secrets),
       diagnostics.filter(Boolean).slice(-3).join('\n\n'),
       serverOutput ? `Generated API output:\n${tail(redact(serverOutput, secrets))}` : '',
@@ -627,11 +649,11 @@ async function runDatabaseCase(database: TestDatabase): Promise<void> {
         if (container) await container.stop()
       } finally {
         rmSync(projectRoot, { recursive: true, force: true, maxRetries: 10, retryDelay: 250 })
-        console.log(`[database:${database}] isolated project and database resources cleaned`)
+        console.log(`[database:${database}][auth:${authFlow}] isolated project and database resources cleaned`)
       }
     }
   }
-  console.log(`[database:${database}] migrations, CRUD, and Better Auth passed`)
+  console.log(`[database:${database}][auth:${authFlow}] migrations, CRUD, and Better Auth passed`)
 }
 
 async function main(): Promise<void> {
@@ -640,7 +662,10 @@ async function main(): Promise<void> {
     ensureTestcontainersNodeVersion()
     await ensureDockerAvailable()
   }
-  for (const database of databases) await runDatabaseCase(database)
+  for (const database of databases) {
+    await runDatabaseCase(database, 'creation')
+    await runDatabaseCase(database, 'add')
+  }
 }
 
 main().catch((error: unknown) => {

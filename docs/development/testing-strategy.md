@@ -125,10 +125,10 @@ The current workflow:
    expected files in the default scaffold. The generated project's dependencies are not installed in
    this package job.
 4. Runs hosted Ubuntu `database-integration` cases for Express + Drizzle + SQLite/PostgreSQL/MySQL.
-   Each generated project receives Better Auth through the creation-time application path, is installed
-   and typechecked, then migrates, boots, and exercises CRUD and authentication. The case also verifies
-   that `omnicraft add auth` is a no-op when creation-time auth is already active. Fresh `add auth`
-   application remains covered by focused unit tests; its prior hosted database evidence is retained.
+   For each database, generated projects exercise both creation-time Better Auth and a fresh
+   auth-module application through the `add auth` handler. Each project is installed and typechecked,
+   then migrates, boots, and exercises CRUD and authentication. Both paths also verify their manifest
+   state and repeated `add auth` idempotency.
 5. Runs hosted Ubuntu `node-runtime-integration` for the 20 registered Express, Fastify, and Hono
    Prisma, Drizzle, and raw-SQL paths, including the exact Vue, Svelte, and JavaScript React client/API
    pairings. Each generated project is installed, client-built, API-typechecked, initialized or
