@@ -27,6 +27,8 @@ export const NODE_RUNTIME_SCENARIOS = [
   { id: 'hono-raw-mysql', framework: 'hono', orm: 'none', database: 'mysql' },
 ] as const satisfies readonly NodeRuntimeScenario[]
 
+export const NEXTJS_DATABASE_SCENARIOS = ['sqlite', 'postgres', 'mysql'] as const satisfies readonly Extract<Database, 'sqlite' | 'postgres' | 'mysql'>[]
+
 export const INTEGRATION_TARGETS = {
   'node-runtime': {
     script: 'scripts/node-stack-integration.ts',
@@ -34,6 +36,12 @@ export const INTEGRATION_TARGETS = {
     workflowCommand:
       'npm run test:integration:node --workspace=create-omnicraft -- --scenario',
     scenarios: NODE_RUNTIME_SCENARIOS.map((scenario) => scenario.id),
+  },
+  'nextjs-runtime': {
+    script: 'scripts/nextjs-runtime-integration.ts',
+    workflowJob: 'nextjs-runtime-integration',
+    workflowCommand: 'npm run test:integration:nextjs --workspace=create-omnicraft -- --database',
+    scenarios: NEXTJS_DATABASE_SCENARIOS,
   },
   'node-express-drizzle': {
     script: 'scripts/db-integration.ts',
@@ -131,6 +139,54 @@ export const SUPPORTED_CAPABILITIES = [
     matrixRowPrefix: '| FastAPI | SQLAlchemy 2 async + Alembic | PostgreSQL | **Supported** |',
     target: 'python-fastapi',
     scenarios: ['postgres'],
+  },
+  {
+    id: 'fastify-drizzle-postgres',
+    matrixRowPrefix: '| Fastify | Drizzle | PostgreSQL | **Supported** |',
+    target: 'node-runtime',
+    scenarios: ['fastify-drizzle-postgres'],
+  },
+  {
+    id: 'fastify-drizzle-sqlite',
+    matrixRowPrefix: '| Fastify | Drizzle | SQLite | **Supported** |',
+    target: 'node-runtime',
+    scenarios: ['fastify-drizzle-sqlite'],
+  },
+  {
+    id: 'fastify-drizzle-mysql',
+    matrixRowPrefix: '| Fastify | Drizzle | MySQL | **Supported** |',
+    target: 'node-runtime',
+    scenarios: ['fastify-drizzle-mysql'],
+  },
+  {
+    id: 'fastify-prisma-postgres',
+    matrixRowPrefix: '| Fastify | Prisma | PostgreSQL | **Supported** |',
+    target: 'node-runtime',
+    scenarios: ['fastify-prisma-postgres'],
+  },
+  {
+    id: 'fastify-raw-sql',
+    matrixRowPrefix: '| Fastify | Raw SQL (`none`) | PostgreSQL, SQLite, MySQL | **Supported** |',
+    target: 'node-runtime',
+    scenarios: ['fastify-raw-postgres', 'fastify-raw-sqlite', 'fastify-raw-mysql'],
+  },
+  {
+    id: 'hono-drizzle-postgres-sqlite',
+    matrixRowPrefix: '| Hono | Drizzle | PostgreSQL, SQLite | **Supported** |',
+    target: 'node-runtime',
+    scenarios: ['hono-drizzle-postgres', 'hono-drizzle-sqlite'],
+  },
+  {
+    id: 'hono-drizzle-mysql',
+    matrixRowPrefix: '| Hono | Drizzle | MySQL | **Supported** |',
+    target: 'node-runtime',
+    scenarios: ['hono-drizzle-mysql'],
+  },
+  {
+    id: 'hono-raw-sql',
+    matrixRowPrefix: '| Hono | Raw SQL (`none`) | PostgreSQL, SQLite, MySQL | **Supported** |',
+    target: 'node-runtime',
+    scenarios: ['hono-raw-postgres', 'hono-raw-sqlite', 'hono-raw-mysql'],
   },
   {
     id: 'laravel-eloquent-postgres',

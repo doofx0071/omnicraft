@@ -37,6 +37,7 @@ All from `packages/cli/` unless noted:
 | `npm run test:integration:db -- --database sqlite` | Generated Express + Drizzle + SQLite (no Docker) |
 | `npm run test:integration:node -- --scenario express-prisma-postgres` | Generated Express + Prisma + PostgreSQL |
 | `npm run test:integration:node` | Generated Express, Fastify, and Hono Prisma/Drizzle/raw-SQL scenarios (Docker for PostgreSQL/MySQL) |
+| `npm run test:integration:nextjs` | Generated Next.js integrated full-stack with SQLite, PostgreSQL, and MySQL |
 | `npm run test:integration:python` | Generated FastAPI + SQLAlchemy + SQLite/PostgreSQL (Python 3.12 + uv; PostgreSQL requires Docker) |
 | `npm run test:integration:php -- --database sqlite` | Generated Laravel + SQLite (Docker PHP/Composer image) |
 | `npm run test:integration:db` | All supported Node databases (requires Docker for PostgreSQL/MySQL) |

@@ -36,6 +36,7 @@ Run from the repository root:
 npm test --workspace=create-omnicraft
 npm run test:integration:db --workspace=create-omnicraft
 npm run test:integration:node --workspace=create-omnicraft
+npm run test:integration:nextjs --workspace=create-omnicraft
 npm run test:integration:php --workspace=create-omnicraft
 ```
 
@@ -47,6 +48,7 @@ npm run test:integration:db --workspace=create-omnicraft -- --database postgres
 npm run test:integration:db --workspace=create-omnicraft -- --database mysql
 npm run test:integration:node --workspace=create-omnicraft -- --scenario express-prisma-postgres
 npm run test:integration:node --workspace=create-omnicraft -- --scenario hono-raw-mysql
+npm run test:integration:nextjs --workspace=create-omnicraft -- --database mysql
 npm run test:integration:python --workspace=create-omnicraft -- --database postgres
 ```
 
@@ -61,6 +63,14 @@ PostgreSQL, and raw SQL on SQLite/PostgreSQL/MySQL; and Hono + Drizzle and raw S
 SQLite/PostgreSQL/MySQL. It installs each generated project, builds/typechecks the client and API,
 initializes the schema or applies migrations, boots the API, and checks CRUD plus duplicate,
 invalid-input, and missing-record behavior. These cases do not install or exercise auth.
+
+The `nextjs-runtime-integration` target covers Next.js integrated full-stack + raw SQL on SQLite,
+PostgreSQL, and MySQL. It runs the pinned-major `create-next-app@16`, applies production layers,
+installs and builds the generated app, typechecks it, applies the generated SQL migrations, boots the
+production Next.js server, and checks the users page plus persisted CRUD and failure behavior. The
+PostgreSQL and MySQL cases use synthetic Testcontainers credentials; SQLite uses a file in the
+isolated generated project. This target validates the selectable MySQL adapter against its
+`mysql2/promise` driver and MySQL SQL migrations.
 
 ## Coverage and isolation
 
@@ -113,6 +123,12 @@ This section records the commands and outcomes actually run for this change.
   database initialization, API boot, CRUD/failure checks, and cleanup. Generated-project checks fixed
   Fastify's error-handler typing, portable Fastify/Hono Drizzle MySQL row reads, and an unused Drizzle
   import in the Hono raw-SQL route.
+- `npm run test:integration:nextjs --workspace=create-omnicraft -- --database ...` — SQLite,
+  PostgreSQL, and MySQL passed locally through official generator, production layers, install, build,
+  typecheck, migration, production boot, CRUD/failure checks, and cleanup. These hosted rows are
+  pending their first CI run. The checks fixed the Next.js PostgreSQL query typing and migration URL,
+  added the missing direct dotenv dependency for migration commands, and checked the previously
+  unverified MySQL adapter end to end.
 - `docker ps` — no test containers remained after the integration runs.
 
 The first PHP image build attempted to compile `pdo_sqlite`, which the selected PHP image already
@@ -128,5 +144,9 @@ providers remain unchanged.
 
 Hosted [runtime-evidence run #40609596120](https://github.com/doofx0071/omnicraft/actions/runs/40609596120)
 passed on commit `b4c26273eaab033fee604bd77c04e0a2ab1d7e19`, including all four Express runtime scenarios,
-FastAPI + PostgreSQL, and the aggregate release gate. The Fastify/Hono additions are local-only until
-their new matrix jobs pass hosted CI.
+FastAPI + PostgreSQL, and the aggregate release gate.
+
+Hosted [Fastify/Hono run #40612114736](https://github.com/doofx0071/omnicraft/actions/runs/40612114736)
+passed all 15 Node runtime scenarios and the aggregate release gate on commit
+`14adbf9d9805e74f44f66d8101077d0d68878f0d`. Exact Fastify/Hono jobs now support the corresponding
+matrix rows. The Next.js SQLite/PostgreSQL/MySQL jobs are still pending hosted CI.

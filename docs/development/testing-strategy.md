@@ -8,14 +8,15 @@ PostgreSQL and MySQL. The current release matrix also runs FastAPI + SQLite/Post
 SQLite/PostgreSQL/MySQL. Each result applies only to the exact generated combinations exercised;
 source checks and smoke scaffolding do not prove that every generated project installs or runs.
 
-The 2026-10-28 runtime-evidence branch passed `npx vitest run` (**131 tests in 14 files**), `npx tsc --noEmit`,
-`npx tsup`, and `npm run check:support-matrix` (15 Supported rows). The smoke command generated all
+The 2026-10-28 runtime-evidence branch passed `npx vitest run` (**132 tests in 14 files**), `npx tsc --noEmit`,
+`npx tsup`, and `npm run check:support-matrix` (23 Supported rows). The smoke command generated all
 17 listed paths.
 Generated-project integration commands also passed locally:
 
 ```text
 npm run test:integration:db       # Express + Drizzle: SQLite, PostgreSQL, MySQL
 npm run test:integration:node      # Express, Fastify, and Hono ORM/raw-SQL scenarios
+npm run test:integration:nextjs    # Next.js integrated full-stack: SQLite, PostgreSQL, MySQL
 npm run test:integration:python   # FastAPI + SQLite, Python 3.12
 npm run test:integration:php      # Laravel 12: SQLite, PostgreSQL, MySQL, pinned PHP/Composer image
 ```
@@ -31,6 +32,11 @@ The follow-up [runtime-evidence run #40609596120](https://github.com/doofx0071/o
 passed the release gate on commit `b4c26273eaab033fee604bd77c04e0a2ab1d7e19`. It ran Express + Prisma/PostgreSQL,
 Express + raw SQL on SQLite/PostgreSQL/MySQL, and FastAPI + PostgreSQL through generated install/setup,
 boot, real database operations, and failure checks. The exact jobs are linked from their matrix rows.
+
+The Fastify/Hono runtime slice passed all 15 Node runtime scenarios and the release gate on
+[run #40612114736](https://github.com/doofx0071/omnicraft/actions/runs/40612114736), commit
+`14adbf9d9805e74f44f66d8101077d0d68878f0d`. The exact Fastify/Hono rows now link to those generated
+install/setup, boot, database-operation, and failure checks.
 
 ## Test levels
 
@@ -115,19 +121,23 @@ The current workflow:
 5. Runs hosted Ubuntu `node-runtime-integration` for the 15 registered Express, Fastify, and Hono
    Prisma, Drizzle, and raw-SQL paths. Each generated project is installed, client-built,
    API-typechecked, initialized or migrated, booted, and checked for CRUD, duplicate, invalid-input,
-   and missing-record behavior. The Fastify/Hono cases are pending their first hosted run.
-6. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
+   and missing-record behavior. All 15 scenarios passed hosted run #40612114736 on commit `14adbf9`.
+6. Runs hosted Ubuntu `nextjs-runtime-integration` for integrated Next.js + raw SQL on SQLite,
+   PostgreSQL, and MySQL. It runs the pinned-major `create-next-app@16`, applies OmniCraft's exact
+   production layers, installs, builds and typechecks the project, runs SQL migrations, boots the
+   production server, and verifies CRUD and failure cases. The new hosted cases are pending.
+7. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
    generated dependencies, runs Alembic migrations, boots Uvicorn, and checks SQLite and PostgreSQL
    CRUD and failure responses. PostgreSQL runs in an isolated Testcontainers instance.
-7. Runs hosted Ubuntu `php-laravel-integration` for SQLite/PostgreSQL/MySQL. The SQLite case uses the
+8. Runs hosted Ubuntu `php-laravel-integration` for SQLite/PostgreSQL/MySQL. The SQLite case uses the
    pinned PHP/Composer test image without a database service; networked databases use isolated Compose
    services. Each case installs Composer dependencies, checks platform requirements, migrates, and
    runs database/API feature tests.
-8. Runs `support-evidence` to check matrix row ids, registered test scenarios, job commands, and the
+9. Runs `support-evidence` to check matrix row ids, registered test scenarios, job commands, and the
    release aggregate. `supported-matrix` fails unless the OS/Node matrix, runtime jobs, support evidence,
    and package artifact all pass. It runs for PRs, main pushes, nightly, and version-tag pushes;
    `workflow_dispatch` supports an explicit pre-release run. The scheduled run uses GitHub-hosted jobs.
-9. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
+10. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
    the release job publishes to npm using OIDC, creates the GitHub Release from the version's changelog
    section, and updates the release snapshots in `ROADMAP.md` and `docs/architecture/system-overview.md`.
    The self-hosted Windows job runs only for main-branch pushes and same-repository pull requests.
