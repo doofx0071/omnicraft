@@ -6,6 +6,7 @@ import {
   integrationScenarios,
   MODULE_RUNTIME_SCENARIOS,
   NEXTJS_DATABASE_SCENARIOS,
+  NATIVE_PLATFORM_SCENARIOS,
   NODE_RUNTIME_SCENARIOS,
 } from './support-evidence.js'
 
@@ -67,5 +68,10 @@ describe('support matrix evidence', () => {
       'add-testing-react-vite-ts',
       'shadcn-react-vite-ts-frontend-only',
     ])
+  })
+
+  it('registers exact Expo simulator and Tauri desktop scenarios', () => {
+    expect(integrationScenarios('native-platform')).toEqual(NATIVE_PLATFORM_SCENARIOS)
+    expect(NATIVE_PLATFORM_SCENARIOS).toEqual(['expo-ios-simulator', 'tauri-linux-desktop'])
   })
 })
