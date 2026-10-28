@@ -82,6 +82,31 @@ jobs:
       - name: Test generated Express + Drizzle against SQLite, PostgreSQL, and MySQL
         run: npm run test:integration:db --workspace=create-omnicraft
 
+  node-runtime-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario:
+          - express-prisma-postgres
+          - express-raw-sqlite
+          - express-raw-postgres
+          - express-raw-mysql
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Test generated Node runtime project (${{ matrix.scenario }})
+        run: npm run test:integration:node --workspace=create-omnicraft -- --scenario ${{ matrix.scenario }}
+
   php-laravel-integration:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -225,6 +250,7 @@ jobs:
     needs:
       - unix
       - database-integration
+      - node-runtime-integration
       - python-fastapi-integration
       - php-laravel-integration
       - support-evidence
@@ -235,12 +261,13 @@ jobs:
         env:
           UNIX_MATRIX: ${{ needs.unix.result }}
           NODE_DATABASE: ${{ needs.database-integration.result }}
+          NODE_RUNTIME: ${{ needs.node-runtime-integration.result }}
           PYTHON_DATABASE: ${{ needs.python-fastapi-integration.result }}
           PHP_DATABASE: ${{ needs.php-laravel-integration.result }}
           SUPPORT_EVIDENCE: ${{ needs.support-evidence.result }}
           PACKAGE_ARTIFACT: ${{ needs.package.result }}
         run: |
-          for result in "$UNIX_MATRIX" "$NODE_DATABASE" "$PYTHON_DATABASE" "$PHP_DATABASE" "$SUPPORT_EVIDENCE" "$PACKAGE_ARTIFACT"; do
+          for result in "$UNIX_MATRIX" "$NODE_DATABASE" "$NODE_RUNTIME" "$PYTHON_DATABASE" "$PHP_DATABASE" "$SUPPORT_EVIDENCE" "$PACKAGE_ARTIFACT"; do
             if [ "$result" != "success" ]; then
               echo "A required release check finished with status: $result"
               exit 1

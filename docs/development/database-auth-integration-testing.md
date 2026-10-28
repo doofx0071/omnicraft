@@ -44,6 +44,7 @@ The Node/Drizzle suite defaults to SQLite, PostgreSQL, and MySQL. Run one databa
 npm run test:integration:db --workspace=create-omnicraft -- --database sqlite
 npm run test:integration:db --workspace=create-omnicraft -- --database postgres
 npm run test:integration:db --workspace=create-omnicraft -- --database mysql
+npm run test:integration:node --workspace=create-omnicraft -- --scenario express-prisma-postgres
 npm run test:integration:python --workspace=create-omnicraft -- --database postgres
 ```
 
@@ -51,6 +52,11 @@ The FastAPI SQLite case does not require Docker. Its PostgreSQL case installs th
 dependencies, applies the generated Alembic migration, boots Uvicorn, and checks PostgreSQL CRUD,
 duplicate and invalid input handling, and missing-record behavior with synthetic Testcontainers
 credentials. The PHP/Laravel suite runs PostgreSQL and MySQL cases.
+
+The separate `node-runtime-integration` target covers Express + Prisma + PostgreSQL and Express + raw
+SQL with SQLite, PostgreSQL, and MySQL. It installs each generated project, builds/typechecks the
+client and API, initializes the schema or applies SQL migrations, boots the API, and checks CRUD plus
+duplicate, invalid-input, and missing-record behavior. These cases do not install or exercise auth.
 
 ## Coverage and isolation
 
