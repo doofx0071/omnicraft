@@ -43,10 +43,11 @@ function runRequired(
   args: string[],
   cwd: string,
   timeoutMs = PREPARATION_TIMEOUT_MS,
+  environment: NodeJS.ProcessEnv = {},
 ): string {
   console.log(`[native] ${label}`)
   const result = runCommand(command, args, cwd, {
-    env: isolatedEnvironment(),
+    env: isolatedEnvironment(environment),
     timeoutMs,
     maxBuffer: MAX_OUTPUT_BYTES,
   })
@@ -116,11 +117,85 @@ interface SimulatorInventory {
   devices: Record<string, SimulatorDevice[]>
 }
 
+interface IosAppTarget {
+  targetName: string
+  targetBuildDir: string
+  fullProductName: string
+}
+
 function selectIosSimulator(inventory: SimulatorInventory): SimulatorDevice {
   const devices = inventory.devices[IOS_RUNTIME] ?? []
   const device = devices.find((candidate) => candidate.isAvailable && candidate.name.includes('iPhone'))
   if (!device) throw new Error(`No available iPhone simulator exists for ${IOS_RUNTIME}.`)
   return device
+}
+
+function iosAppTargetsFromBuildSettings(output: string): IosAppTarget[] {
+  const headers = [...output.matchAll(/^Build settings for action .+ and target (.+):\s*$/gm)]
+  return headers.flatMap((header, index) => {
+    const targetName = header[1]?.trim()
+    const start = (header.index ?? 0) + header[0].length
+    const end = headers[index + 1]?.index ?? output.length
+    const block = output.slice(start, end)
+    const setting = (name: string) => new RegExp(`^\\s*${name} = (.+)$`, 'm').exec(block)?.[1]?.trim()
+    const productType = setting('PRODUCT_TYPE')
+    const targetBuildDir = setting('TARGET_BUILD_DIR')
+    const fullProductName = setting('FULL_PRODUCT_NAME')
+    if (
+      productType !== 'com.apple.product-type.application' ||
+      !targetBuildDir ||
+      !fullProductName?.endsWith('.app') ||
+      /tests?\.app$/i.test(fullProductName)
+    ) {
+      return []
+    }
+    return [{ targetName: targetName ?? 'unknown', targetBuildDir, fullProductName }]
+  })
+}
+
+function findIosAppTarget(
+  workspacePath: string,
+  derivedData: string,
+  schemes: readonly string[],
+  projectName: string,
+  simulatorId: string,
+  projectRoot: string,
+): { scheme: string; target: IosAppTarget } {
+  const preferred = schemes.find((candidate) => candidate.toLowerCase() === projectName.toLowerCase())
+  const candidates = preferred
+    ? [preferred, ...schemes.filter((candidate) => candidate !== preferred)]
+    : schemes
+  const inspected: string[] = []
+
+  for (const scheme of candidates) {
+    const settings = runRequired(
+      `Inspect native iOS app target for scheme ${scheme}`,
+      'xcodebuild',
+      [
+        '-showBuildSettings',
+        '-workspace',
+        workspacePath,
+        '-scheme',
+        scheme,
+        '-configuration',
+        'Release',
+        '-sdk',
+        'iphonesimulator',
+        '-destination',
+        `id=${simulatorId}`,
+        '-derivedDataPath',
+        derivedData,
+      ],
+      projectRoot,
+    )
+    const appTargets = iosAppTargetsFromBuildSettings(settings)
+    if (appTargets.length === 1) return { scheme, target: appTargets[0] as IosAppTarget }
+    inspected.push(`${scheme}: ${appTargets.length} simulator app targets`)
+  }
+
+  throw new Error(
+    `No Xcode scheme produced one iOS simulator app target. Schemes inspected: ${inspected.join('; ') || 'none'}.`,
+  )
 }
 
 function findIosAppBundle(derivedData: string): string {
@@ -135,8 +210,14 @@ function findIosAppBundle(derivedData: string): string {
       return
     }
     for (const entry of entries) {
-      if (!entry.isDirectory()) continue
       const path = join(directory, entry.name)
+      let isDirectory = false
+      try {
+        isDirectory = statSync(path).isDirectory()
+      } catch {
+        continue
+      }
+      if (!isDirectory) continue
       if (entry.name.endsWith('.app')) {
         if (!entry.name.endsWith('Tests.app')) appBundles.push(path)
       } else {
@@ -147,8 +228,16 @@ function findIosAppBundle(derivedData: string): string {
 
   visit(productsRoot)
   if (appBundles.length !== 1) {
+    let products = 'missing'
+    try {
+      products = readdirSync(productsRoot, { withFileTypes: true })
+        .map((entry) => `${entry.isDirectory() ? 'directory' : entry.isSymbolicLink() ? 'symlink' : 'file'}:${entry.name}`)
+        .join(', ') || 'empty'
+    } catch {
+      // Keep the missing directory in the diagnostic.
+    }
     throw new Error(
-      `Expected one generated iOS simulator app under ${productsRoot}, found ${appBundles.length}: ${appBundles.join(', ') || 'none'}.`,
+      `Expected one generated iOS simulator app under ${productsRoot}, found ${appBundles.length}: ${appBundles.join(', ') || 'none'}. Products: ${products}.`,
     )
   }
   return appBundles[0] ?? ''
@@ -322,11 +411,19 @@ async function runExpoIosSimulator(): Promise<void> {
     const schemes = (xcode.workspace?.schemes ?? xcode.project?.schemes ?? []).filter(
       (candidate) => !candidate.startsWith('Pods-') && !/tests?$/i.test(candidate),
     )
-    const scheme =
-      schemes.find((candidate) => candidate.toLowerCase() === projectName.toLowerCase()) ?? schemes[0]
-    if (!scheme) throw new Error(`No Xcode app build scheme was generated. Available schemes: ${schemes.join(', ')}`)
-
     const derivedData = join(projectRoot, '.ci-derived-data')
+    const appTarget = findIosAppTarget(
+      workspacePath,
+      derivedData,
+      schemes,
+      projectName,
+      simulatorId,
+      projectRoot,
+    )
+    const scheme = appTarget.scheme
+    console.log(
+      `[native] Selected Xcode scheme ${scheme}, app target ${appTarget.target.targetName}: ${appTarget.target.fullProductName}`,
+    )
     runRequired(
       'Build the native iOS simulator app',
       'xcodebuild',
@@ -351,7 +448,8 @@ async function runExpoIosSimulator(): Promise<void> {
       BUILD_TIMEOUT_MS,
     )
 
-    const appPath = findIosAppBundle(derivedData)
+    const expectedAppPath = join(appTarget.target.targetBuildDir, appTarget.target.fullProductName)
+    const appPath = existsSync(expectedAppPath) ? expectedAppPath : findIosAppBundle(derivedData)
     const bundleId = iosBundleIdentifier(projectPath)
     runRequired('Install the native app in the simulator', 'xcrun', ['simctl', 'install', simulatorId, appPath], projectRoot, 120_000)
     const launchOutput = runRequired(
@@ -425,6 +523,7 @@ async function runTauriLinuxDesktop(): Promise<void> {
       ['run', 'tauri', '--', 'build', '--no-bundle'],
       projectRoot,
       BUILD_TIMEOUT_MS,
+      { CI: 'true' },
     )
 
     const executable = findTauriBinary(join(projectRoot, 'src-tauri', 'target', 'release'))
