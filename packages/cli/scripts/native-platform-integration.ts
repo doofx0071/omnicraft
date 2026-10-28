@@ -13,7 +13,8 @@ import { saveManifest } from '../src/add.js'
 import type { Answers } from '../src/types.js'
 
 const PREPARATION_TIMEOUT_MS = 8 * 60 * 1000
-const BUILD_TIMEOUT_MS = 25 * 60 * 1000
+const EXPO_BUILD_TIMEOUT_MS = 35 * 60 * 1000
+const TAURI_BUILD_TIMEOUT_MS = 25 * 60 * 1000
 const MAX_OUTPUT_BYTES = 64 * 1024 * 1024
 
 function tail(value: string, length = 12_000): string {
@@ -23,7 +24,7 @@ function tail(value: string, length = 12_000): string {
 function failureDetails(value: string): string {
   const lines = value.split(/\r?\n/)
   const diagnosticIndices = lines.flatMap((line, index) =>
-    /(?:^|\s)(?:fatal\s+)?error:|error generated\b|The following build commands failed|\*\* BUILD FAILED \*\*|Command .* failed/i.test(line)
+    /(?:^|\s)(?:fatal\s+)?error:|error generated\b|The following build commands failed|\*\* BUILD FAILED \*\*|Command .* failed|timed out|ETIMEDOUT/i.test(line)
       ? [index]
       : [],
   )
@@ -78,6 +79,47 @@ function runRequired(
   const output = redact(result.output)
   if (!result.ok) {
     throw new Error(`${label} failed (exit ${result.exitCode ?? 'unknown'}):\n${failureDetails(output)}`)
+  }
+  console.log(`[native] completed: ${label}`)
+  return output
+}
+
+async function runRequiredAsync(
+  label: string,
+  command: string,
+  args: string[],
+  cwd: string,
+  timeoutMs: number,
+  environment: NodeJS.ProcessEnv = {},
+): Promise<string> {
+  console.log(`[native] ${label}`)
+  const child = startCommand(command, args, cwd, {
+    env: isolatedEnvironment(environment),
+    maxOutputBytes: MAX_OUTPUT_BYTES,
+  })
+  let timedOut = false
+  let timeoutTimer: ReturnType<typeof setTimeout> | undefined
+  const timeoutResult = new Promise<{ ok: boolean; output: string; exitCode: number | null }>((resolve) => {
+    timeoutTimer = setTimeout(async () => {
+      timedOut = true
+      try {
+        await child.stop(5_000)
+      } catch {
+        // Keep the timeout report even if the operating system rejects a stop signal.
+      }
+      resolve({
+        ok: false,
+        output: `Timed out after ${timeoutMs}ms.\n${child.output}`,
+        exitCode: null,
+      })
+    }, timeoutMs)
+  })
+  const result = await Promise.race([child.exited, timeoutResult])
+  if (timeoutTimer) clearTimeout(timeoutTimer)
+  const output = redact(result.output)
+  if (!result.ok) {
+    const reason = timedOut ? `timed out after ${timeoutMs}ms` : `failed (exit ${result.exitCode ?? 'unknown'})`
+    throw new Error(`${label} ${reason}:\n${failureDetails(output)}`)
   }
   console.log(`[native] completed: ${label}`)
   return output
@@ -204,41 +246,38 @@ function findIosAppTarget(
   simulatorId: string,
   projectRoot: string,
 ): { scheme: string; target: IosAppTarget } {
-  const preferred = schemes.find((candidate) => candidate.toLowerCase() === projectName.toLowerCase())
-  const candidates = preferred
-    ? [preferred, ...schemes.filter((candidate) => candidate !== preferred)]
-    : schemes
-  const inspected: string[] = []
-
-  for (const scheme of candidates) {
-    const settings = runRequired(
-      `Inspect native iOS app target for scheme ${scheme}`,
-      'xcodebuild',
-      [
-        '-showBuildSettings',
-        '-workspace',
-        workspacePath,
-        '-scheme',
-        scheme,
-        '-configuration',
-        'Release',
-        '-sdk',
-        'iphonesimulator',
-        '-destination',
-        `id=${simulatorId}`,
-        '-derivedDataPath',
-        derivedData,
-      ],
-      projectRoot,
-    )
-    const appTargets = iosAppTargetsFromBuildSettings(settings)
-    if (appTargets.length === 1) return { scheme, target: appTargets[0] as IosAppTarget }
-    inspected.push(`${scheme}: ${appTargets.length} simulator app targets`)
+  const normalizeSchemeName = (value: string) => value.replace(/[^a-z0-9]/gi, '').toLowerCase()
+  const normalizedProjectName = normalizeSchemeName(projectName)
+  const scheme = schemes.find((candidate) => normalizeSchemeName(candidate) === normalizedProjectName)
+  if (!scheme) {
+    throw new Error(`No generated Xcode scheme matches project ${projectName}. Schemes: ${schemes.join(', ')}.`)
   }
 
-  throw new Error(
-    `No Xcode scheme produced one iOS simulator app target. Schemes inspected: ${inspected.join('; ') || 'none'}.`,
+  const settings = runRequired(
+    `Inspect native iOS app target for scheme ${scheme}`,
+    'xcodebuild',
+    [
+      '-showBuildSettings',
+      '-workspace',
+      workspacePath,
+      '-scheme',
+      scheme,
+      '-configuration',
+      'Debug',
+      '-sdk',
+      'iphonesimulator',
+      '-destination',
+      `id=${simulatorId}`,
+      '-derivedDataPath',
+      derivedData,
+    ],
+    projectRoot,
   )
+  const appTargets = iosAppTargetsFromBuildSettings(settings)
+  if (appTargets.length !== 1) {
+    throw new Error(`Expected one simulator app target for scheme ${scheme}, found ${appTargets.length}.`)
+  }
+  return { scheme, target: appTargets[0] as IosAppTarget }
 }
 
 function findIosAppBundle(derivedData: string): string {
@@ -468,7 +507,7 @@ async function runExpoIosSimulator(): Promise<void> {
     console.log(
       `[native] Selected Xcode scheme ${scheme}, app target ${appTarget.target.targetName}: ${appTarget.target.fullProductName}`,
     )
-    runRequired(
+    await runRequiredAsync(
       'Build the native iOS simulator app',
       'xcodebuild',
       [
@@ -478,7 +517,7 @@ async function runExpoIosSimulator(): Promise<void> {
         '-scheme',
         scheme,
         '-configuration',
-        'Release',
+        'Debug',
         '-sdk',
         'iphonesimulator',
         '-destination',
@@ -489,7 +528,7 @@ async function runExpoIosSimulator(): Promise<void> {
         'build',
       ],
       projectRoot,
-      BUILD_TIMEOUT_MS,
+      EXPO_BUILD_TIMEOUT_MS,
     )
 
     const expectedAppPath = join(appTarget.target.targetBuildDir, appTarget.target.fullProductName)
@@ -519,10 +558,10 @@ async function runExpoIosSimulator(): Promise<void> {
     runRequired('Capture the running simulator screen', 'xcrun', ['simctl', 'io', simulatorId, 'screenshot', screenshotPath], projectRoot, 60_000)
     requirePath(screenshotPath, 'iOS simulator screenshot')
     if (statSync(screenshotPath).size < 1024) throw new Error('The iOS simulator screenshot was unexpectedly empty.')
-    console.log(`[native] Expo ${simulator.name}: native Release build installed and launched (${bundleId}).`)
+    console.log(`[native] Expo ${simulator.name}: native Debug build installed and launched (${bundleId}).`)
   } finally {
     if (simulatorId) runCommand('xcrun', ['simctl', 'shutdown', simulatorId], projectRoot, { timeoutMs: 30_000 })
-    rmSync(parent, { recursive: true, force: true })
+    rmSync(parent, { recursive: true, force: true, maxRetries: 10, retryDelay: 1_000 })
   }
 }
 
@@ -566,7 +605,7 @@ async function runTauriLinuxDesktop(): Promise<void> {
       'npm',
       ['run', 'tauri', '--', 'build', '--no-bundle'],
       projectRoot,
-      BUILD_TIMEOUT_MS,
+      TAURI_BUILD_TIMEOUT_MS,
       { CI: 'true' },
     )
 
@@ -598,7 +637,7 @@ async function runTauriLinuxDesktop(): Promise<void> {
   } finally {
     if (appProcess) await appProcess.stop(10_000)
     if (displayProcess) await displayProcess.stop(10_000)
-    rmSync(parent, { recursive: true, force: true })
+    rmSync(parent, { recursive: true, force: true, maxRetries: 10, retryDelay: 1_000 })
   }
 }
 
