@@ -69,6 +69,7 @@ export const MODULE_RUNTIME_SCENARIOS = [
   'add-testing-react-vite-ts',
   'shadcn-react-vite-ts-frontend-only',
 ] as const
+export const NATIVE_PLATFORM_SCENARIOS = ['expo-ios-simulator', 'tauri-linux-desktop'] as const
 
 export const INTEGRATION_TARGETS = {
   'node-runtime': {
@@ -101,6 +102,12 @@ export const INTEGRATION_TARGETS = {
     workflowJob: 'module-runtime-integration',
     workflowCommand: 'npm run test:integration:modules --workspace=create-omnicraft -- --scenario',
     scenarios: MODULE_RUNTIME_SCENARIOS,
+  },
+  'native-platform': {
+    script: 'scripts/native-platform-integration.ts',
+    workflowJob: 'native-platform-integration',
+    workflowCommand: 'npm run test:integration:native --workspace=create-omnicraft -- --scenario',
+    scenarios: NATIVE_PLATFORM_SCENARIOS,
   },
   'node-express-drizzle': {
     script: 'scripts/db-integration.ts',

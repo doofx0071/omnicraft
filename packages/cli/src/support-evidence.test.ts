@@ -6,6 +6,7 @@ import {
   integrationScenarios,
   MODULE_RUNTIME_SCENARIOS,
   NEXTJS_DATABASE_SCENARIOS,
+  NATIVE_PLATFORM_SCENARIOS,
   NODE_RUNTIME_SCENARIOS,
   SUPPORTED_CAPABILITIES,
   type SupportedCapability,
@@ -123,5 +124,10 @@ describe('support matrix evidence', () => {
     })
 
     expect(() => validateSupportEvidence(capabilities)).toThrow(/generated-project extras/)
+  })
+
+  it('registers exact Expo simulator and Tauri desktop scenarios', () => {
+    expect(integrationScenarios('native-platform')).toEqual(NATIVE_PLATFORM_SCENARIOS)
+    expect(NATIVE_PLATFORM_SCENARIOS).toEqual(['expo-ios-simulator', 'tauri-linux-desktop'])
   })
 })

@@ -8,9 +8,9 @@ PostgreSQL and MySQL. The current release matrix also runs FastAPI + SQLite/Post
 SQLite/PostgreSQL/MySQL. Each result applies only to the exact generated combinations exercised;
 source checks and smoke scaffolding do not prove that every generated project installs or runs.
 
-The 2026-10-28 runtime-evidence branch passed `npx vitest run` (**132 tests in 14 files**), `npx tsc --noEmit`,
-`npx tsup`, and `npm run check:support-matrix` (23 Supported rows). The smoke command generated all
-17 listed paths.
+The 2026-10-28 runtime-evidence branch passed `npx vitest run` (**142 tests in 14 files**),
+`npx tsc --noEmit`, `npx tsup`, and `npm run check:support-matrix` (34 Supported rows). The smoke
+command generated all 17 listed paths.
 Generated-project integration commands also passed locally:
 
 ```text
@@ -67,10 +67,13 @@ PostgreSQL/SQLite, the Laravel SQLite overlay, React frontend-only, Vue/Svelte c
 Next.js adapters, and shadcn's React/Vite overlay. This is a selected set, not the full runtime ×
 framework × ORM × database product.
 
-Expo and Tauri require platform-specific hosted checks; see the support matrix for their current
-status and limits. `omnicraft add testing` is Supported only for React/Vite TypeScript frontend-only:
-the hosted generated-project scenario installs the module, runs its sample assertion, builds and boots
-the app, and checks bundle and missing-asset responses.
+Hosted native checks now generate Expo and Tauri projects through the production commands, apply the
+production layers, install dependencies, and build and launch the generated app on an iOS simulator and
+Linux desktop respectively. These checks cover only iPhone simulator and Ubuntu desktop targets; they do
+not establish Android, physical iOS device, macOS, or Windows native support. The support matrix records
+the exact hosted run and keeps the broader native rows provisional. `omnicraft add testing` is Supported
+only for React/Vite TypeScript frontend-only: the hosted generated-project scenario installs the module,
+runs its sample assertion, builds and boots the app, and checks bundle and missing-asset responses.
 
 ### Level 2 — Scaffold smoke (`scripts/smoke-e2e.ts`)
 
@@ -100,8 +103,9 @@ case. Examples include:
 - Laravel: install through Composer, migrate/seed, boot Artisan, and exercise API/database behavior.
 - Frontend-only React/Vite: database operations do not apply; install and build the generated app, boot
   its preview server, load the emitted JavaScript bundle, and verify that a missing asset fails.
-- Native apps: record platform-specific prerequisites and test the native build/launch separately from
-  frontend-only checks.
+- Native apps: record platform-specific prerequisites and test the native build/launch on the named
+  target. A simulator or desktop launch applies only to that platform, and database operations are not
+  required for native scaffolds that do not include a database.
 
 Record evidence for the exact combination in the [support matrix](../templates/stack-support-matrix.md).
 Do not infer one database/framework/frontend combination from a successful test of another.
@@ -146,20 +150,25 @@ The current workflow:
    The shadcn case runs the production init and component install commands, installs, builds, boots, and
    checks the generated app. Both scenarios passed [run #40618652654](https://github.com/doofx0071/omnicraft/actions/runs/40618652654/job/122588485044)
    on commit `b28f5c48fd22820461a76defd3d099def5dd594f`; only these exact module paths are Supported.
-10. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
+10. Runs `native-platform-integration` for Expo on `macos-26` and Tauri on `ubuntu-24.04`. It generates
+   each project through its production command, applies production layers, installs dependencies,
+   builds a native app, and verifies launch in an iPhone simulator or visible Linux desktop window.
+   Both targets passed run [#40699127397](https://github.com/doofx0071/omnicraft/actions/runs/40699127397)
+   on head `5fff8ad638b203affc168fc948169d75b7cfc719`; the support matrix records the exact limits.
+11. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
    generated dependencies, runs Alembic migrations, boots Uvicorn, and checks SQLite and PostgreSQL
    CRUD and failure responses. PostgreSQL runs in an isolated Testcontainers instance.
-11. Runs hosted Ubuntu `php-laravel-integration` for SQLite/PostgreSQL/MySQL. The SQLite case uses the
+12. Runs hosted Ubuntu `php-laravel-integration` for SQLite/PostgreSQL/MySQL. The SQLite case uses the
    pinned PHP/Composer test image without a database service; networked databases use isolated Compose
    services. Each case installs Composer dependencies, checks platform requirements, migrates, and
    runs database/API feature tests.
-12. Runs `support-evidence` to resolve every exact Supported flag combination through available values,
+13. Runs `support-evidence` to resolve every exact Supported flag combination through available values,
    prompt/flag and answer compatibility, production composition, and module guards; it also checks the
    rendered matrix label, matching scenario, job command, and release aggregate dependency.
    `supported-matrix` fails unless the OS/Node matrix, runtime jobs, support evidence, and package
    artifact all pass. It runs for PRs, main pushes, nightly, and version-tag pushes;
    `workflow_dispatch` supports an explicit pre-release run. The scheduled run uses GitHub-hosted jobs.
-13. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
+14. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
    the release job publishes to npm using OIDC, creates the GitHub Release from the version's changelog
    section, and updates the release snapshots in `ROADMAP.md` and `docs/architecture/system-overview.md`.
    The self-hosted Windows job runs only for main-branch pushes and same-repository pull requests.
@@ -175,7 +184,8 @@ pull requests, release tags, and scheduled runs use hosted runners only.
 - **Supported** requires Level 3 evidence for the exact combination and a passing hosted CI result
   recorded on a tested commit; a smoke scaffold, local result, or typecheck alone is insufficient.
 - **Scaffold-verified** means the exact combination has an engine fixture or smoke entry but lacks full
-  Level 3 evidence.
+  Level 3 evidence for its documented scope. A hosted native check on one simulator or desktop target
+  does not establish support on other platforms.
 - **Selectable — unverified** means the registry and layers expose the choice but no exact fixture/smoke
   or passing hosted runtime result covers it.
 - **Rejected — unsupported combination** means preflight rejects the combination, or the prompt omits
