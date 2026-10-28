@@ -1,4 +1,16 @@
-import type { Database } from './types.js'
+import { AVAILABLE, type ModuleId } from './capabilities.js'
+import {
+  BACKEND_FRAMEWORK_LABELS,
+  DATABASE_LABELS,
+  FRONTEND_LABELS,
+  ORM_LABELS,
+  type BackendFramework,
+  type BackendRuntime,
+  type Database,
+  type Frontend,
+  type Language,
+  type Orm,
+} from './types.js'
 
 export interface NodeRuntimeScenario {
   id: string
@@ -52,6 +64,12 @@ export const NODE_RUNTIME_SCENARIOS = [
 
 export const NEXTJS_DATABASE_SCENARIOS = ['sqlite', 'postgres', 'mysql'] as const satisfies readonly Extract<Database, 'sqlite' | 'postgres' | 'mysql'>[]
 export const FRONTEND_RUNTIME_SCENARIOS = ['react-js-frontend-only'] as const
+export const DOCKER_MODULE_SCENARIOS = ['postgres', 'mysql'] as const satisfies readonly Extract<Database, 'postgres' | 'mysql'>[]
+export const MODULE_RUNTIME_SCENARIOS = [
+  'add-testing-react-vite-ts',
+  'shadcn-react-vite-ts-frontend-only',
+] as const
+export const NATIVE_PLATFORM_SCENARIOS = ['expo-ios-simulator', 'tauri-linux-desktop'] as const
 
 export const INTEGRATION_TARGETS = {
   'node-runtime': {
@@ -72,6 +90,24 @@ export const INTEGRATION_TARGETS = {
     workflowJob: 'frontend-runtime-integration',
     workflowCommand: 'npm run test:integration:frontend --workspace=create-omnicraft',
     scenarios: FRONTEND_RUNTIME_SCENARIOS,
+  },
+  'docker-module': {
+    script: 'scripts/docker-module-integration.ts',
+    workflowJob: 'docker-module-integration',
+    workflowCommand: 'npm run test:integration:docker-module --workspace=create-omnicraft -- --database',
+    scenarios: DOCKER_MODULE_SCENARIOS,
+  },
+  'module-runtime': {
+    script: 'scripts/module-runtime-integration.ts',
+    workflowJob: 'module-runtime-integration',
+    workflowCommand: 'npm run test:integration:modules --workspace=create-omnicraft -- --scenario',
+    scenarios: MODULE_RUNTIME_SCENARIOS,
+  },
+  'native-platform': {
+    script: 'scripts/native-platform-integration.ts',
+    workflowJob: 'native-platform-integration',
+    workflowCommand: 'npm run test:integration:native --workspace=create-omnicraft -- --scenario',
+    scenarios: NATIVE_PLATFORM_SCENARIOS,
   },
   'node-express-drizzle': {
     script: 'scripts/db-integration.ts',
@@ -103,204 +139,470 @@ export const INTEGRATION_TARGETS = {
 
 export type IntegrationTargetId = keyof typeof INTEGRATION_TARGETS
 
-interface SupportedCapability {
+export interface SupportedCombination {
+  flags: {
+    platform: 'web'
+    lang: Language
+    frontend: Frontend
+    fullStack: boolean
+    runtime?: BackendRuntime
+    backend?: BackendFramework
+    orm?: Orm
+    db?: Database
+    extras: readonly (typeof AVAILABLE.extras)[number][]
+  }
+  module?: ModuleId
+}
+
+export type SupportMatrixFormat =
+  | 'frontend-app'
+  | 'frontend-client-api'
+  | 'frontend-only'
+  | 'nextjs-integrated'
+  | 'node-backend'
+  | 'python-backend'
+  | 'php-backend'
+  | 'auth-module'
+  | 'docker-module'
+  | 'testing-module'
+  | 'shadcn-extra'
+
+export interface SupportedCapability {
   id: string
-  matrixRowPrefix: string
+  matrixFormat: SupportMatrixFormat
   target: IntegrationTargetId
   scenarios: readonly string[]
+  combinations: readonly SupportedCombination[]
+}
+
+type SupportedExtras = SupportedCombination['flags']['extras']
+
+function webStack(
+  frontend: Frontend,
+  language: Language,
+  runtime: BackendRuntime,
+  backend: BackendFramework,
+  orm: Orm | undefined,
+  database: Database,
+  module?: ModuleId,
+): SupportedCombination {
+  return {
+    flags: {
+      platform: 'web',
+      lang: language,
+      frontend,
+      fullStack: true,
+      runtime,
+      backend,
+      ...(orm ? { orm } : {}),
+      db: database,
+      extras: [],
+    },
+    ...(module ? { module } : {}),
+  }
+}
+
+function nodeStack(
+  backend: 'express' | 'fastify' | 'hono',
+  orm: Orm,
+  database: Database,
+  frontend: Frontend = 'react',
+  language: Language = 'typescript',
+  module?: ModuleId,
+): SupportedCombination {
+  return webStack(frontend, language, 'node', backend, orm, database, module)
+}
+
+function pythonStack(database: Database): SupportedCombination {
+  return webStack('react', 'typescript', 'python', 'fastapi', undefined, database)
+}
+
+function phpStack(database: Database): SupportedCombination {
+  return webStack('react', 'typescript', 'php', 'laravel', undefined, database)
+}
+
+function nextjsStack(database: Database): SupportedCombination {
+  return {
+    flags: {
+      platform: 'web',
+      lang: 'typescript',
+      frontend: 'nextjs',
+      fullStack: true,
+      db: database,
+      extras: ['tailwind', 'eslint'],
+    },
+  }
+}
+
+function frontendOnlyStack(
+  language: Language,
+  extras: SupportedExtras = [],
+  module?: ModuleId,
+): SupportedCombination {
+  return {
+    flags: {
+      platform: 'web',
+      lang: language,
+      frontend: 'react',
+      fullStack: false,
+      extras: [...extras],
+    },
+    ...(module ? { module } : {}),
+  }
+}
+
+function requiredDatabase(combination: SupportedCombination): Database {
+  const database = combination.flags.db
+  if (!database) throw new Error('A Supported matrix combination must specify its database.')
+  return database as Database
+}
+
+function displayOrm(orm: string | undefined): string {
+  if (!orm) throw new Error('A Supported Node combination must specify its ORM/data access.')
+  return orm === 'none' ? 'Raw SQL (`none`)' : ORM_LABELS[orm as Orm]
+}
+
+function requireOneCombination(capability: SupportedCapability): SupportedCombination {
+  if (capability.combinations.length !== 1) {
+    throw new Error(`Matrix format "${capability.matrixFormat}" requires one exact combination.`)
+  }
+  return capability.combinations[0] as SupportedCombination
+}
+
+/** Renders the exact matrix label from the typed combination registered with its evidence. */
+export function registeredMatrixRowPrefix(capability: SupportedCapability): string {
+  const combinations = capability.combinations
+  if (combinations.length === 0) throw new Error('A Supported matrix row must register a combination.')
+  const first = combinations[0] as SupportedCombination
+  const frontend = first.flags.frontend as Frontend
+  const language = first.flags.lang as Language
+  const frontendLabel =
+    language === 'javascript'
+      ? `${FRONTEND_LABELS[frontend]} + Vite JavaScript`
+      : `${FRONTEND_LABELS[frontend]} + Vite + TypeScript`
+  const database = (item: SupportedCombination) => DATABASE_LABELS[requiredDatabase(item)]
+  const oneDatabase = () => database(requireOneCombination(capability))
+  const databaseList = (separator = ', ') => combinations.map(database).join(separator)
+  const databases = combinations.flatMap((combination) =>
+    combination.flags.db ? [combination.flags.db] : [],
+  )
+  if (databases.length > 0 && new Set(databases).size !== databases.length) {
+    throw new Error(`Supported row "${capability.id}" repeats a database combination.`)
+  }
+
+  let label: string
+  switch (capability.matrixFormat) {
+    case 'frontend-app': {
+      const flags = requireOneCombination(capability).flags
+      label = `${frontendLabel} + ${BACKEND_FRAMEWORK_LABELS[flags.backend as BackendFramework]} + ${displayOrm(flags.orm)} + ${oneDatabase()}`
+      break
+    }
+    case 'frontend-client-api': {
+      const flags = requireOneCombination(capability).flags
+      label = `${frontendLabel} + ${BACKEND_FRAMEWORK_LABELS[flags.backend as BackendFramework]} + ${displayOrm(flags.orm)} + ${oneDatabase()}${language === 'javascript' ? ' separate API' : ''}`
+      break
+    }
+    case 'frontend-only':
+      label = `${frontendLabel}, frontend-only`
+      break
+    case 'nextjs-integrated':
+      label =
+        oneDatabase() === 'MySQL'
+          ? 'Next.js integrated full-stack + MySQL'
+          : `Next.js integrated full-stack + raw SQL + ${oneDatabase()}`
+      break
+    case 'node-backend': {
+      const flags = first.flags
+      if (
+        combinations.some(
+          (combination) =>
+            combination.flags.backend !== flags.backend || combination.flags.orm !== flags.orm,
+        )
+      ) {
+        throw new Error(`Node backend row "${capability.id}" mixes frameworks or ORMs.`)
+      }
+      label = `${BACKEND_FRAMEWORK_LABELS[flags.backend as BackendFramework]} | ${displayOrm(flags.orm)} | ${databaseList()}`
+      break
+    }
+    case 'python-backend':
+      label = `FastAPI | SQLAlchemy 2 async + Alembic | ${oneDatabase()}`
+      break
+    case 'php-backend':
+      label = `Laravel 12 | Eloquent | ${oneDatabase()}`
+      break
+    case 'auth-module':
+      label = `\`omnicraft add auth\` — Express + Drizzle + ${databaseList('/')}`
+      break
+    case 'docker-module':
+      label = `\`omnicraft add docker\` — Express + Drizzle + ${oneDatabase()} separate API`
+      break
+    case 'testing-module':
+      label = '`omnicraft add testing` — React/Vite TypeScript frontend-only'
+      break
+    case 'shadcn-extra':
+      label = 'shadcn/ui — React/Vite TypeScript frontend-only'
+      break
+  }
+  return `| ${label} | **Supported** |`
 }
 
 /**
- * Each Supported matrix row names the exact runtime test target and scenario
- * that must pass before a release can ship.
+ * Each Supported row records the exact flag-level stack/module combination,
+ * the generated-project scenario, and how to render its matrix label. The
+ * consistency checker resolves these flags through the current CLI rules.
  */
 export const SUPPORTED_CAPABILITIES = [
   {
     id: 'frontend-react-express-drizzle-postgres',
-    matrixRowPrefix:
-      '| React + Vite + TypeScript + Express + Drizzle + PostgreSQL | **Supported** |',
+    matrixFormat: 'frontend-app',
     target: 'node-express-drizzle',
     scenarios: ['postgres'],
+    combinations: [nodeStack('express', 'drizzle', 'postgres')],
   },
   {
     id: 'express-drizzle-postgres',
-    matrixRowPrefix: '| Express | Drizzle | PostgreSQL | **Supported** |',
+    matrixFormat: 'node-backend',
     target: 'node-express-drizzle',
     scenarios: ['postgres'],
+    combinations: [nodeStack('express', 'drizzle', 'postgres')],
   },
   {
     id: 'express-drizzle-sqlite',
-    matrixRowPrefix: '| Express | Drizzle | SQLite | **Supported** |',
+    matrixFormat: 'node-backend',
     target: 'node-express-drizzle',
     scenarios: ['sqlite'],
+    combinations: [nodeStack('express', 'drizzle', 'sqlite')],
   },
   {
     id: 'express-drizzle-mysql',
-    matrixRowPrefix: '| Express | Drizzle | MySQL | **Supported** |',
+    matrixFormat: 'node-backend',
     target: 'node-express-drizzle',
     scenarios: ['mysql'],
+    combinations: [nodeStack('express', 'drizzle', 'mysql')],
   },
   {
     id: 'express-prisma-postgres',
-    matrixRowPrefix: '| Express | Prisma | PostgreSQL | **Supported** |',
+    matrixFormat: 'node-backend',
     target: 'node-runtime',
     scenarios: ['express-prisma-postgres'],
+    combinations: [nodeStack('express', 'prisma', 'postgres')],
   },
   {
     id: 'express-raw-sqlite',
-    matrixRowPrefix: '| Express | Raw SQL (`none`) | SQLite | **Supported** |',
+    matrixFormat: 'node-backend',
     target: 'node-runtime',
     scenarios: ['express-raw-sqlite'],
+    combinations: [nodeStack('express', 'none', 'sqlite')],
   },
   {
     id: 'express-raw-postgres',
-    matrixRowPrefix: '| Express | Raw SQL (`none`) | PostgreSQL | **Supported** |',
+    matrixFormat: 'node-backend',
     target: 'node-runtime',
     scenarios: ['express-raw-postgres'],
+    combinations: [nodeStack('express', 'none', 'postgres')],
   },
   {
     id: 'express-raw-mysql',
-    matrixRowPrefix: '| Express | Raw SQL (`none`) | MySQL | **Supported** |',
+    matrixFormat: 'node-backend',
     target: 'node-runtime',
     scenarios: ['express-raw-mysql'],
+    combinations: [nodeStack('express', 'none', 'mysql')],
   },
   {
     id: 'fastapi-sqlalchemy-postgres',
-    matrixRowPrefix: '| FastAPI | SQLAlchemy 2 async + Alembic | PostgreSQL | **Supported** |',
+    matrixFormat: 'python-backend',
     target: 'python-fastapi',
     scenarios: ['postgres'],
+    combinations: [pythonStack('postgres')],
   },
   {
     id: 'fastify-drizzle-postgres',
-    matrixRowPrefix: '| Fastify | Drizzle | PostgreSQL | **Supported** |',
+    matrixFormat: 'node-backend',
     target: 'node-runtime',
     scenarios: ['fastify-drizzle-postgres'],
+    combinations: [nodeStack('fastify', 'drizzle', 'postgres')],
   },
   {
     id: 'fastify-drizzle-sqlite',
-    matrixRowPrefix: '| Fastify | Drizzle | SQLite | **Supported** |',
+    matrixFormat: 'node-backend',
     target: 'node-runtime',
     scenarios: ['fastify-drizzle-sqlite'],
+    combinations: [nodeStack('fastify', 'drizzle', 'sqlite')],
   },
   {
     id: 'fastify-drizzle-mysql',
-    matrixRowPrefix: '| Fastify | Drizzle | MySQL | **Supported** |',
+    matrixFormat: 'node-backend',
     target: 'node-runtime',
     scenarios: ['fastify-drizzle-mysql'],
+    combinations: [nodeStack('fastify', 'drizzle', 'mysql')],
   },
   {
     id: 'fastify-prisma-postgres',
-    matrixRowPrefix: '| Fastify | Prisma | PostgreSQL | **Supported** |',
+    matrixFormat: 'node-backend',
     target: 'node-runtime',
     scenarios: ['fastify-prisma-postgres'],
+    combinations: [nodeStack('fastify', 'prisma', 'postgres')],
   },
   {
     id: 'fastify-raw-sql',
-    matrixRowPrefix: '| Fastify | Raw SQL (`none`) | PostgreSQL, SQLite, MySQL | **Supported** |',
+    matrixFormat: 'node-backend',
     target: 'node-runtime',
     scenarios: ['fastify-raw-postgres', 'fastify-raw-sqlite', 'fastify-raw-mysql'],
+    combinations: [
+      nodeStack('fastify', 'none', 'postgres'),
+      nodeStack('fastify', 'none', 'sqlite'),
+      nodeStack('fastify', 'none', 'mysql'),
+    ],
   },
   {
     id: 'hono-drizzle-postgres-sqlite',
-    matrixRowPrefix: '| Hono | Drizzle | PostgreSQL, SQLite | **Supported** |',
+    matrixFormat: 'node-backend',
     target: 'node-runtime',
     scenarios: ['hono-drizzle-postgres', 'hono-drizzle-sqlite'],
+    combinations: [
+      nodeStack('hono', 'drizzle', 'postgres'),
+      nodeStack('hono', 'drizzle', 'sqlite'),
+    ],
   },
   {
     id: 'hono-drizzle-mysql',
-    matrixRowPrefix: '| Hono | Drizzle | MySQL | **Supported** |',
+    matrixFormat: 'node-backend',
     target: 'node-runtime',
     scenarios: ['hono-drizzle-mysql'],
+    combinations: [nodeStack('hono', 'drizzle', 'mysql')],
   },
   {
     id: 'hono-raw-sql',
-    matrixRowPrefix: '| Hono | Raw SQL (`none`) | PostgreSQL, SQLite, MySQL | **Supported** |',
+    matrixFormat: 'node-backend',
     target: 'node-runtime',
     scenarios: ['hono-raw-postgres', 'hono-raw-sqlite', 'hono-raw-mysql'],
+    combinations: [
+      nodeStack('hono', 'none', 'postgres'),
+      nodeStack('hono', 'none', 'sqlite'),
+      nodeStack('hono', 'none', 'mysql'),
+    ],
   },
   {
     id: 'laravel-eloquent-postgres',
-    matrixRowPrefix: '| Laravel 12 | Eloquent | PostgreSQL | **Supported** |',
+    matrixFormat: 'php-backend',
     target: 'php-laravel',
     scenarios: ['postgres'],
+    combinations: [phpStack('postgres')],
   },
   {
     id: 'laravel-eloquent-mysql',
-    matrixRowPrefix: '| Laravel 12 | Eloquent | MySQL | **Supported** |',
+    matrixFormat: 'php-backend',
     target: 'php-laravel',
     scenarios: ['mysql'],
+    combinations: [phpStack('mysql')],
   },
   {
     id: 'fastapi-sqlalchemy-sqlite',
-    matrixRowPrefix: '| FastAPI | SQLAlchemy 2 async + Alembic | SQLite | **Supported** |',
+    matrixFormat: 'python-backend',
     target: 'python-fastapi',
     scenarios: ['sqlite'],
+    combinations: [pythonStack('sqlite')],
   },
   {
     id: 'laravel-eloquent-sqlite',
-    matrixRowPrefix: '| Laravel 12 | Eloquent | SQLite | **Supported** |',
+    matrixFormat: 'php-backend',
     target: 'php-laravel',
     scenarios: ['sqlite'],
+    combinations: [phpStack('sqlite')],
   },
   {
     id: 'auth-express-drizzle-sqlite',
-    matrixRowPrefix: '| `omnicraft add auth` — Express + Drizzle + SQLite | **Supported** |',
+    matrixFormat: 'auth-module',
     target: 'node-express-drizzle',
     scenarios: ['sqlite'],
+    combinations: [nodeStack('express', 'drizzle', 'sqlite', 'react', 'typescript', 'auth')],
   },
   {
     id: 'auth-express-drizzle-postgres-mysql',
-    matrixRowPrefix:
-      '| `omnicraft add auth` — Express + Drizzle + PostgreSQL/MySQL | **Supported** |',
+    matrixFormat: 'auth-module',
     target: 'node-express-drizzle',
     scenarios: ['postgres', 'mysql'],
+    combinations: [
+      nodeStack('express', 'drizzle', 'postgres', 'react', 'typescript', 'auth'),
+      nodeStack('express', 'drizzle', 'mysql', 'react', 'typescript', 'auth'),
+    ],
   },
   {
     id: 'frontend-vue-express-drizzle-sqlite',
-    matrixRowPrefix:
-      '| Vue + Vite + TypeScript + Express + Drizzle + SQLite | **Supported** |',
+    matrixFormat: 'frontend-client-api',
     target: 'node-runtime',
     scenarios: ['express-drizzle-sqlite-vue'],
+    combinations: [nodeStack('express', 'drizzle', 'sqlite', 'vue')],
   },
   {
     id: 'frontend-svelte-express-drizzle-sqlite',
-    matrixRowPrefix:
-      '| Svelte + Vite + TypeScript + Express + Drizzle + SQLite | **Supported** |',
+    matrixFormat: 'frontend-client-api',
     target: 'node-runtime',
     scenarios: ['express-drizzle-sqlite-svelte'],
+    combinations: [nodeStack('express', 'drizzle', 'sqlite', 'svelte')],
   },
   {
     id: 'frontend-react-js-express-drizzle-sqlite',
-    matrixRowPrefix:
-      '| React + Vite JavaScript + Express + Drizzle + SQLite separate API | **Supported** |',
+    matrixFormat: 'frontend-client-api',
     target: 'node-runtime',
     scenarios: ['express-drizzle-sqlite-react-js'],
+    combinations: [nodeStack('express', 'drizzle', 'sqlite', 'react', 'javascript')],
   },
   {
     id: 'frontend-react-js-frontend-only',
-    matrixRowPrefix: '| React + Vite JavaScript, frontend-only | **Supported** |',
+    matrixFormat: 'frontend-only',
     target: 'frontend-runtime',
     scenarios: ['react-js-frontend-only'],
+    combinations: [frontendOnlyStack('javascript')],
   },
   {
     id: 'nextjs-raw-sqlite',
-    matrixRowPrefix:
-      '| Next.js integrated full-stack + raw SQL + SQLite | **Supported** |',
+    matrixFormat: 'nextjs-integrated',
     target: 'nextjs-runtime',
     scenarios: ['sqlite'],
+    combinations: [nextjsStack('sqlite')],
   },
   {
     id: 'nextjs-raw-postgres',
-    matrixRowPrefix:
-      '| Next.js integrated full-stack + raw SQL + PostgreSQL | **Supported** |',
+    matrixFormat: 'nextjs-integrated',
     target: 'nextjs-runtime',
     scenarios: ['postgres'],
+    combinations: [nextjsStack('postgres')],
   },
   {
     id: 'nextjs-raw-mysql',
-    matrixRowPrefix: '| Next.js integrated full-stack + MySQL | **Supported** |',
+    matrixFormat: 'nextjs-integrated',
     target: 'nextjs-runtime',
     scenarios: ['mysql'],
+    combinations: [nextjsStack('mysql')],
+  },
+  {
+    id: 'docker-module-postgres',
+    matrixFormat: 'docker-module',
+    target: 'docker-module',
+    scenarios: ['postgres'],
+    combinations: [nodeStack('express', 'drizzle', 'postgres', 'react', 'typescript', 'docker')],
+  },
+  {
+    id: 'docker-module-mysql',
+    matrixFormat: 'docker-module',
+    target: 'docker-module',
+    scenarios: ['mysql'],
+    combinations: [nodeStack('express', 'drizzle', 'mysql', 'react', 'typescript', 'docker')],
+  },
+  {
+    id: 'testing-module-react-vite-ts-frontend-only',
+    matrixFormat: 'testing-module',
+    target: 'module-runtime',
+    scenarios: ['add-testing-react-vite-ts'],
+    combinations: [frontendOnlyStack('typescript', [], 'testing')],
+  },
+  {
+    id: 'shadcn-react-vite-ts-frontend-only',
+    matrixFormat: 'shadcn-extra',
+    target: 'module-runtime',
+    scenarios: ['shadcn-react-vite-ts-frontend-only'],
+    combinations: [frontendOnlyStack('typescript', ['tailwind', 'eslint', 'shadcn'])],
   },
 ] as const satisfies readonly SupportedCapability[]
 

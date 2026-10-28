@@ -135,6 +135,10 @@ describe('full-stack combos', () => {
       const clientPkg = readJson(join(dir, 'client', 'package.json'))
       expect(clientPkg.name).toBe('demo-app-client')
       expect(clientPkg.dependencies).toHaveProperty('react')
+      expect(clientPkg.devDependencies).toHaveProperty('@tailwindcss/vite')
+      expect(clientPkg.devDependencies).toHaveProperty('tailwindcss')
+      expect(existsSync(join(dir, 'client', 'src', 'package.json'))).toBe(false)
+      expect(rootPkg.devDependencies).not.toHaveProperty('@tailwindcss/vite')
       expect(readFileSync(join(dir, 'client', 'index.html'), 'utf8')).toContain(
         '<title>demo-app</title>',
       )
@@ -257,6 +261,9 @@ describe('frontend-only', () => {
     const pkg = readJson(join(dir, 'package.json'))
     expect(pkg.name).toBe('demo-app')
     expect(pkg.dependencies).toHaveProperty('react')
+    expect(pkg.devDependencies).toHaveProperty('@tailwindcss/vite')
+    expect(pkg.devDependencies).toHaveProperty('tailwindcss')
+    expect(existsSync(join(dir, 'src', 'package.json'))).toBe(false)
     expect(existsSync(join(dir, 'src', 'App.tsx'))).toBe(true)
     expect(existsSync(join(dir, 'docker-compose.yml'))).toBe(false)
     expect(existsSync(join(dir, 'client'))).toBe(false)
