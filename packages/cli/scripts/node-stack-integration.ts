@@ -101,8 +101,8 @@ function makeAnswers(projectRoot: string, scenario: NodeRuntimeScenario): Answer
     projectName: `omnicraft-${scenario.id}-test`,
     targetDir: projectRoot,
     projectType: 'web',
-    frontend: 'react',
-    language: 'typescript',
+    frontend: scenario.frontend ?? 'react',
+    language: scenario.language ?? 'typescript',
     fullStack: true,
     backendRuntime: 'node',
     backendFramework: scenario.framework,
@@ -307,8 +307,12 @@ async function runScenario(scenario: NodeRuntimeScenario): Promise<void> {
     }
 
     runRequired('Install generated dependencies', 'npm', ['install', '--no-audit', '--no-fund'], projectRoot, env, secrets, diagnostics)
-    runRequired('Typecheck generated client', 'npx', ['tsc', '--noEmit', '-p', 'client'], projectRoot, env, secrets, diagnostics, 120_000)
-    runRequired('Build generated client', 'npm', ['run', 'build', '--workspace=client'], projectRoot, env, secrets, diagnostics)
+    if ((scenario.frontend ?? 'react') === 'react' && (scenario.language ?? 'typescript') === 'typescript') {
+      runRequired('Typecheck generated client', 'npx', ['tsc', '--noEmit', '-p', 'client'], projectRoot, env, secrets, diagnostics, 120_000)
+      runRequired('Build generated client', 'npm', ['run', 'build', '--workspace=client'], projectRoot, env, secrets, diagnostics)
+    } else {
+      runRequired('Build and frontend-check generated client', 'npm', ['run', 'build', '--workspace=client'], projectRoot, env, secrets, diagnostics, 180_000)
+    }
     runRequired('Typecheck generated API', 'npx', ['tsc', '--noEmit', '-p', 'server'], projectRoot, env, secrets, diagnostics, 120_000)
     console.log(`[node:${scenario.id}] generated client and API checks completed`)
     console.log(`[node:${scenario.id}] applying ${scenario.orm} database setup`)

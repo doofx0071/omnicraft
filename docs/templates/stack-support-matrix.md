@@ -36,18 +36,19 @@ jobs added after that run.
 | --- | --- | --- |
 | React + Vite + TypeScript, frontend-only | **Scaffold-verified** | The prior matrix records local typecheck/build; the current smoke and package job scaffold it. No browser boot/operation result is recorded. |
 | React + Vite + TypeScript + Express + Drizzle + PostgreSQL | **Supported** | `database-integration` installs and typechecks the generated client/API, migrates PostgreSQL data, boots the API, and exercises CRUD/auth. <!-- support-id: frontend-react-express-drizzle-postgres --> |
-| Vue + Vite + TypeScript + Express + Drizzle + SQLite | **Scaffold-verified** | Current smoke run generated it. The changelog records Vue build/CRUD verification but does not identify the database combination, so that result is not attributed to this exact row. |
-| Svelte + Vite + TypeScript + Express + Drizzle + SQLite | **Scaffold-verified** | Current smoke run generated it. The changelog records Svelte build/CRUD verification but does not identify the database combination, so that result is not attributed to this exact row. |
+| Vue + Vite + TypeScript + Express + Drizzle + SQLite | **Scaffold-verified** | Local scenario `express-drizzle-sqlite-vue` installed and built the client, typechecked the API, applied Drizzle migrations, booted the API, and verified CRUD and failure behavior. The hosted scenario is required by CI but still needs a passing run before promotion. |
+| Svelte + Vite + TypeScript + Express + Drizzle + SQLite | **Scaffold-verified** | Local scenario `express-drizzle-sqlite-svelte` installed and built the client, typechecked the API, applied Drizzle migrations, booted the API, and verified CRUD and failure behavior. The hosted scenario is required by CI but still needs a passing run before promotion. |
 | Next.js integrated full-stack + raw SQL + SQLite | **Scaffold-verified** | The generated-project runner passed locally through `create-next-app@16`, production layer composition, install, build, typecheck, SQL migration, production boot, CRUD, and failure checks. Hosted CI is pending. |
 | Next.js integrated full-stack + raw SQL + PostgreSQL | **Scaffold-verified** | The generated-project runner passed locally through `create-next-app@16`, production layer composition, install, build, typecheck, SQL migration, production boot, CRUD, and failure checks. Hosted CI is pending. |
 | Next.js integrated full-stack + MySQL | **Scaffold-verified** | The compatibility contract accepts MySQL for integrated Next.js, whose exact production adapter uses `mysql2/promise` and MySQL-compatible `?` placeholders. The generated-project runner passed locally through install, build, typecheck, SQL migration, production boot, CRUD, and failure checks; hosted CI is pending. |
-| React + Vite JavaScript, frontend-only | **Scaffold-verified** | The previous matrix records a frontend-only JavaScript scaffold. The current unit suite and smoke script do not cover this path. |
-| React + Vite JavaScript + separate API | **Selectable — unverified** | The JavaScript client layer composes with the TypeScript server, but no exact test or smoke entry verifies it. |
+| React + Vite JavaScript, frontend-only | **Scaffold-verified** | Local `test:integration:frontend` generated from production layers, installed and built the project, booted Vite preview, loaded the emitted bundle, and checked missing-asset behavior. Database operations are not applicable to the frontend-only architecture. The hosted job is required before promotion. |
+| React + Vite JavaScript + Express + Drizzle + SQLite separate API | **Scaffold-verified** | Local scenario `express-drizzle-sqlite-react-js` installed and built the JavaScript client, typechecked the TypeScript API, applied Drizzle migrations, booted the API, and verified CRUD and failure behavior. The hosted scenario is required by CI but still needs a passing run before promotion. |
 | Expo SDK 58 + TypeScript | **Scaffold-verified** | The prior matrix/changelog record scaffold, install, and TypeScript checks. No simulator/device build or launch is recorded. |
 | Tauri 2 + React UI | **Scaffold-verified** | The prior matrix/changelog record scaffold and frontend install/build. The native desktop build was not run because it requires the Rust toolchain. |
 
 The smoke script covers React frontend-only, Vue and Svelte with Express + Drizzle + SQLite, and Next.js
-with SQLite. It does not cover Expo or Tauri. Its Next.js step invokes `create-next-app`; if that command
+with SQLite. The separate runtime integration target covers the JavaScript React frontend-only path.
+It does not cover Expo or Tauri. Its Next.js step invokes `create-next-app`; if that command
 fails, the script logs the failure and skips the overlay without failing the whole smoke run.
 
 ## Separate frontend + API backend combinations
@@ -95,7 +96,7 @@ The repository has no `templates/server/node/hono/prisma/` layer.
 | Capability | Status | Evidence and limits |
 | --- | --- | --- |
 | TypeScript templates | **Scaffold-verified** | TypeScript is the default language and appears in the exact supported rows above; this generic entry does not claim separate runtime evidence. |
-| JavaScript React/Vite client | **Scaffold-verified** | Previous matrix records a frontend-only scaffold; no current automated fixture. Full-stack server remains TypeScript. |
+| JavaScript React/Vite client | **Scaffold-verified** | Automated runtime fixtures now cover the frontend-only app and the exact Express + Drizzle + SQLite separate API pairing above. The selected API remains TypeScript; other API combinations are not inferred. |
 | JavaScript Vue, Svelte, or Next.js templates | **Rejected — unsupported combination** | No JavaScript template overlay exists for these frontends. The prompt only offers JavaScript for React/Vite; incompatible flags are rejected. |
 | JavaScript Expo or Tauri | **Rejected — unsupported combination** | Native scaffolds are fixed to TypeScript; incompatible `--lang` flags are rejected. |
 | Next.js with `--orm`, `--runtime`, `--backend`, `--no-full-stack`, or contradictory `--extras` | **Rejected — unsupported combination** | Next.js is integrated full-stack and always uses raw SQL, Tailwind, and ESLint from create-next-app; separate-backend flags are rejected, extras are fixed, and the prompt has no ORM or extras question. |

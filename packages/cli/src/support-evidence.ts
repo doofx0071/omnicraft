@@ -5,6 +5,8 @@ export interface NodeRuntimeScenario {
   framework: 'express' | 'fastify' | 'hono'
   orm: 'drizzle' | 'prisma' | 'none'
   database: Extract<Database, 'sqlite' | 'postgres' | 'mysql'>
+  frontend?: 'react' | 'vue' | 'svelte'
+  language?: 'typescript' | 'javascript'
 }
 
 export const NODE_RUNTIME_SCENARIOS = [
@@ -12,6 +14,27 @@ export const NODE_RUNTIME_SCENARIOS = [
   { id: 'express-raw-sqlite', framework: 'express', orm: 'none', database: 'sqlite' },
   { id: 'express-raw-postgres', framework: 'express', orm: 'none', database: 'postgres' },
   { id: 'express-raw-mysql', framework: 'express', orm: 'none', database: 'mysql' },
+  {
+    id: 'express-drizzle-sqlite-vue',
+    framework: 'express',
+    orm: 'drizzle',
+    database: 'sqlite',
+    frontend: 'vue',
+  },
+  {
+    id: 'express-drizzle-sqlite-svelte',
+    framework: 'express',
+    orm: 'drizzle',
+    database: 'sqlite',
+    frontend: 'svelte',
+  },
+  {
+    id: 'express-drizzle-sqlite-react-js',
+    framework: 'express',
+    orm: 'drizzle',
+    database: 'sqlite',
+    language: 'javascript',
+  },
   { id: 'fastify-drizzle-postgres', framework: 'fastify', orm: 'drizzle', database: 'postgres' },
   { id: 'fastify-drizzle-sqlite', framework: 'fastify', orm: 'drizzle', database: 'sqlite' },
   { id: 'fastify-drizzle-mysql', framework: 'fastify', orm: 'drizzle', database: 'mysql' },
@@ -28,6 +51,7 @@ export const NODE_RUNTIME_SCENARIOS = [
 ] as const satisfies readonly NodeRuntimeScenario[]
 
 export const NEXTJS_DATABASE_SCENARIOS = ['sqlite', 'postgres', 'mysql'] as const satisfies readonly Extract<Database, 'sqlite' | 'postgres' | 'mysql'>[]
+export const FRONTEND_RUNTIME_SCENARIOS = ['react-js-frontend-only'] as const
 
 export const INTEGRATION_TARGETS = {
   'node-runtime': {
@@ -42,6 +66,12 @@ export const INTEGRATION_TARGETS = {
     workflowJob: 'nextjs-runtime-integration',
     workflowCommand: 'npm run test:integration:nextjs --workspace=create-omnicraft -- --database',
     scenarios: NEXTJS_DATABASE_SCENARIOS,
+  },
+  'frontend-runtime': {
+    script: 'scripts/frontend-runtime-integration.ts',
+    workflowJob: 'frontend-runtime-integration',
+    workflowCommand: 'npm run test:integration:frontend --workspace=create-omnicraft',
+    scenarios: FRONTEND_RUNTIME_SCENARIOS,
   },
   'node-express-drizzle': {
     script: 'scripts/db-integration.ts',

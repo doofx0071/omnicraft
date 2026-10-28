@@ -93,6 +93,9 @@ jobs:
           - express-raw-sqlite
           - express-raw-postgres
           - express-raw-mysql
+          - express-drizzle-sqlite-vue
+          - express-drizzle-sqlite-svelte
+          - express-drizzle-sqlite-react-js
           - fastify-drizzle-postgres
           - fastify-drizzle-sqlite
           - fastify-drizzle-mysql
@@ -140,6 +143,23 @@ jobs:
 
       - name: Test generated Next.js project (${{ matrix.database }})
         run: npm run test:integration:nextjs --workspace=create-omnicraft -- --database ${{ matrix.database }}
+
+  frontend-runtime-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Test generated React/Vite JavaScript frontend-only project
+        run: npm run test:integration:frontend --workspace=create-omnicraft
 
   php-laravel-integration:
     runs-on: ubuntu-latest
@@ -286,6 +306,7 @@ jobs:
       - database-integration
       - node-runtime-integration
       - nextjs-runtime-integration
+      - frontend-runtime-integration
       - python-fastapi-integration
       - php-laravel-integration
       - support-evidence
@@ -298,12 +319,13 @@ jobs:
           NODE_DATABASE: ${{ needs.database-integration.result }}
           NODE_RUNTIME: ${{ needs.node-runtime-integration.result }}
           NEXTJS_RUNTIME: ${{ needs.nextjs-runtime-integration.result }}
+          FRONTEND_RUNTIME: ${{ needs.frontend-runtime-integration.result }}
           PYTHON_DATABASE: ${{ needs.python-fastapi-integration.result }}
           PHP_DATABASE: ${{ needs.php-laravel-integration.result }}
           SUPPORT_EVIDENCE: ${{ needs.support-evidence.result }}
           PACKAGE_ARTIFACT: ${{ needs.package.result }}
         run: |
-          for result in "$UNIX_MATRIX" "$NODE_DATABASE" "$NODE_RUNTIME" "$NEXTJS_RUNTIME" "$PYTHON_DATABASE" "$PHP_DATABASE" "$SUPPORT_EVIDENCE" "$PACKAGE_ARTIFACT"; do
+          for result in "$UNIX_MATRIX" "$NODE_DATABASE" "$NODE_RUNTIME" "$NEXTJS_RUNTIME" "$FRONTEND_RUNTIME" "$PYTHON_DATABASE" "$PHP_DATABASE" "$SUPPORT_EVIDENCE" "$PACKAGE_ARTIFACT"; do
             if [ "$result" != "success" ]; then
               echo "A required release check finished with status: $result"
               exit 1
