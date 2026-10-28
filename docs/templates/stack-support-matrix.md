@@ -6,10 +6,12 @@ unions, or the presence of a template directory do not prove that every cross-pr
 ## Statuses
 
 - **Supported** — the repository records a generated-project install/setup, typecheck or equivalent,
-  boot, and successful real operation for the exact combination. Historical manual results are labeled
-  as such; this documentation pass did not rerun those application-level checks.
-- **Scaffold-verified** — an engine test or the smoke script generated the exact combination. This does
-  not prove dependencies install, the app boots, or database operations work.
+  boot, and successful real operation for the exact combination, with a passing hosted CI run recorded
+  on a tested commit.
+- **Scaffold-verified** — an engine test or the smoke script generated the exact combination. A local
+  runtime result may be recorded, but the row remains provisional until the exact hosted CI evidence is
+  recorded; scaffolding alone does not prove dependencies install, the app boots, or database operations
+  work.
 - **Selectable — unverified** — the CLI registry and template layers expose the combination, but no
   exact engine fixture or smoke entry verifies it.
 - **Rejected — unsupported combination** — preflight rejects the combination, or the prompt omits it,
@@ -83,7 +85,7 @@ The repository has no `templates/server/node/hono/prisma/` layer.
 | Framework | Data access | Database | Status | Evidence |
 | --- | --- | --- | --- | --- |
 | FastAPI | SQLAlchemy 2 async + Alembic | SQLite | **Supported** | Hosted [`python-fastapi-integration`](https://github.com/doofx0071/omnicraft/actions/runs/40562224821/job/122394000487) installed generated dependencies, applied Alembic migrations, booted Uvicorn, and checked SQLite CRUD, validation, and conflict responses. <!-- support-id: fastapi-sqlalchemy-sqlite --> |
-| FastAPI | SQLAlchemy 2 async + Alembic | PostgreSQL | **Scaffold-verified** | Engine fixture and smoke; no generated install/migration/runtime result recorded. |
+| FastAPI | SQLAlchemy 2 async + Alembic | PostgreSQL | **Scaffold-verified** | The generated-project runner now passes locally through install, Alembic migration, Uvicorn boot, CRUD, conflict, validation, and missing-record checks. Keep provisional until the exact hosted CI run is recorded. |
 | Laravel 12 | Eloquent | SQLite | **Supported** | Hosted [`php-laravel-integration`](https://github.com/doofx0071/omnicraft/actions/runs/40562224821/job/122394000585) installed Composer dependencies in the pinned PHP image, migrated SQLite, verified the active driver, and exercised the generated API. <!-- support-id: laravel-eloquent-sqlite --> |
 | Laravel 12 | Eloquent | PostgreSQL | **Supported** | `php-laravel-integration` installs Composer dependencies in the pinned PHP image, migrates PostgreSQL, verifies the active driver, and exercises the generated API. <!-- support-id: laravel-eloquent-postgres --> |
 | Laravel 12 | Eloquent | MySQL | **Supported** | `php-laravel-integration` installs Composer dependencies in the pinned PHP image, migrates MySQL, verifies the active driver, and exercises the generated API. <!-- support-id: laravel-eloquent-mysql --> |

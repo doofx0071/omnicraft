@@ -107,8 +107,8 @@ The current workflow:
    Each generated project is installed and typechecked; migrations, API boot, CRUD, and Better Auth
    flows are exercised.
 5. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
-   generated dependencies, runs Alembic migrations, boots Uvicorn, and checks SQLite CRUD and failure
-   responses.
+   generated dependencies, runs Alembic migrations, boots Uvicorn, and checks SQLite and PostgreSQL
+   CRUD and failure responses. PostgreSQL runs in an isolated Testcontainers instance.
 6. Runs hosted Ubuntu `php-laravel-integration` for SQLite/PostgreSQL/MySQL. The SQLite case uses the
    pinned PHP/Composer test image without a database service; networked databases use isolated Compose
    services. Each case installs Composer dependencies, checks platform requirements, migrates, and
@@ -130,8 +130,8 @@ pull requests, release tags, and scheduled runs use hosted runners only.
 
 ## Support statuses
 
-- **Supported** requires Level 3 evidence for the exact combination; a smoke scaffold or typecheck alone
-  is insufficient.
+- **Supported** requires Level 3 evidence for the exact combination and a passing hosted CI result
+  recorded on a tested commit; a smoke scaffold, local result, or typecheck alone is insufficient.
 - **Scaffold-verified** means the exact combination has an engine fixture or smoke entry but lacks full
   Level 3 evidence.
 - **Selectable — unverified** means the registry and layers expose the choice but no exact fixture/smoke

@@ -5,11 +5,12 @@ Thanks for helping craft stacks! This repo is a small monorepo: all product code
 
 ## Setup
 
-Prerequisites: **Node.js ≥ 20.12** (24 recommended), npm 11. The FastAPI + SQLite integration uses
-Python 3.12 and [uv](https://docs.astral.sh/uv/). The Laravel integration runs PHP and Composer inside
-the repository's pinned Docker image, so host PHP/Composer are not required. Docker Engine and Compose
-are required for PostgreSQL/MySQL and Laravel integration runs; SQLite-only runs do not start a database
-container.
+Prerequisites: **Node.js ≥ 20.12** (24 recommended), npm 11. The FastAPI integrations use Python 3.12
+and [uv](https://docs.astral.sh/uv/); its PostgreSQL case also needs Docker. The Laravel integration
+runs PHP and Composer inside the repository's pinned Docker image, so host PHP/Composer are not
+required. Docker Engine is required for PostgreSQL/MySQL integration containers. Docker Compose v2 is
+also required for Laravel's containerized PHP runner; SQLite-only database checks do not start a
+database container.
 
 ```bash
 git clone https://github.com/doofx0071/omnicraft
@@ -34,7 +35,7 @@ All from `packages/cli/` unless noted:
 | `npx tsx scripts/smoke-e2e.ts <dir>` | Scaffold the combinations currently listed in the smoke script |
 | `npm run check:support-matrix` | Check every Supported row against its registered scenario and CI release gate |
 | `npm run test:integration:db -- --database sqlite` | Generated Express + Drizzle + SQLite (no Docker) |
-| `npm run test:integration:python` | Generated FastAPI + SQLAlchemy + SQLite (Python 3.12 + uv) |
+| `npm run test:integration:python` | Generated FastAPI + SQLAlchemy + SQLite/PostgreSQL (Python 3.12 + uv; PostgreSQL requires Docker) |
 | `npm run test:integration:php -- --database sqlite` | Generated Laravel + SQLite (Docker PHP/Composer image) |
 | `npm run test:integration:db` | All supported Node databases (requires Docker for PostgreSQL/MySQL) |
 | `npm run test:integration:php` | Laravel SQLite, PostgreSQL, and MySQL (requires Docker for PHP image and networked DBs) |

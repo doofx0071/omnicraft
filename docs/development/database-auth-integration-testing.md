@@ -8,7 +8,9 @@ slow checks; `npm test`, the scaffold smoke script, typechecking, and the CLI bu
 - Node.js 20.12 or newer and npm for the CLI, fast checks, SQLite-only integration, and Laravel
   orchestration; PostgreSQL/MySQL Testcontainers runs require Node.js 22.22 or newer, as required by
   [Testcontainers v12](https://github.com/testcontainers/testcontainers-node/releases/tag/v12.0.0).
-- Docker Engine or Docker Desktop with the Docker Compose v2 plugin for PostgreSQL/MySQL cases.
+- Python 3.12 and `uv` for FastAPI; Docker Engine is also required for its PostgreSQL case.
+- Docker Engine or Docker Desktop for PostgreSQL/MySQL Testcontainers cases; Docker Compose v2 is also
+  required for the containerized PHP/Laravel runner.
 - Docker image pulls, PHP image package downloads, and Composer package downloads must be reachable
   from the machine running Docker. The generated Node project also installs dependencies from npm.
 - No host PHP or Composer installation is required. Laravel runs in the PHP test image.
@@ -42,9 +44,13 @@ The Node/Drizzle suite defaults to SQLite, PostgreSQL, and MySQL. Run one databa
 npm run test:integration:db --workspace=create-omnicraft -- --database sqlite
 npm run test:integration:db --workspace=create-omnicraft -- --database postgres
 npm run test:integration:db --workspace=create-omnicraft -- --database mysql
+npm run test:integration:python --workspace=create-omnicraft -- --database postgres
 ```
 
-The SQLite case does not require Docker. The PHP/Laravel suite runs PostgreSQL and MySQL cases.
+The FastAPI SQLite case does not require Docker. Its PostgreSQL case installs the generated Python
+dependencies, applies the generated Alembic migration, boots Uvicorn, and checks PostgreSQL CRUD,
+duplicate and invalid input handling, and missing-record behavior with synthetic Testcontainers
+credentials. The PHP/Laravel suite runs PostgreSQL and MySQL cases.
 
 ## Coverage and isolation
 

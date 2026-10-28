@@ -7,11 +7,11 @@ export const INTEGRATION_TARGETS = {
     workflowCommand: 'npm run test:integration:db --workspace=create-omnicraft',
     scenarios: ['sqlite', 'postgres', 'mysql'],
   },
-  'python-fastapi-sqlite': {
+  'python-fastapi': {
     script: 'scripts/fastapi-integration.ts',
     workflowJob: 'python-fastapi-integration',
     workflowCommand: 'npm run test:integration:python --workspace=create-omnicraft',
-    scenarios: ['sqlite'],
+    scenarios: ['sqlite', 'postgres'],
   },
   'php-laravel': {
     script: 'scripts/php-laravel-e2e.ts',
@@ -83,7 +83,7 @@ export const SUPPORTED_CAPABILITIES = [
   {
     id: 'fastapi-sqlalchemy-sqlite',
     matrixRowPrefix: '| FastAPI | SQLAlchemy 2 async + Alembic | SQLite | **Supported** |',
-    target: 'python-fastapi-sqlite',
+    target: 'python-fastapi',
     scenarios: ['sqlite'],
   },
   {
