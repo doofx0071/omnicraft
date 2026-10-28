@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { hasStackFlags, resolveAnswers, validateStackFlags } from './prefill.js'
+import { hasFullStackFlags } from './compatibility.js'
 import { parseArgs } from './args.js'
 
 describe('validateStackFlags', () => {
@@ -7,6 +8,24 @@ describe('validateStackFlags', () => {
     expect(() => validateStackFlags(parseArgs(['--backend', 'fastify', '--orm=prisma']))).not.toThrow()
     expect(() => validateStackFlags(parseArgs(['--frontend', 'react']))).not.toThrow()
     expect(() => validateStackFlags(parseArgs(['--db', 'sqlite']))).not.toThrow()
+  })
+
+  it('accepts Better Auth only for its supported Express and Drizzle stack', () => {
+    for (const database of ['sqlite', 'postgres', 'mysql']) {
+      expect(() => validateStackFlags(parseArgs(['--auth', 'better-auth', '--db', database]))).not.toThrow()
+    }
+    expect(() => validateStackFlags(parseArgs(['--auth', 'better-auth', '--backend', 'fastify']))).toThrow(
+      /--auth better-auth requires TypeScript with a full-stack React\/Vite Express API/,
+    )
+    expect(() => validateStackFlags(parseArgs(['--auth', 'better-auth', '--runtime', 'python']))).toThrow(
+      /--auth better-auth requires TypeScript with a full-stack React\/Vite Express API/,
+    )
+    expect(() => validateStackFlags(parseArgs(['--auth', 'better-auth', '--no-full-stack']))).toThrow(
+      /--auth better-auth requires TypeScript with a full-stack React\/Vite Express API/,
+    )
+    expect(() => validateStackFlags(parseArgs(['--auth', 'better-auth', '--lang', 'javascript']))).toThrow(
+      /--auth better-auth requires TypeScript/,
+    )
   })
 
   it('rejects unavailable choices with the available list', () => {
@@ -107,7 +126,35 @@ describe('resolveAnswers', () => {
     expect(answers.backendFramework).toBe('express')
     expect(answers.orm).toBe('drizzle')
     expect(answers.database).toBe('postgres')
+    expect(answers.authentication).toBe('none')
     expect(answers.extras).toEqual({ tailwind: true, eslintPrettier: true, shadcn: false })
+  })
+
+  it('resolves the explicit Better Auth flag to the same supported default stack', () => {
+    const answers = resolveAnswers(
+      parseArgs(['--yes', '--auth', 'better-auth']),
+      base.projectName,
+      base.targetDir,
+    )
+    expect(answers.authentication).toBe('better-auth')
+    expect(answers.frontend).toBe('react')
+    expect(answers.backendRuntime).toBe('node')
+    expect(answers.backendFramework).toBe('express')
+    expect(answers.orm).toBe('drizzle')
+    expect(answers.database).toBe('postgres')
+  })
+
+  it('keeps explicit None equivalent to the default without forcing a backend', () => {
+    const answers = resolveAnswers(
+      parseArgs(['--yes', '--auth', 'none', '--no-full-stack']),
+      base.projectName,
+      base.targetDir,
+    )
+    expect(answers.authentication).toBe('none')
+    expect(answers.architecture).toEqual({ kind: 'frontend-only' })
+    expect(answers.backendFramework).toBeNull()
+    expect(hasFullStackFlags(parseArgs(['--auth', 'none']))).toBe(false)
+    expect(hasFullStackFlags(parseArgs(['--auth', 'better-auth']))).toBe(true)
   })
 
   it('applies flag overrides', () => {

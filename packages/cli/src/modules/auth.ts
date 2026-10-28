@@ -9,7 +9,7 @@
  * if the anchor is missing.
  */
 import type { ModuleDefinition } from '../add.js'
-import { MODULE_COMPATIBILITY } from '../compatibility.js'
+import { authenticationCompatibilityReason } from '../compatibility.js'
 
 const AUTH_TS = (provider: string) => `import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
@@ -313,24 +313,7 @@ export const authModule: ModuleDefinition = {
   id: 'auth',
   description: 'better-auth email/password boilerplate (express + drizzle stacks)',
   incompatible(manifest) {
-    const supported = MODULE_COMPATIBILITY.auth
-    if (manifest.stack.frontend !== supported.frontend) {
-      return `Better Auth currently requires the React frontend; ${manifest.stack.frontend} is not covered yet.`
-    }
-    if (
-      manifest.stack.backendRuntime !== supported.backendRuntime ||
-      manifest.stack.backendFramework !== supported.backendFramework ||
-      manifest.stack.orm !== supported.orm
-    ) {
-      return 'Better Auth currently requires Node.js + Express + Drizzle; its route patches target Express.'
-    }
-    if (manifest.stack.architecture.kind !== supported.architecture) {
-      return `architecture "${manifest.stack.architecture.kind}" is not covered yet`
-    }
-    if (!(supported.databases as readonly string[]).includes(manifest.stack.database ?? '')) {
-      return `Better Auth currently supports SQLite, PostgreSQL, and MySQL; ${manifest.stack.database ?? 'no database'} is not covered yet.`
-    }
-    return null
+    return authenticationCompatibilityReason('better-auth', manifest.stack)
   },
   files(_ctx, manifest) {
     const provider =

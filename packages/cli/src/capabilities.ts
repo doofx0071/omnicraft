@@ -1,6 +1,7 @@
 import type {
   BackendFramework,
   BackendRuntime,
+  AuthenticationSetup,
   Database,
   Frontend,
   Language,
@@ -122,6 +123,15 @@ export const CAPABILITY_REGISTRY = {
     { value: 'docker', label: 'docker', available: true, hint: 'Database Compose service' },
     { value: 'testing', label: 'testing', available: true, hint: 'Vitest client test setup' },
   ] as const,
+  authentication: [
+    { value: 'none', label: 'None', available: true, hint: 'No authentication layer' },
+    {
+      value: 'better-auth',
+      label: 'Better Auth (email/password)',
+      available: true,
+      hint: 'TypeScript React + Node/Express + Drizzle only; SQLite, PostgreSQL, or MySQL',
+    },
+  ] as const satisfies readonly CapabilityOption<AuthenticationSetup>[],
   ormsByNodeBackend: {
     express: ['drizzle', 'prisma', 'none'],
     fastify: ['drizzle', 'prisma', 'none'],
@@ -159,6 +169,7 @@ export const AVAILABLE = {
   orm: { node: availableValues(CAPABILITY_REGISTRY.orm) },
   extras: availableValues(CAPABILITY_REGISTRY.extras),
   modules: availableValues(CAPABILITY_REGISTRY.modules),
+  authentication: availableValues(CAPABILITY_REGISTRY.authentication),
 } as const
 
 export type ModuleId = (typeof AVAILABLE.modules)[number]

@@ -1,4 +1,4 @@
-import type { Answers, BackendFramework, Frontend, Orm } from './types.js'
+import type { Answers, AuthenticationSetup, BackendFramework, Frontend, Orm } from './types.js'
 import type { ParsedArgs } from './args.js'
 import { AVAILABLE } from './capabilities.js'
 import {
@@ -38,6 +38,7 @@ export function validateStackFlags(args: ParsedArgs): void {
   if (args.frontend) parseEnumChoice('--frontend', args.frontend, AVAILABLE.frontend)
   if (args.backend) parseEnumChoice('--backend', args.backend, AVAILABLE.backend[runtime])
   if (args.db) parseEnumChoice('--db', args.db, AVAILABLE.db[runtime])
+  if (args.auth) parseEnumChoice('--auth', args.auth, AVAILABLE.authentication)
   if (args.orm && runtime !== 'node') {
     throw new Error('--orm applies to Node.js backends only (Python uses SQLAlchemy + Alembic, PHP uses Eloquent)')
   }
@@ -72,6 +73,7 @@ export function hasStackFlags(args: ParsedArgs): boolean {
     args.backend !== undefined ||
     args.db !== undefined ||
     args.orm !== undefined ||
+    args.auth !== undefined ||
     args.extras !== undefined
   )
 }
@@ -122,6 +124,9 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
     backendFramework,
     orm,
     database: fullStack ? db : null,
+    authentication: args.auth
+      ? parseEnumChoice<AuthenticationSetup>('--auth', args.auth, AVAILABLE.authentication)
+      : 'none',
     extras: {
       tailwind: extrasList.includes('tailwind') || extrasList.includes('shadcn'),
       eslintPrettier: extrasList.includes('eslint'),

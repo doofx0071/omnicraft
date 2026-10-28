@@ -109,6 +109,7 @@ function makeAnswers(projectRoot: string, database: NextjsDatabase): Answers {
     backendFramework: null,
     orm: 'none',
     database,
+    authentication: 'none',
     extras: { tailwind: true, eslintPrettier: true, shadcn: false },
     architecture: { kind: 'integrated-fullstack', framework: 'nextjs' },
   }

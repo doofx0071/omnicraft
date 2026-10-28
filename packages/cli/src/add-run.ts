@@ -10,6 +10,15 @@ import { deepMergePackageJson } from './scaffold/merge.js'
 import { unwrap } from './cancel.js'
 import { existsSync, mkdirSync, readFileSync, rmdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve, sep } from 'node:path'
+import type { ModuleId } from './capabilities.js'
+
+type ModuleDef = (typeof MODULES)[number]
+
+export type ModuleApplyResult =
+  | { status: 'applied'; module: ModuleDef }
+  | { status: 'already-installed'; module: ModuleDef }
+  | { status: 'dry-run'; module: ModuleDef; operations: string[] }
+  | { status: 'rejected'; module: ModuleDef; message: string; details?: string[] }
 
 function applyChangesTransactionally(targetDir: string, changes: Map<string, string>): void {
   const targetRoot = resolve(targetDir)
@@ -72,39 +81,29 @@ function applyChangesTransactionally(targetDir: string, changes: Map<string, str
   }
 }
 
-export async function runAdd(moduleArg: string | undefined, targetArg: string | undefined, dryRun: boolean): Promise<void> {
-  const targetDir = resolveTarget(targetArg)
-  type ModuleDef = (typeof MODULES)[number]
-  let module: ModuleDef | undefined
-
-  if (moduleArg) {
-    module = MODULES.find((m) => m.id === moduleArg)
-    if (!module) {
-      p.log.error(`Unknown module "${moduleArg}". Available: ${MODULES.map((m) => m.id).join(', ')}`)
-      process.exitCode = 1
-      return
-    }
-  } else {
-    module = unwrap<ModuleDef>(
-      await p.select<ModuleDef>({
-        message: 'Which module do you want to add?',
-        options: MODULES.map((m) => ({ value: m, label: m.id, hint: m.description })),
-      }),
-    )
-  }
+export function applyModuleToProject(
+  moduleId: ModuleId,
+  targetDir: string,
+  options: { dryRun?: boolean; recordModule?: boolean; onApplying?: () => void } = {},
+): ModuleApplyResult {
+  const module = MODULES.find((candidate) => candidate.id === moduleId)
+  if (!module) throw new Error(`Unknown module "${moduleId}".`)
 
   const manifest = loadManifest(targetDir)
-  const installed = manifest.modules.includes(module.id)
-  if (installed) {
-    p.log.warn(`Module "${module.id}" is already installed — nothing to do (adds are idempotent).`)
-    return
+  if (
+    manifest.modules.includes(module.id) ||
+    (module.id === 'auth' && manifest.authentication === 'better-auth')
+  ) {
+    return { status: 'already-installed', module }
   }
 
   const incompatibility = module.incompatible?.(manifest, targetDir) ?? null
   if (incompatibility) {
-    p.log.error(`Module "${module.id}" cannot be added: ${incompatibility}`)
-    process.exitCode = 1
-    return
+    return {
+      status: 'rejected',
+      module,
+      message: `Module "${module.id}" cannot be added: ${incompatibility}`,
+    }
   }
 
   const vars = moduleVars(manifest)
@@ -120,11 +119,11 @@ export async function runAdd(moduleArg: string | undefined, targetArg: string | 
   // Collision check — never overwrite existing files.
   const collisions = files.filter(([path]) => existsSync(join(targetDir, path)))
   if (collisions.length > 0) {
-    p.log.error(
-      `Refusing to overwrite existing file(s): ${collisions.map(([path]) => path).join(', ')}.`,
-    )
-    process.exitCode = 1
-    return
+    return {
+      status: 'rejected',
+      module,
+      message: `Refusing to overwrite existing file(s): ${collisions.map(([path]) => path).join(', ')}.`,
+    }
   }
 
   // Patch anchors are validated BEFORE any write — a missing anchor means the
@@ -147,32 +146,32 @@ export async function runAdd(moduleArg: string | undefined, targetArg: string | 
     }
   }
   if (patchFailures.length > 0) {
-    p.log.error(`Patches cannot be applied — aborting before any write:`)
-    for (const failure of patchFailures) p.log.error(`  - ${failure}`)
-    process.exitCode = 1
-    return
+    return {
+      status: 'rejected',
+      module,
+      message: 'Patches cannot be applied — aborting before any write:',
+      details: patchFailures,
+    }
   }
 
-  if (dryRun) {
-    p.note(
-      [
+  if (options.dryRun) {
+    return {
+      status: 'dry-run',
+      module,
+      operations: [
         ...files.map(([path, content]) => `create  ${path}  (${content.length} bytes)`),
         ...renderedPatches.map((patch) => `patch   ${patch.file}  ("${patch.find.slice(0, 40)}")`),
-        module.packageJson?.dependencies
-          ? `deps    ${Object.keys(module.packageJson.dependencies).join(', ')}`
-          : null,
-        module.packageJson?.devDependencies
-          ? `devDeps ${Object.keys(module.packageJson.devDependencies).join(', ')}`
-          : null,
-        module.packageJson?.scripts
-          ? `scripts ${Object.keys(module.packageJson.scripts).join(', ')}`
-          : null,
-      ]
-        .filter(Boolean)
-        .join('\n'),
-      `Dry run — omnicraft add ${module.id}`,
-    )
-    return
+        ...(module.packageJson?.dependencies
+          ? [`deps    ${Object.keys(module.packageJson.dependencies).join(', ')}`]
+          : []),
+        ...(module.packageJson?.devDependencies
+          ? [`devDeps ${Object.keys(module.packageJson.devDependencies).join(', ')}`]
+          : []),
+        ...(module.packageJson?.scripts
+          ? [`scripts ${Object.keys(module.packageJson.scripts).join(', ')}`]
+          : []),
+      ],
+    }
   }
 
   const changes = new Map<string, string>()
@@ -195,13 +194,68 @@ export async function runAdd(moduleArg: string | undefined, targetArg: string | 
     changes.set('package.json', `${JSON.stringify(merged, null, 2)}\n`)
   }
 
-  const updatedManifest = { ...manifest, modules: [...manifest.modules, module.id] }
+  const authentication = module.id === 'auth' ? 'better-auth' : manifest.authentication
+  const updatedManifest = {
+    ...manifest,
+    ...(authentication ? { authentication } : {}),
+    modules: options.recordModule === false ? manifest.modules : [...manifest.modules, module.id],
+  }
   changes.set('.omnicraft/project.json', `${JSON.stringify(updatedManifest, null, 2)}\n`)
 
-  const spinner = p.spinner()
+  options.onApplying?.()
   applyChangesTransactionally(targetDir, changes)
+  return { status: 'applied', module }
+}
 
-  spinner.stop(`Module "${module.id}" added`)
+export async function runAdd(
+  moduleArg: string | undefined,
+  targetArg: string | undefined,
+  dryRun: boolean,
+): Promise<void> {
+  const targetDir = resolveTarget(targetArg)
+  let module: ModuleDef | undefined
+
+  if (moduleArg) {
+    module = MODULES.find((candidate) => candidate.id === moduleArg)
+    if (!module) {
+      p.log.error(`Unknown module "${moduleArg}". Available: ${MODULES.map((m) => m.id).join(', ')}`)
+      process.exitCode = 1
+      return
+    }
+  } else {
+    module = unwrap<ModuleDef>(
+      await p.select<ModuleDef>({
+        message: 'Which module do you want to add?',
+        options: MODULES.map((candidate) => ({
+          value: candidate,
+          label: candidate.id,
+          hint: candidate.description,
+        })),
+      }),
+    )
+  }
+
+  const spinner = dryRun ? null : p.spinner()
+  const result = applyModuleToProject(module.id as ModuleId, targetDir, {
+    dryRun,
+    onApplying: () => spinner?.start(),
+  })
+  if (result.status === 'already-installed') {
+    p.log.warn(`Module "${module.id}" is already installed — nothing to do (adds are idempotent).`)
+    return
+  }
+  if (result.status === 'rejected') {
+    p.log.error(result.message)
+    for (const detail of result.details ?? []) p.log.error(`  - ${detail}`)
+    process.exitCode = 1
+    return
+  }
+  if (result.status === 'dry-run') {
+    p.note(result.operations.join('\n'), `Dry run — omnicraft add ${module.id}`)
+    return
+  }
+
+  spinner?.stop(`Module "${module.id}" added`)
   if (module.packageJson) {
     p.log.warn('New dependencies were added to package.json — run your package manager install.')
   }

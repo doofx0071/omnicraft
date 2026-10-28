@@ -13,6 +13,7 @@ export type BackendFramework =
   | 'symfony'
 export type Orm = 'drizzle' | 'prisma' | 'none' | 'mongoose'
 export type Database = 'postgres' | 'sqlite' | 'mysql' | 'mongodb'
+export type AuthenticationSetup = 'none' | 'better-auth'
 
 /**
  * How the project is architected (master plan §3-B).
@@ -48,6 +49,7 @@ export interface Answers {
   backendFramework: BackendFramework | null
   orm: Orm | null
   database: Database | null
+  authentication: AuthenticationSetup
   extras: Extras
   /** Derived from frontend + fullStack; nextjs fullStack = integrated full-stack. */
   architecture: ProjectArchitecture

@@ -11,7 +11,7 @@ import type { StartedMySqlContainer } from '@testcontainers/mysql'
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql'
 import { runCommand, startCommand, type StartedCommand } from '../src/exec.js'
 import { saveManifest } from '../src/add.js'
-import { runAdd } from '../src/add-run.js'
+import { applyModuleToProject, runAdd } from '../src/add-run.js'
 import { CLI_VERSION, TEMPLATES_ROOT } from '../src/config.js'
 import { buildManifest } from '../src/manifest.js'
 import { createEnvFiles } from '../src/scaffold/env.js'
@@ -119,6 +119,7 @@ function makeAnswers(projectRoot: string, database: TestDatabase): Answers {
     backendFramework: 'express',
     orm: 'drizzle',
     database,
+    authentication: 'none',
     extras: { tailwind: false, eslintPrettier: false, shadcn: false },
     architecture: { kind: 'separate-frontend-api' },
   }
@@ -126,9 +127,13 @@ function makeAnswers(projectRoot: string, database: TestDatabase): Answers {
 
 function scaffoldWithAuth(projectRoot: string, database: TestDatabase): void {
   const answers = makeAnswers(projectRoot, database)
+  answers.authentication = 'better-auth'
   applyLayers(TEMPLATES_ROOT, composeLayers(answers), templateVariables(answers), projectRoot)
   createEnvFiles(projectRoot)
-  saveManifest(projectRoot, buildManifest(answers, CLI_VERSION, 'npm'))
+  const manifest = buildManifest(answers, CLI_VERSION, 'npm')
+  saveManifest(projectRoot, { ...manifest, authentication: 'none' })
+  const result = applyModuleToProject('auth', projectRoot, { recordModule: false })
+  assert.equal(result.status, 'applied', 'Creation-time Better Auth should apply the existing auth module.')
 }
 
 async function startDatabase(
@@ -479,17 +484,23 @@ async function runDatabaseCase(database: TestDatabase): Promise<void> {
   try {
     console.log(`[database:${database}] preparing generated project`)
     scaffoldWithAuth(projectRoot, database)
-    await runAdd('auth', projectRoot, false)
 
     const manifest = JSON.parse(
       readFileSync(join(projectRoot, '.omnicraft', 'project.json'), 'utf8'),
     ) as {
+      authentication?: string
       modules?: string[]
     }
     assert(
-      manifest.modules?.includes('auth'),
-      'The existing add-auth integration should be applied.',
+      manifest.authentication === 'better-auth',
+      'Creation-time auth configuration should be recorded separately from add-module history.',
     )
+    assert.deepEqual(manifest.modules, [])
+    await runAdd('auth', projectRoot, false)
+    const afterAdd = JSON.parse(
+      readFileSync(join(projectRoot, '.omnicraft', 'project.json'), 'utf8'),
+    ) as { modules?: string[] }
+    assert.deepEqual(afterAdd.modules, [], 'omnicraft add auth should be idempotent after creation-time auth.')
 
     let databaseUrl: string
     if (database === 'sqlite') {

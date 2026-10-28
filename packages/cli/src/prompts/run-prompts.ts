@@ -6,6 +6,7 @@ import {
   DATABASE_LABELS,
   FRONTEND_LABELS,
   type Answers,
+  type AuthenticationSetup,
   type BackendFramework,
   type BackendRuntime,
   type Database,
@@ -20,10 +21,12 @@ import { AVAILABLE, parseEnumChoice, validateStackFlags } from '../prefill.js'
 import type { ParsedArgs } from '../args.js'
 import {
   hasFullStackFlags,
+  compatibleAuthenticationSetups,
   isFrontendAllowedByFlags,
   isProjectTypeAllowedByFlags,
   isRuntimeAllowedByFlags,
   nodeOrmsForFramework,
+  MODULE_COMPATIBILITY,
   supportsLanguage,
   supportsShadcn,
   validateAnswerCompatibility,
@@ -219,7 +222,9 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
         ? await selectWithSoon<Language>(
             'Select a language:',
             registryChoices(CAPABILITY_REGISTRY.language).filter((choice) =>
-              supportsLanguage(projectType, frontend, choice.value),
+              supportsLanguage(projectType, frontend, choice.value) &&
+              (flags.auth?.trim().toLowerCase() !== 'better-auth' ||
+                choice.value === MODULE_COMPATIBILITY.auth.language),
             ),
           )
         : 'typescript'
@@ -273,10 +278,18 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
           : await selectWithSoon<BackendFramework>(
               'Select a backend framework:',
               frameworkChoices[backendRuntime].filter(
-                (choice) =>
-                  !choice.available ||
-                  !flags.orm ||
-                  nodeOrmsForFramework(choice.value).includes(flags.orm as 'drizzle' | 'prisma' | 'none'),
+                (choice) => {
+                  if (
+                    flags.auth?.trim().toLowerCase() === 'better-auth' &&
+                    choice.value !== MODULE_COMPATIBILITY.auth.backendFramework
+                  )
+                    return false
+                  return (
+                    !choice.available ||
+                    !flags.orm ||
+                    nodeOrmsForFramework(choice.value).includes(flags.orm as 'drizzle' | 'prisma' | 'none')
+                  )
+                },
               ),
             )
     } else {
@@ -321,7 +334,12 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
           ? 'drizzle'
           : await selectWithSoon<'drizzle' | 'prisma' | 'none'>(
               'Select an ORM:',
-              ormChoices.filter((choice) => nodeOrmsForFramework(backendFramework).includes(choice.value)),
+              ormChoices.filter(
+                (choice) =>
+                  nodeOrmsForFramework(backendFramework).includes(choice.value) &&
+                  (flags.auth?.trim().toLowerCase() !== 'better-auth' ||
+                    choice.value === MODULE_COMPATIBILITY.auth.orm),
+              ),
             )
       p.log.info(orm === 'none' ? 'ORM: none — raw SQL via the driver' : `ORM: ${orm === 'drizzle' ? 'Drizzle' : 'Prisma'}`)
     } else if (backendRuntime === 'python') {
@@ -334,6 +352,27 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
 
     p.log.info(`Database: ${DATABASE_LABELS[database]}`)
   }
+
+  const authenticationContext = {
+    frontend,
+    language,
+    architecture,
+    backendRuntime: fullStack && !integrated && !native ? backendRuntime : null,
+    backendFramework: fullStack && !integrated && !native ? backendFramework : null,
+    orm: fullStack && !native ? orm : null,
+    database: fullStack && !native ? database : null,
+  }
+  const compatibleAuthSetups = compatibleAuthenticationSetups(authenticationContext)
+  const authentication: AuthenticationSetup = flags.auth
+    ? parseEnumChoice('--auth', flags.auth, AVAILABLE.authentication)
+    : forced || !compatibleAuthSetups.includes('better-auth')
+      ? 'none'
+      : await selectWithSoon<AuthenticationSetup>(
+          'Select an authentication setup:',
+          registryChoices(CAPABILITY_REGISTRY.authentication).filter((choice) =>
+            compatibleAuthSetups.includes(choice.value),
+          ),
+        )
 
   // ── Extras ──────────────────────────────────────────────────────────────
   let extras: { tailwind: boolean; eslintPrettier: boolean; shadcn: boolean }
@@ -383,6 +422,7 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
     backendFramework: fullStack && !integrated && !native ? backendFramework : null,
     orm: fullStack && !native ? orm : null,
     database: fullStack && !native ? database : null,
+    authentication,
     extras: native ? { tailwind: false, eslintPrettier: false, shadcn: false } : extras,
     architecture,
   }
@@ -426,6 +466,7 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
         .join(', ') || 'none'}`,
     )
   }
+  summary.push(`Authentication: ${authentication === 'better-auth' ? 'Better Auth (email/password)' : 'none'}`)
   summary.push(`Folder:     ${targetDir}`)
   if (!native) summary.push(`Ports:      client ${CLIENT_PORT} · server ${SERVER_PORT}`)
   p.note(summary.join('\n'), 'Here is what will be generated')

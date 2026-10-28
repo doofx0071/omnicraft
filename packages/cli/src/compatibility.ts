@@ -1,6 +1,7 @@
 import type { ParsedArgs } from './args.js'
 import type {
   Answers,
+  AuthenticationSetup,
   BackendFramework,
   Frontend,
   Language,
@@ -16,6 +17,7 @@ export const NODE_FRAMEWORK_ORMS = CAPABILITY_REGISTRY.ormsByNodeBackend
 export const MODULE_COMPATIBILITY = {
   auth: {
     frontend: 'react',
+    language: 'typescript',
     backendRuntime: 'node',
     backendFramework: 'express',
     orm: 'drizzle',
@@ -23,6 +25,53 @@ export const MODULE_COMPATIBILITY = {
     databases: ['postgres', 'sqlite', 'mysql'],
   },
 } as const
+
+export interface AuthenticationContext {
+  frontend: string
+  language?: string
+  architecture: { kind: string }
+  backendRuntime: string | null
+  backendFramework: string | null
+  orm: string | null
+  database: string | null
+}
+
+export function authenticationCompatibilityReason(
+  setup: AuthenticationSetup,
+  context: AuthenticationContext,
+): string | null {
+  if (setup === 'none') return null
+
+  const supported = MODULE_COMPATIBILITY.auth
+  if (context.frontend !== supported.frontend) {
+    return `Better Auth currently requires the React frontend; ${context.frontend} is not covered yet.`
+  }
+  if (context.language !== undefined && context.language !== supported.language) {
+    return `Better Auth creation currently requires TypeScript; ${context.language} is not covered yet.`
+  }
+  if (
+    context.backendRuntime !== supported.backendRuntime ||
+    context.backendFramework !== supported.backendFramework ||
+    context.orm !== supported.orm
+  ) {
+    return 'Better Auth currently requires Node.js + Express + Drizzle; its route patches target Express.'
+  }
+  if (context.architecture.kind !== supported.architecture) {
+    return `architecture "${context.architecture.kind}" is not covered yet`
+  }
+  if (!(supported.databases as readonly string[]).includes(context.database ?? '')) {
+    return `Better Auth currently supports SQLite, PostgreSQL, and MySQL; ${context.database ?? 'no database'} is not covered yet.`
+  }
+  return null
+}
+
+export function compatibleAuthenticationSetups(
+  context: AuthenticationContext,
+): AuthenticationSetup[] {
+  return AVAILABLE.authentication.filter(
+    (setup) => authenticationCompatibilityReason(setup, context) === null,
+  )
+}
 
 const NEXTJS_GENERATOR_EXTRAS = ['tailwind', 'eslint'] as const
 
@@ -127,6 +176,24 @@ export function validateFlagCompatibility(args: ParsedArgs): void {
   if (runtime === 'node' && backend === 'hono' && orm === 'prisma') {
     throw new Error('Prisma is not available for Hono; choose Drizzle or raw SQL with --orm none.')
   }
+
+  if (args.auth?.trim().toLowerCase() === 'better-auth') {
+    const supported = MODULE_COMPATIBILITY.auth
+    const conflicts =
+      (platform !== undefined && platform !== 'web') ||
+      args.fullStack === false ||
+      (args.lang !== undefined && args.lang.trim().toLowerCase() !== supported.language) ||
+      (frontend !== undefined && frontend !== supported.frontend) ||
+      (args.runtime !== undefined && runtime !== supported.backendRuntime) ||
+      (backend !== undefined && backend !== supported.backendFramework) ||
+      (orm !== undefined && orm !== supported.orm) ||
+      (args.db !== undefined && !(supported.databases as readonly string[]).includes(args.db.trim().toLowerCase()))
+    if (conflicts) {
+      throw new Error(
+        '--auth better-auth requires TypeScript with a full-stack React/Vite Express API using Drizzle and SQLite, PostgreSQL, or MySQL.',
+      )
+    }
+  }
 }
 
 /**
@@ -144,11 +211,13 @@ export function isProjectTypeAllowedByFlags(projectType: ProjectType, args: Pars
     args.backend !== undefined ||
     args.db !== undefined ||
     args.orm !== undefined ||
-    (args.extras?.length ?? 0) > 0
+    (args.extras?.length ?? 0) > 0 ||
+    args.auth?.trim().toLowerCase() === 'better-auth'
   return !webOnlyFlags
 }
 
 export function isFrontendAllowedByFlags(frontend: Frontend, args: ParsedArgs): boolean {
+  if (args.auth?.trim().toLowerCase() === 'better-auth' && frontend !== MODULE_COMPATIBILITY.auth.frontend) return false
   if (args.lang?.trim().toLowerCase() === 'javascript' && frontend !== 'react') return false
   if (args.extras?.includes('shadcn') && frontend !== 'react') return false
   if (frontend === 'nextjs' && !matchesNextjsGeneratorExtras(args.extras)) return false
@@ -164,6 +233,11 @@ export function isRuntimeAllowedByFlags(
   runtime: 'node' | 'python' | 'php',
   args: ParsedArgs,
 ): boolean {
+  if (
+    args.auth?.trim().toLowerCase() === 'better-auth' &&
+    runtime !== MODULE_COMPATIBILITY.auth.backendRuntime
+  )
+    return false
   if (args.runtime && args.runtime.trim().toLowerCase() !== runtime) return false
   if (!args.runtime && (args.orm || args.backend)) return runtime === 'node'
   if (
@@ -175,11 +249,17 @@ export function isRuntimeAllowedByFlags(
 }
 
 export function hasFullStackFlags(args: ParsedArgs): boolean {
-  return Boolean(args.runtime || args.backend || args.db || args.orm)
+  return Boolean(args.runtime || args.backend || args.db || args.orm || args.auth?.trim().toLowerCase() === 'better-auth')
 }
 
 /** Throws when an Answers object could silently compose the wrong template. */
 export function validateAnswerCompatibility(answers: Answers): void {
+  const authenticationError = authenticationCompatibilityReason(
+    answers.authentication,
+    answers,
+  )
+  if (authenticationError) throw new Error(authenticationError)
+
   const integrated = answers.architecture.kind === 'integrated-fullstack'
   const native = answers.architecture.kind === 'native-app'
 

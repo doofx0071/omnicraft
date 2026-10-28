@@ -28,6 +28,8 @@ describe('parseArgs', () => {
     expect(parseArgs(['--frontend', 'react']).frontend).toBe('react')
     expect(parseArgs(['--backend=fastify']).backend).toBe('fastify')
     expect(parseArgs(['--orm', 'prisma']).orm).toBe('prisma')
+    expect(parseArgs(['--auth', 'none']).auth).toBe('none')
+    expect(parseArgs(['--auth=better-auth']).auth).toBe('better-auth')
   })
 
   it('parses --full-stack / --no-full-stack', () => {
@@ -44,6 +46,7 @@ describe('parseArgs', () => {
   it('throws on a value flag without a value', () => {
     expect(() => parseArgs(['--frontend'])).toThrow(/Missing value for --frontend/)
     expect(() => parseArgs(['--frontend', '--yes'])).toThrow(/Missing value for --frontend/)
+    expect(() => parseArgs(['--auth'])).toThrow(/Missing value for --auth/)
   })
 
   it('throws on unknown options', () => {

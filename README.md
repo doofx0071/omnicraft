@@ -31,11 +31,12 @@ Open <a href="docs/demo.html">docs/demo.html</a> in a browser — the same flow 
 ◆  Select a backend framework:            ● Express · Fastify · Hono / FastAPI / Laravel
 ◆  Select a database:                     ● PostgreSQL · SQLite (zero setup) · MySQL
 ◆  Select an ORM:                         ● Drizzle · Prisma  (node only)
+◆  Select an authentication setup:        ● None · Better Auth (compatible TypeScript React + Express + Drizzle paths only)
 ◆  Pick extras:                           ◉ Tailwind CSS  ◉ ESLint + Prettier
 └  Scaffolds → git init → installs deps → prints next steps
 ```
 
-Next.js skips the separate backend, ORM, and extras prompts. Its `create-next-app` base always includes Tailwind and ESLint.
+Next.js skips the separate backend, ORM, authentication, and extras prompts. Its `create-next-app` base always includes Tailwind and ESLint. The auth prompt appears only for TypeScript React/Vite + Node/Express + Drizzle projects using SQLite, PostgreSQL, or MySQL. Choose `None` to leave the project without the optional auth layer, or `Better Auth` to generate the same integration used by `omnicraft add auth`. Set a private `BETTER_AUTH_SECRET` in `server/.env` and run `npm run db:push` before using the auth endpoints; OmniCraft never creates or stores a real secret.
 
 ## What you get (full-stack React)
 
@@ -77,7 +78,8 @@ The prompt and flags expose these choices. A choice in one row does not imply ev
 | Data access | Separate Node API: Drizzle, Prisma, or raw SQL · Next.js route handlers: raw SQL · Python: SQLAlchemy + Alembic · PHP: Eloquent | Prisma is PostgreSQL-only and unavailable for Hono. Raw SQL is not an ORM. |
 | Database | PostgreSQL, SQLite, MySQL (availability varies by runtime) | The matrix lists which combinations have scaffold or runtime evidence. |
 | Extras | Tailwind CSS, ESLint + Prettier, shadcn/ui | Next.js always includes Tailwind + ESLint from create-next-app; shadcn/ui is web React/Vite-only and implies Tailwind. |
-| `omnicraft add` modules | `docker`, `testing`, Better Auth email/password (`auth`) | Auth requires a React frontend with a separate Node + Express + Drizzle API; hosted end-to-end evidence covers SQLite, PostgreSQL, and MySQL. Incompatible auth manifests are rejected before files are changed. |
+| Authentication setup | `None`, Better Auth email/password | The create-time prompt and `--auth` flag expose Better Auth only for the exact TypeScript React/Vite + Node/Express + Drizzle + SQLite/PostgreSQL/MySQL paths. Its creation-time support remains provisional until hosted evidence is linked in the matrix. |
+| `omnicraft add` modules | `docker`, `testing`, Better Auth email/password (`auth`) | Auth requires a React frontend with a separate Node + Express + Drizzle API; hosted database flows cover SQLite, PostgreSQL, and MySQL. Focused tests verify that `omnicraft add auth` applies the module to a bare compatible project. |
 
 ## Options
 
@@ -88,7 +90,7 @@ npm create omnicraft@latest [project-name] [options]
                        also allows running without a TTY)
   --lang <name>        Skip the language prompt (typescript, javascript; JS is web React/Vite only)
   --platform <name>    Skip the "What are you building?" prompt (web, mobile, desktop)
-  --full-stack         Force the full-stack flow (default: yes; --runtime/--backend/--db/--orm imply it)
+  --full-stack         Force the full-stack flow (default: yes; --runtime/--backend/--db/--orm/--auth better-auth imply it)
   --no-full-stack      Frontend only (cannot be combined with backend/database flags)
   --runtime <name>     Skip the runtime prompt (node, python, php)
   --frontend <name>    Skip the frontend prompt (react, nextjs, vue, svelte; Next.js is integrated)
@@ -96,6 +98,8 @@ npm create omnicraft@latest [project-name] [options]
                        python: fastapi · php: laravel)
   --db <name>          Skip the database prompt (node: postgres, sqlite, mysql ·
                        python: postgres, sqlite · php: postgres, sqlite, mysql)
+  --auth <name>        Authentication setup (none, better-auth; Better Auth requires
+                       TypeScript React + Node/Express/Drizzle with SQLite, PostgreSQL, or MySQL)
   --orm <name>         Skip ORM selection (drizzle, prisma, none; Prisma is PostgreSQL-only and
                        unavailable for Hono). Separate Node APIs only; Next.js uses raw SQL and
                        rejects --runtime, --backend, --orm, and --no-full-stack
@@ -116,6 +120,7 @@ Scripted use in CI:
 ```bash
 npm create omnicraft@latest my-app -- --yes --skip-install
 npm create omnicraft@latest api -- --no-full-stack --extras none
+npm create omnicraft@latest web -- --yes --auth better-auth --skip-install
 ```
 
 ## How it works

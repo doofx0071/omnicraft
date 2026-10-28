@@ -108,6 +108,7 @@ function makeAnswers(projectRoot: string, scenario: NodeRuntimeScenario): Answer
     backendFramework: scenario.framework,
     orm: scenario.orm,
     database: scenario.database,
+    authentication: 'none',
     extras: { tailwind: false, eslintPrettier: false, shadcn: false },
     architecture: { kind: 'separate-frontend-api' },
   }

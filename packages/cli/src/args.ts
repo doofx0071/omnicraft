@@ -16,6 +16,7 @@ export interface ParsedArgs {
   backend?: string
   orm?: string
   db?: string
+  auth?: string
   extras?: string[]
 }
 
@@ -29,7 +30,7 @@ Options:
                        also allows running without a TTY)
   --lang <name>        Skip the language prompt (typescript, javascript; JS is web React/Vite only)
   --platform <name>    Skip the "What are you building?" prompt (web, mobile, desktop)
-  --full-stack         Force the full-stack flow (default: yes; --runtime/--backend/--db/--orm imply it)
+  --full-stack         Force the full-stack flow (default: yes; --runtime/--backend/--db/--orm/--auth better-auth imply it)
   --no-full-stack      Frontend only (cannot be combined with backend/database flags)
   --runtime <name>     Skip the runtime prompt (node, python, php)
   --frontend <name>    Skip the frontend prompt (react, nextjs, vue, svelte; Next.js is integrated)
@@ -37,6 +38,8 @@ Options:
                        python: fastapi · php: laravel)
   --db <name>          Skip the database prompt (node: postgres, sqlite, mysql ·
                        python: postgres, sqlite · php: postgres, sqlite, mysql)
+  --auth <name>        Authentication setup (none, better-auth; Better Auth requires
+                       TypeScript React + Node/Express/Drizzle with SQLite, PostgreSQL, or MySQL)
   --orm <name>         Skip ORM selection (drizzle, prisma, none; Prisma is PostgreSQL-only and
                        unavailable for Hono). Separate Node APIs only; Next.js uses raw SQL and
                        rejects --runtime, --backend, --orm, and --no-full-stack
@@ -58,7 +61,7 @@ Examples:
   npm create omnicraft@latest my-app -- --no-full-stack --extras tailwind
 `
 
-const VALUE_FLAGS = new Set(['--lang', '--platform', '--runtime', '--frontend', '--backend', '--orm', '--db', '--extras'])
+const VALUE_FLAGS = new Set(['--lang', '--platform', '--runtime', '--frontend', '--backend', '--orm', '--db', '--auth', '--extras'])
 
 export function parseArgs(argv: string[]): ParsedArgs {
   const args: ParsedArgs = {
@@ -95,6 +98,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
       else if (valueFlag === '--backend') args.backend = value
       else if (valueFlag === '--orm') args.orm = value
       else if (valueFlag === '--db') args.db = value
+      else if (valueFlag === '--auth') args.auth = value
       else args.extras = splitList(value)
     } else if (arg === '--latest') args.latest = true
     else if (arg === '--skip-install') args.skipInstall = true

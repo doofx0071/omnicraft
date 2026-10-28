@@ -15,6 +15,7 @@ function makeAnswers(overrides: Partial<Answers> = {}): Answers {
     backendFramework: 'express',
     orm: 'drizzle',
     database: 'postgres',
+    authentication: 'none',
     extras: { tailwind: true, eslintPrettier: true, shadcn: false },
     architecture: { kind: 'separate-frontend-api' },
     ...overrides,

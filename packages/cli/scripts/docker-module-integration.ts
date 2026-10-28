@@ -108,6 +108,7 @@ function makeAnswers(projectRoot: string, database: DockerDatabase): Answers {
     backendFramework: 'express',
     orm: 'drizzle',
     database,
+    authentication: 'none',
     extras: { tailwind: false, eslintPrettier: false, shadcn: false },
     architecture: { kind: 'separate-frontend-api' },
   }

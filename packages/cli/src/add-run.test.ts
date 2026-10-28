@@ -19,7 +19,7 @@ vi.mock('@clack/prompts', () => ({
   spinner: () => ({ start: vi.fn(), stop: vi.fn() }),
 }))
 
-import { runAdd } from './add-run.js'
+import { applyModuleToProject, runAdd } from './add-run.js'
 import { loadManifest, saveManifest } from './add.js'
 
 let tempRoot = ''
@@ -114,6 +114,7 @@ describe('omnicraft add', () => {
     await runAdd('auth', tempRoot, false)
 
     expect(loadManifest(tempRoot).modules).toEqual(['auth'])
+    expect(loadManifest(tempRoot).authentication).toBe('better-auth')
     expect(readFileSync(join(tempRoot, 'server/src/index.ts'), 'utf8')).toContain('toNodeHandler(auth)')
     expect(readFileSync(join(tempRoot, 'server/src/routes/index.ts'), 'utf8')).toContain('meRouter')
     expect(readFileSync(join(tempRoot, 'server/drizzle.config.ts'), 'utf8')).toContain('auth-schema.ts')
@@ -124,6 +125,22 @@ describe('omnicraft add', () => {
     expect(packageJson.dependencies.express).toBe('^5.0.0')
     expect(packageJson.dependencies['better-auth']).toBe('^1.7.14')
     expect(filesUnder('.').every((path) => !readFileSync(join(tempRoot, path), 'utf8').includes('test-only-secret'))).toBe(true)
+  })
+
+  it('applies creation-time auth without recording it as an added module', async () => {
+    createAuthProject()
+
+    const result = applyModuleToProject('auth', tempRoot, { recordModule: false })
+
+    expect(result.status).toBe('applied')
+    expect(loadManifest(tempRoot).authentication).toBe('better-auth')
+    expect(loadManifest(tempRoot).modules).toEqual([])
+    expect(existsSync(join(tempRoot, 'server/src/auth.ts'))).toBe(true)
+
+    const before = filesUnder('.').map((path) => [path, readFileSync(join(tempRoot, path), 'utf8')])
+    await runAdd('auth', tempRoot, false)
+    expect(filesUnder('.').map((path) => [path, readFileSync(join(tempRoot, path), 'utf8')])).toEqual(before)
+    expect(loadManifest(tempRoot).modules).toEqual([])
   })
 
   it('is idempotent and leaves the second invocation unchanged', async () => {

@@ -21,6 +21,7 @@ function makeAnswers(overrides: Partial<Answers> = {}): Answers {
     backendFramework: fullStack ? 'express' : null,
     orm: fullStack ? 'drizzle' : null,
     database: fullStack ? 'postgres' : null,
+    authentication: 'none',
     extras: { tailwind: true, eslintPrettier: true, shadcn: false },
     architecture: fullStack ? { kind: 'separate-frontend-api' } : { kind: 'frontend-only' },
     ...overrides,
@@ -94,6 +95,18 @@ describe('composition compatibility', () => {
     [{ frontend: 'nextjs', backendRuntime: null, backendFramework: null, orm: 'none', extras: { tailwind: false, eslintPrettier: true, shadcn: false }, architecture: { kind: 'integrated-fullstack', framework: 'nextjs' } }, /Next\.js must use the integrated full-stack architecture/],
   ] as const)('rejects incompatible answers before returning layers', (overrides, message) => {
     expect(() => composeLayers(makeAnswers(overrides))).toThrow(message)
+  })
+
+  it('accepts Better Auth only on the existing Express + Drizzle composition', () => {
+    const withoutAuth = composeLayers(makeAnswers())
+    const withAuth = composeLayers(makeAnswers({ authentication: 'better-auth' }))
+    expect(withAuth).toEqual(withoutAuth)
+    expect(() =>
+      composeLayers(makeAnswers({ authentication: 'better-auth', backendFramework: 'fastify' })),
+    ).toThrow(/Better Auth currently requires Node\.js \+ Express \+ Drizzle/)
+    expect(() =>
+      composeLayers(makeAnswers({ authentication: 'better-auth', language: 'javascript' })),
+    ).toThrow(/Better Auth creation currently requires TypeScript/)
   })
 })
 

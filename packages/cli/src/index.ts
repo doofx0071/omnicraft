@@ -1,7 +1,7 @@
 import * as p from '@clack/prompts'
 import { HELP_TEXT, parseArgs } from './args.js'
 import { CancelledError, unwrap } from './cancel.js'
-import { runAdd } from './add-run.js'
+import { applyModuleToProject, runAdd } from './add-run.js'
 import {
   CLI_VERSION,
   CNA_PACKAGE,
@@ -292,8 +292,21 @@ async function main(): Promise<void> {
     // Project manifest — enables omnicraft add stack detection.
     const { buildManifest } = await import('./manifest.js')
     const { saveManifest } = await import('./add.js')
-    saveManifest(answers.targetDir, buildManifest(answers, CLI_VERSION, detectPackageManager()))
+    const manifest = buildManifest(answers, CLI_VERSION, detectPackageManager())
+    saveManifest(
+      answers.targetDir,
+      answers.authentication === 'better-auth' ? { ...manifest, authentication: 'none' } : manifest,
+    )
     p.log.step('Created .omnicraft/project.json')
+
+    if (answers.authentication === 'better-auth') {
+      const result = applyModuleToProject('auth', answers.targetDir, { recordModule: false })
+      if (result.status !== 'applied') {
+        const details = result.status === 'rejected' ? ` ${result.message}` : ''
+        throw new Error(`Could not configure Better Auth during project creation.${details}`)
+      }
+      p.log.step('Configured Better Auth')
+    }
 
     spinner.start('Initializing git repository...')
     const gitOk = gitInit(answers.targetDir)

@@ -97,6 +97,7 @@ function makeAnswers(projectRoot: string, scenario: Scenario): Answers {
     backendFramework: null,
     orm: null,
     database: null,
+    authentication: 'none',
     extras: { tailwind: shadcn, eslintPrettier: shadcn, shadcn },
     architecture: { kind: 'frontend-only' },
   }

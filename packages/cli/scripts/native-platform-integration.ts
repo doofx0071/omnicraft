@@ -145,6 +145,7 @@ function makeAnswers(
     backendFramework: null,
     orm: null,
     database: null,
+    authentication: 'none',
     extras: { tailwind: false, eslintPrettier: false, shadcn: false },
     architecture: { kind: 'native-app', platform },
   }

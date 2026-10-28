@@ -50,14 +50,15 @@ The current suite covers:
 | `src/validators.test.ts` | Project-name normalization and npm-name validation. |
 | `src/renderer.test.ts` | Token substitution, unresolved-token detection, dotfile renaming, and binary detection. |
 | `src/merge.test.ts` | `package.json` deep merge semantics. |
-| `src/prefill.test.ts` | Available flag values, runtime-scoped databases/frameworks, Prisma/PostgreSQL validation, and `--yes` answer resolution. |
+| `src/prefill.test.ts` | Available flag values, runtime-scoped databases/frameworks, Prisma/PostgreSQL validation, authentication flag preflight, and `--yes` answer resolution. |
 | `src/update-check.test.ts` | Version comparison, mocked registry fetch, offline behavior, and cache. |
 | `src/prompts/run-prompts.test.ts` | Scripted prompt flow, frontend-only branch, unavailable-option retry, cancellation, and invalid names. |
 | `src/next-steps.test.ts` | Integrated Next.js commands/endpoints and container startup for PostgreSQL. |
 | `src/exec.test.ts` | Fixed-command output, timeout handling, and stopping a child process. |
-| `src/engine.test.ts` | Selected generated files, layer overrides, manifests, env files, token scans, protected-path examples, and selected engine combinations. |
+| `src/engine.test.ts` | Selected generated files, layer overrides, manifests, env files, token scans, protected-path examples, selected engine combinations, and creation-time auth compatibility. |
+| `src/compatibility.test.ts`, `src/manifest.test.ts` | Exact creation-time auth choices and constraints, plus manifest separation between active authentication and `modules`. |
 | `src/capabilities.test.ts` | Available prompt/flag choices derive from the typed capability registry, and the module menu matches its registered module IDs. |
-| `src/add-run.test.ts` | Module dry-run, success, idempotency, collisions, unsupported stacks, missing patch anchors, and rollback after a failed write. |
+| `src/add-run.test.ts` | Module dry-run, success, idempotency, creation-time auth application, collisions, unsupported stacks, missing patch anchors, and rollback after a failed write. |
 | `src/support-evidence.test.ts` | Every Supported row resolves through selectable values, prompt/flag/composition and module guards, renders from its exact combination, and maps to the matching scenario, script, job, and aggregate release check. |
 | `src/modules/auth.test.ts` | Better Auth compatibility and secret setup guidance. |
 
@@ -124,8 +125,10 @@ The current workflow:
    expected files in the default scaffold. The generated project's dependencies are not installed in
    this package job.
 4. Runs hosted Ubuntu `database-integration` cases for Express + Drizzle + SQLite/PostgreSQL/MySQL.
-   Each generated project is installed and typechecked; migrations, API boot, CRUD, and Better Auth
-   flows are exercised.
+   Each generated project receives Better Auth through the creation-time application path, is installed
+   and typechecked, then migrates, boots, and exercises CRUD and authentication. The case also verifies
+   that `omnicraft add auth` is a no-op when creation-time auth is already active. Fresh `add auth`
+   application remains covered by focused unit tests; its prior hosted database evidence is retained.
 5. Runs hosted Ubuntu `node-runtime-integration` for the 20 registered Express, Fastify, and Hono
    Prisma, Drizzle, and raw-SQL paths, including the exact Vue, Svelte, and JavaScript React client/API
    pairings. Each generated project is installed, client-built, API-typechecked, initialized or

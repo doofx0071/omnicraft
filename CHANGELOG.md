@@ -6,6 +6,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added
+
+- Creation-time authentication selection for `None` or Better Auth on the currently verified
+  TypeScript React/Vite + Express + Drizzle database paths. `--auth better-auth` uses the same module
+  application path as `omnicraft add auth`; the manifest records active authentication separately
+  from `modules`, and the creation-time support row remains provisional pending hosted evidence.
+
 ## [1.0.2] — 2026-10-28
 
 ### Fixed

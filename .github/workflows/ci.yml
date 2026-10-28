@@ -79,7 +79,7 @@ jobs:
       - name: Install workspace dependencies
         run: npm ci
 
-      - name: Test generated Express + Drizzle against SQLite, PostgreSQL, and MySQL
+      - name: Test creation-time and add-auth Express + Drizzle on SQLite, PostgreSQL, and MySQL
         run: npm run test:integration:db --workspace=create-omnicraft
 
   node-runtime-integration:
