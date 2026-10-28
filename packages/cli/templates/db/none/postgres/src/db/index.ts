@@ -8,6 +8,6 @@ export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
  * are the SQL-injection defense — values never concatenate into the text.
  */
 export async function query<T>(sql: string, values: unknown[] = []): Promise<T[]> {
-  const { rows } = await pool.query<T>(sql, values);
-  return rows;
+  const { rows } = await pool.query(sql, values);
+  return rows as T[];
 }

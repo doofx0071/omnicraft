@@ -4,7 +4,6 @@ import { createServer } from 'node:net'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { text } from 'node:stream/consumers'
 import { setTimeout as delay } from 'node:timers/promises'
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql'
 import { runCommand, startCommand, type StartedCommand } from '../src/exec.js'
@@ -300,16 +299,8 @@ async function runDatabaseCase(database: TestDatabase): Promise<void> {
   } catch (error) {
     const detail = redact(error instanceof Error ? error.message : String(error), secrets)
     const childOutput = child ? redact(child.output, secrets) : ''
-    let containerOutput = ''
-    if (container) {
-      try {
-        containerOutput = redact(await text(await container.logs({ tail: 200 })), secrets)
-      } catch {
-        containerOutput = 'PostgreSQL container logs were unavailable.'
-      }
-    }
     failure = new Error(
-      `[fastapi:${database}] failed\n${detail}${diagnostics.length ? `\n\n${diagnostics.slice(-4).join('\n\n')}` : ''}${childOutput ? `\n\nGenerated API output:\n${tail(childOutput)}` : ''}${containerOutput ? `\n\nPostgreSQL container output:\n${tail(containerOutput)}` : ''}`,
+      `[fastapi:${database}] failed\n${detail}${diagnostics.length ? `\n\n${diagnostics.slice(-4).join('\n\n')}` : ''}${childOutput ? `\n\nGenerated API output:\n${tail(childOutput)}` : ''}`,
       { cause: error },
     )
   } finally {

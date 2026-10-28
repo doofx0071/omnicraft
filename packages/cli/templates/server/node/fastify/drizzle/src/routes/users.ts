@@ -27,7 +27,9 @@ export async function usersRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: z.prettifyError(parsed.error) });
     }
     try {
-      const [user] = await db.insert(users).values(parsed.data).returning();
+      await db.insert(users).values(parsed.data);
+      const [user] = await db.select().from(users).where(eq(users.email, parsed.data.email)).limit(1);
+      if (!user) throw new Error("Created user could not be loaded.");
       return reply.status(201).send(user);
     } catch (err) {
       if (isUniqueViolation(err)) {
@@ -42,10 +44,11 @@ export async function usersRoutes(app: FastifyInstance) {
     if (!Number.isInteger(id)) {
       return reply.status(400).send({ error: "Invalid user id" });
     }
-    const [deleted] = await db.delete(users).where(eq(users.id, id)).returning();
+    const [deleted] = await db.select().from(users).where(eq(users.id, id)).limit(1);
     if (!deleted) {
       return reply.status(404).send({ error: "User not found" });
     }
+    await db.delete(users).where(eq(users.id, id));
     return deleted;
   });
 }

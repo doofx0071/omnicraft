@@ -8,7 +8,7 @@
 > and [testing strategy](../../development/testing-strategy.md). Selectable choices and module ids now
 > come from `packages/cli/src/capabilities.ts`; compatibility rules and module-write safety have
 > regression tests. Remaining existing-stack runtime gaps are tracked in
-> [the active runtime evidence plan](../active/omnicraft-stack-runtime-evidence-plan.md), not treated as
+> [the completed runtime evidence plan](omnicraft-stack-runtime-evidence-plan.md), not treated as
 > completed work in this historical plan.
 
 - **Prepared:** 26 October 2026
