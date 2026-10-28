@@ -156,11 +156,17 @@ async function ensureDockerAvailable(): Promise<void> {
   if ((version[0] ?? 0) < 22 || ((version[0] ?? 0) === 22 && (version[1] ?? 0) < 22)) {
     throw new Error('PostgreSQL/MySQL integration requires Node.js 22.22 or newer (Testcontainers v12).')
   }
-  const result = runCommand('docker', ['info'], process.cwd(), {
-    timeoutMs: 15_000,
-    maxBuffer: 1_000_000,
-  })
-  if (!result.ok) throw new Error('Docker Engine/Desktop is required for Node database integration tests.')
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    const result = runCommand('docker', ['info'], process.cwd(), {
+      timeoutMs: 10_000,
+      maxBuffer: 1_000_000,
+    })
+    if (result.ok) return
+    if (attempt < 5) await delay(2_000)
+  }
+  throw new Error(
+    'Docker Engine/Desktop did not become ready for Node database integration tests after five bounded checks.',
+  )
 }
 
 async function reservePort(): Promise<number> {
