@@ -21,6 +21,31 @@ function tail(value: string, length = 12_000): string {
   return value.length > length ? value.slice(-length) : value
 }
 
+function failureDetails(value: string): string {
+  const lines = value.split(/\r?\n/)
+  const diagnosticIndices = lines.flatMap((line, index) =>
+    /(?:^|\s)(?:fatal\s+)?error:|error generated\b|The following build commands failed|\*\* BUILD FAILED \*\*|Command .* failed/i.test(line)
+      ? [index]
+      : [],
+  )
+  const selected = [...diagnosticIndices.slice(0, 40), ...diagnosticIndices.slice(-20)]
+  const context = new Set<number>()
+  for (const index of selected) {
+    for (let nearby = Math.max(0, index - 1); nearby <= Math.min(lines.length - 1, index + 2); nearby += 1) {
+      context.add(nearby)
+    }
+  }
+  const excerpt = [...context]
+    .sort((left, right) => left - right)
+    .map((index) => `${index + 1}: ${lines[index] ?? ''}`)
+    .join('\n')
+  const diagnostics =
+    excerpt.length > 8_000
+      ? `${excerpt.slice(0, 4_000)}\n... ${excerpt.length - 8_000} diagnostic characters omitted ...\n${excerpt.slice(-4_000)}`
+      : excerpt || 'No compiler error line was captured.'
+  return `Relevant failure diagnostics:\n${diagnostics}\nFinal output:\n${tail(value, 3_000)}`
+}
+
 function redact(value: string): string {
   let result = value
   for (const [key, secret] of Object.entries(process.env)) {
@@ -53,7 +78,7 @@ function runRequired(
   })
   const output = redact(result.output)
   if (!result.ok) {
-    throw new Error(`${label} failed (exit ${result.exitCode ?? 'unknown'}):\n${tail(output)}`)
+    throw new Error(`${label} failed (exit ${result.exitCode ?? 'unknown'}):\n${failureDetails(output)}`)
   }
   console.log(`[native] completed: ${label}`)
   return output
