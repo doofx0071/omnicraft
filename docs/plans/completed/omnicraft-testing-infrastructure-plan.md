@@ -23,7 +23,7 @@
 - **Phase 5:** FastAPI + SQLite and Laravel + SQLite generated-project jobs passed in hosted run
   [#40562224821](https://github.com/doofx0071/omnicraft/actions/runs/40562224821); their exact matrix
   rows are now Supported. Laravel PostgreSQL/MySQL are also exercised. Remaining existing selectable
-  combinations are not promoted and are itemized in the [runtime evidence follow-up](../active/omnicraft-stack-runtime-evidence-plan.md).
+  combinations are not promoted and are itemized in the [runtime evidence follow-up](omnicraft-stack-runtime-evidence-plan.md).
   Laravel Livewire/Inertia starter modes are **not applicable** because the current CLI exposes no
   such modes.
 - **Phase 6:** CI maps Supported rows to scripts/scenarios/jobs, gates releases on the full supported
@@ -808,7 +808,7 @@ This plan is complete on the evidence below. Each criterion is checked only wher
 ## 15. Historical proposed issues / pull requests
 
 This original breakdown predates the implementation above. The current outstanding runtime and
-capability-to-matrix work is tracked in the [active runtime-evidence plan](../active/omnicraft-stack-runtime-evidence-plan.md); creation-time auth remains not applicable unless that feature is implemented.
+capability-to-matrix work is tracked in the [completed runtime-evidence plan](omnicraft-stack-runtime-evidence-plan.md); creation-time auth remains not applicable unless that feature is implemented.
 
 Create separate issues or PRs so work remains reviewable:
 

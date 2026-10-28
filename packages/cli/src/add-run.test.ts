@@ -205,11 +205,44 @@ describe('omnicraft add', () => {
     expect(existsSync(join(tempRoot, 'src/App.test.tsx'))).toBe(true)
     expect(existsSync(join(tempRoot, 'src/setupTests.ts'))).toBe(true)
     expect(loadManifest(tempRoot).modules).toEqual(['testing'])
+    expect(readFileSync(join(tempRoot, 'vitest.config.ts'), 'utf8')).toContain(
+      'setupFiles: ["./src/setupTests.ts"]',
+    )
+    expect(readFileSync(join(tempRoot, 'src/App.test.tsx'), 'utf8')).toContain(
+      'screen.getByRole("heading", { name: "⚡ demo-app" })',
+    )
     const packageJson = JSON.parse(readFileSync(join(tempRoot, 'package.json'), 'utf8')) as {
       devDependencies: Record<string, string>
       scripts: Record<string, string>
     }
     expect(packageJson.devDependencies.vitest).toBe('^3.0.0')
     expect(packageJson.scripts.test).toBe('vitest run')
+  })
+
+  it('rejects the Docker module on SQLite before writing files', async () => {
+    saveManifest(tempRoot, manifest())
+    write('package.json', JSON.stringify({ name: 'demo-app' }, null, 2))
+    const manifestBefore = readFileSync(join(tempRoot, '.omnicraft/project.json'), 'utf8')
+
+    await runAdd('docker', tempRoot, false)
+
+    expect(process.exitCode).toBe(1)
+    expect(existsSync(join(tempRoot, 'docker-compose.yml'))).toBe(false)
+    expect(readFileSync(join(tempRoot, '.omnicraft/project.json'), 'utf8')).toBe(manifestBefore)
+  })
+
+  it('rejects the Docker module on integrated Next.js before writing files', async () => {
+    const projectManifest = manifest('nextjs', { kind: 'integrated-fullstack', framework: 'nextjs' })
+    projectManifest.stack.database = 'postgres'
+    projectManifest.stack.orm = 'none'
+    saveManifest(tempRoot, projectManifest)
+    write('package.json', JSON.stringify({ name: 'demo-app' }, null, 2))
+    const manifestBefore = readFileSync(join(tempRoot, '.omnicraft/project.json'), 'utf8')
+
+    await runAdd('docker', tempRoot, false)
+
+    expect(process.exitCode).toBe(1)
+    expect(existsSync(join(tempRoot, 'docker-compose.yml'))).toBe(false)
+    expect(readFileSync(join(tempRoot, '.omnicraft/project.json'), 'utf8')).toBe(manifestBefore)
   })
 })

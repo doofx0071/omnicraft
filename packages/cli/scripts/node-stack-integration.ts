@@ -101,8 +101,8 @@ function makeAnswers(projectRoot: string, scenario: NodeRuntimeScenario): Answer
     projectName: `omnicraft-${scenario.id}-test`,
     targetDir: projectRoot,
     projectType: 'web',
-    frontend: 'react',
-    language: 'typescript',
+    frontend: scenario.frontend ?? 'react',
+    language: scenario.language ?? 'typescript',
     fullStack: true,
     backendRuntime: 'node',
     backendFramework: scenario.framework,
@@ -156,11 +156,17 @@ async function ensureDockerAvailable(): Promise<void> {
   if ((version[0] ?? 0) < 22 || ((version[0] ?? 0) === 22 && (version[1] ?? 0) < 22)) {
     throw new Error('PostgreSQL/MySQL integration requires Node.js 22.22 or newer (Testcontainers v12).')
   }
-  const result = runCommand('docker', ['info'], process.cwd(), {
-    timeoutMs: 15_000,
-    maxBuffer: 1_000_000,
-  })
-  if (!result.ok) throw new Error('Docker Engine/Desktop is required for Node database integration tests.')
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    const result = runCommand('docker', ['info'], process.cwd(), {
+      timeoutMs: 10_000,
+      maxBuffer: 1_000_000,
+    })
+    if (result.ok) return
+    if (attempt < 5) await delay(2_000)
+  }
+  throw new Error(
+    'Docker Engine/Desktop did not become ready for Node database integration tests after five bounded checks.',
+  )
 }
 
 async function reservePort(): Promise<number> {
@@ -301,8 +307,12 @@ async function runScenario(scenario: NodeRuntimeScenario): Promise<void> {
     }
 
     runRequired('Install generated dependencies', 'npm', ['install', '--no-audit', '--no-fund'], projectRoot, env, secrets, diagnostics)
-    runRequired('Typecheck generated client', 'npx', ['tsc', '--noEmit', '-p', 'client'], projectRoot, env, secrets, diagnostics, 120_000)
-    runRequired('Build generated client', 'npm', ['run', 'build', '--workspace=client'], projectRoot, env, secrets, diagnostics)
+    if ((scenario.frontend ?? 'react') === 'react' && (scenario.language ?? 'typescript') === 'typescript') {
+      runRequired('Typecheck generated client', 'npx', ['tsc', '--noEmit', '-p', 'client'], projectRoot, env, secrets, diagnostics, 120_000)
+      runRequired('Build generated client', 'npm', ['run', 'build', '--workspace=client'], projectRoot, env, secrets, diagnostics)
+    } else {
+      runRequired('Build and frontend-check generated client', 'npm', ['run', 'build', '--workspace=client'], projectRoot, env, secrets, diagnostics, 180_000)
+    }
     runRequired('Typecheck generated API', 'npx', ['tsc', '--noEmit', '-p', 'server'], projectRoot, env, secrets, diagnostics, 120_000)
     console.log(`[node:${scenario.id}] generated client and API checks completed`)
     console.log(`[node:${scenario.id}] applying ${scenario.orm} database setup`)

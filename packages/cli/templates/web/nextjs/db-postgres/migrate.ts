@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { readFileSync, readdirSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename } from "node:path";
 import { pool } from "./index.js";
 
 /**
@@ -25,7 +25,7 @@ export async function migrate(): Promise<void> {
 
   for (const file of files) {
     if (applied.has(file)) continue;
-    const sql = readFileSync(join(migrationsDir, file), "utf8");
+    const sql = readFileSync(new URL(file, migrationsDir), "utf8");
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
