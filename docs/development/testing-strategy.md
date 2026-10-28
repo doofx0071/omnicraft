@@ -123,16 +123,17 @@ The current workflow:
 5. Runs hosted Ubuntu `node-runtime-integration` for the 20 registered Express, Fastify, and Hono
    Prisma, Drizzle, and raw-SQL paths, including the exact Vue, Svelte, and JavaScript React client/API
    pairings. Each generated project is installed, client-built, API-typechecked, initialized or
-   migrated, booted, and checked for CRUD, duplicate, invalid-input, and missing-record behavior. The
-   15 Fastify/Hono scenarios passed hosted run #40612114736 on commit `14adbf9`; the three client/API
-   scenarios await their new hosted run.
+   migrated, booted, and checked for CRUD, duplicate, invalid-input, and missing-record behavior. All
+   20 scenarios passed hosted run #40614408163 on commit `336622e`.
 6. Runs hosted Ubuntu `nextjs-runtime-integration` for integrated Next.js + raw SQL on SQLite,
    PostgreSQL, and MySQL. It runs the pinned-major `create-next-app@16`, applies OmniCraft's exact
    production layers, installs, builds and typechecks the project, runs SQL migrations, boots the
-   production server, and verifies CRUD and failure cases. The new hosted cases are pending.
+   production server, and verifies CRUD and failure cases. All three database scenarios passed hosted
+   run #40614408163 on commit `336622e`.
 7. Runs hosted Ubuntu `frontend-runtime-integration` for React/Vite JavaScript frontend-only. It
    installs, builds, boots Vite preview, fetches the generated bundle, and checks missing-asset
-   behavior; database operations do not apply.
+   behavior; database operations do not apply. The generated-project check passed hosted run
+   #40614408163 on commit `336622e`.
 8. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
    generated dependencies, runs Alembic migrations, boots Uvicorn, and checks SQLite and PostgreSQL
    CRUD and failure responses. PostgreSQL runs in an isolated Testcontainers instance.

@@ -255,6 +255,53 @@ export const SUPPORTED_CAPABILITIES = [
     target: 'node-express-drizzle',
     scenarios: ['postgres', 'mysql'],
   },
+  {
+    id: 'frontend-vue-express-drizzle-sqlite',
+    matrixRowPrefix:
+      '| Vue + Vite + TypeScript + Express + Drizzle + SQLite | **Supported** |',
+    target: 'node-runtime',
+    scenarios: ['express-drizzle-sqlite-vue'],
+  },
+  {
+    id: 'frontend-svelte-express-drizzle-sqlite',
+    matrixRowPrefix:
+      '| Svelte + Vite + TypeScript + Express + Drizzle + SQLite | **Supported** |',
+    target: 'node-runtime',
+    scenarios: ['express-drizzle-sqlite-svelte'],
+  },
+  {
+    id: 'frontend-react-js-express-drizzle-sqlite',
+    matrixRowPrefix:
+      '| React + Vite JavaScript + Express + Drizzle + SQLite separate API | **Supported** |',
+    target: 'node-runtime',
+    scenarios: ['express-drizzle-sqlite-react-js'],
+  },
+  {
+    id: 'frontend-react-js-frontend-only',
+    matrixRowPrefix: '| React + Vite JavaScript, frontend-only | **Supported** |',
+    target: 'frontend-runtime',
+    scenarios: ['react-js-frontend-only'],
+  },
+  {
+    id: 'nextjs-raw-sqlite',
+    matrixRowPrefix:
+      '| Next.js integrated full-stack + raw SQL + SQLite | **Supported** |',
+    target: 'nextjs-runtime',
+    scenarios: ['sqlite'],
+  },
+  {
+    id: 'nextjs-raw-postgres',
+    matrixRowPrefix:
+      '| Next.js integrated full-stack + raw SQL + PostgreSQL | **Supported** |',
+    target: 'nextjs-runtime',
+    scenarios: ['postgres'],
+  },
+  {
+    id: 'nextjs-raw-mysql',
+    matrixRowPrefix: '| Next.js integrated full-stack + MySQL | **Supported** |',
+    target: 'nextjs-runtime',
+    scenarios: ['mysql'],
+  },
 ] as const satisfies readonly SupportedCapability[]
 
 export function integrationScenarios(target: IntegrationTargetId): readonly string[] {
