@@ -205,6 +205,12 @@ describe('omnicraft add', () => {
     expect(existsSync(join(tempRoot, 'src/App.test.tsx'))).toBe(true)
     expect(existsSync(join(tempRoot, 'src/setupTests.ts'))).toBe(true)
     expect(loadManifest(tempRoot).modules).toEqual(['testing'])
+    expect(readFileSync(join(tempRoot, 'vitest.config.ts'), 'utf8')).toContain(
+      'setupFiles: ["./src/setupTests.ts"]',
+    )
+    expect(readFileSync(join(tempRoot, 'src/App.test.tsx'), 'utf8')).toContain(
+      'screen.getByRole("heading", { name: "⚡ demo-app" })',
+    )
     const packageJson = JSON.parse(readFileSync(join(tempRoot, 'package.json'), 'utf8')) as {
       devDependencies: Record<string, string>
       scripts: Record<string, string>

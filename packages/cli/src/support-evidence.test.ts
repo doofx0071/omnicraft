@@ -4,6 +4,7 @@ import {
   FRONTEND_RUNTIME_SCENARIOS,
   DOCKER_MODULE_SCENARIOS,
   integrationScenarios,
+  MODULE_RUNTIME_SCENARIOS,
   NEXTJS_DATABASE_SCENARIOS,
   NODE_RUNTIME_SCENARIOS,
 } from './support-evidence.js'
@@ -58,5 +59,13 @@ describe('support matrix evidence', () => {
   it('registers PostgreSQL and MySQL for the generated Docker-module integration runner', () => {
     expect(integrationScenarios('docker-module')).toEqual(DOCKER_MODULE_SCENARIOS)
     expect(DOCKER_MODULE_SCENARIOS).toEqual(['postgres', 'mysql'])
+  })
+
+  it('registers the generated testing-module and shadcn install scenarios', () => {
+    expect(integrationScenarios('module-runtime')).toEqual(MODULE_RUNTIME_SCENARIOS)
+    expect(MODULE_RUNTIME_SCENARIOS).toEqual([
+      'add-testing-react-vite-ts',
+      'shadcn-react-vite-ts-frontend-only',
+    ])
   })
 })
