@@ -123,6 +123,37 @@ function selectIosSimulator(inventory: SimulatorInventory): SimulatorDevice {
   return device
 }
 
+function findIosAppBundle(derivedData: string): string {
+  const productsRoot = join(derivedData, 'Build', 'Products')
+  const appBundles: string[] = []
+
+  function visit(directory: string): void {
+    let entries
+    try {
+      entries = readdirSync(directory, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      const path = join(directory, entry.name)
+      if (entry.name.endsWith('.app')) {
+        if (!entry.name.endsWith('Tests.app')) appBundles.push(path)
+      } else {
+        visit(path)
+      }
+    }
+  }
+
+  visit(productsRoot)
+  if (appBundles.length !== 1) {
+    throw new Error(
+      `Expected one generated iOS simulator app under ${productsRoot}, found ${appBundles.length}: ${appBundles.join(', ') || 'none'}.`,
+    )
+  }
+  return appBundles[0] ?? ''
+}
+
 function findIosProject(iosRoot: string): { projectPath: string; workspacePath: string } {
   const project = readdirSync(iosRoot).find((name) => name.endsWith('.xcodeproj'))
   if (!project) throw new Error(`Expo prebuild did not create an Xcode project in ${iosRoot}.`)
@@ -320,10 +351,7 @@ async function runExpoIosSimulator(): Promise<void> {
       BUILD_TIMEOUT_MS,
     )
 
-    const appRoot = join(derivedData, 'Build', 'Products', 'Release-iphonesimulator')
-    const appBundle = readdirSync(appRoot).find((name) => name.endsWith('.app') && !name.endsWith('Tests.app'))
-    if (!appBundle) throw new Error(`xcodebuild did not produce an iOS simulator app in ${appRoot}.`)
-    const appPath = join(appRoot, appBundle)
+    const appPath = findIosAppBundle(derivedData)
     const bundleId = iosBundleIdentifier(projectPath)
     runRequired('Install the native app in the simulator', 'xcrun', ['simctl', 'install', simulatorId, appPath], projectRoot, 120_000)
     const launchOutput = runRequired(
