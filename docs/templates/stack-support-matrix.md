@@ -8,10 +8,10 @@ unions, or the presence of a template directory do not prove that every cross-pr
 - **Supported** — the repository records a generated-project install/setup, typecheck or equivalent,
   boot, and successful real operation for the exact combination, with a passing hosted CI run recorded
   on a tested commit.
-- **Scaffold-verified** — an engine test or the smoke script generated the exact combination. A local
-  runtime result may be recorded, but the row remains provisional until the exact hosted CI evidence is
-  recorded; scaffolding alone does not prove dependencies install, the app boots, or database operations
-  work.
+- **Scaffold-verified** — an engine test or the smoke script generated the exact combination, or local
+  generated-project checks passed without hosted evidence. A local runtime result may be recorded, but
+  the row remains provisional until the exact hosted CI evidence is recorded; scaffolding alone does not
+  prove dependencies install, the app boots, or database operations work.
 - **Selectable — unverified** — the CLI registry and template layers expose the combination, but no
   exact engine fixture or smoke entry verifies it.
 - **Rejected — unsupported combination** — preflight rejects the combination, or the prompt omits it,
@@ -105,7 +105,8 @@ The repository has no `templates/server/node/hono/prisma/` layer.
 | `omnicraft add auth` — Express + Drizzle + PostgreSQL/MySQL | **Supported** | `database-integration` checks registration, login, session persistence across restart, protected-route behavior, logout, stored password hash, and CRUD on both databases. <!-- support-id: auth-express-drizzle-postgres-mysql --> |
 | `omnicraft add auth` — Fastify/Hono + Drizzle | **Rejected — unsupported combination** | The module guard rejects these frameworks because its route patches target Express files. |
 | `omnicraft add testing` | **Scaffold-verified** | Unit tests verify files, dependencies, scripts, and manifest changes; the generated sample test is not installed and executed in CI. |
-| `omnicraft add docker` | **Selectable — unverified** | Implementation exists for PostgreSQL/MySQL separate-API projects; no current add-module test covers it. |
+| `omnicraft add docker` — Express + Drizzle + PostgreSQL separate API | **Scaffold-verified** | Local `test:integration:docker-module -- --database postgres` checked the generated scaffold's existing Compose-file conflict, successful add after removing that file, idempotency, Compose validation/startup, migrations, API CRUD, and failure behavior. The host port was remapped only because local port 5432 was occupied. Hosted evidence is pending. |
+| `omnicraft add docker` — Express + Drizzle + MySQL separate API | **Scaffold-verified** | Local `test:integration:docker-module -- --database mysql` checked the generated scaffold's existing Compose-file conflict, successful add after removing that file, idempotency, Compose validation/startup, migrations, API CRUD, and failure behavior. Hosted evidence is pending. |
 | Tailwind CSS | **Scaffold-verified** | Generated in the current smoke paths; prior matrix records a generated-project build. |
 | ESLint + Prettier | **Scaffold-verified** | Current smoke paths include the extra; CI lint is limited to Express + Drizzle + PostgreSQL on the Windows job. |
 | shadcn/ui — React/Vite | **Scaffold-verified** | Engine test checks the overlay; the post-scaffold shadcn CLI install is not covered by the current suite. Other frontend/platform combinations omit shadcn from the prompt and reject incompatible flags. |

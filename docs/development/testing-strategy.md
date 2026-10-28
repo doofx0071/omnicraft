@@ -134,18 +134,22 @@ The current workflow:
    installs, builds, boots Vite preview, fetches the generated bundle, and checks missing-asset
    behavior; database operations do not apply. The generated-project check passed hosted run
    #40614408163 on commit `336622e`.
-8. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
+8. Runs hosted Ubuntu `docker-module-integration` for the generated Express + Drizzle + PostgreSQL and
+   MySQL paths. It checks the default Compose-file conflict, successful module addition and idempotency,
+   validates and starts the Compose database, installs and checks the generated app, migrates, boots the
+   API, and verifies CRUD and failure cases. Its hosted cases are pending.
+9. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
    generated dependencies, runs Alembic migrations, boots Uvicorn, and checks SQLite and PostgreSQL
    CRUD and failure responses. PostgreSQL runs in an isolated Testcontainers instance.
-9. Runs hosted Ubuntu `php-laravel-integration` for SQLite/PostgreSQL/MySQL. The SQLite case uses the
+10. Runs hosted Ubuntu `php-laravel-integration` for SQLite/PostgreSQL/MySQL. The SQLite case uses the
    pinned PHP/Composer test image without a database service; networked databases use isolated Compose
    services. Each case installs Composer dependencies, checks platform requirements, migrates, and
    runs database/API feature tests.
-10. Runs `support-evidence` to check matrix row ids, registered test scenarios, job commands, and the
+11. Runs `support-evidence` to check matrix row ids, registered test scenarios, job commands, and the
    release aggregate. `supported-matrix` fails unless the OS/Node matrix, runtime jobs, support evidence,
    and package artifact all pass. It runs for PRs, main pushes, nightly, and version-tag pushes;
    `workflow_dispatch` supports an explicit pre-release run. The scheduled run uses GitHub-hosted jobs.
-11. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
+12. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
    the release job publishes to npm using OIDC, creates the GitHub Release from the version's changelog
    section, and updates the release snapshots in `ROADMAP.md` and `docs/architecture/system-overview.md`.
    The self-hosted Windows job runs only for main-branch pushes and same-repository pull requests.

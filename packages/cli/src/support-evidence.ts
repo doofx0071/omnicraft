@@ -52,6 +52,7 @@ export const NODE_RUNTIME_SCENARIOS = [
 
 export const NEXTJS_DATABASE_SCENARIOS = ['sqlite', 'postgres', 'mysql'] as const satisfies readonly Extract<Database, 'sqlite' | 'postgres' | 'mysql'>[]
 export const FRONTEND_RUNTIME_SCENARIOS = ['react-js-frontend-only'] as const
+export const DOCKER_MODULE_SCENARIOS = ['postgres', 'mysql'] as const satisfies readonly Extract<Database, 'postgres' | 'mysql'>[]
 
 export const INTEGRATION_TARGETS = {
   'node-runtime': {
@@ -72,6 +73,12 @@ export const INTEGRATION_TARGETS = {
     workflowJob: 'frontend-runtime-integration',
     workflowCommand: 'npm run test:integration:frontend --workspace=create-omnicraft',
     scenarios: FRONTEND_RUNTIME_SCENARIOS,
+  },
+  'docker-module': {
+    script: 'scripts/docker-module-integration.ts',
+    workflowJob: 'docker-module-integration',
+    workflowCommand: 'npm run test:integration:docker-module --workspace=create-omnicraft -- --database',
+    scenarios: DOCKER_MODULE_SCENARIOS,
   },
   'node-express-drizzle': {
     script: 'scripts/db-integration.ts',

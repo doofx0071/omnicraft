@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { validateSupportEvidence } from '../scripts/check-support-evidence.js'
 import {
   FRONTEND_RUNTIME_SCENARIOS,
+  DOCKER_MODULE_SCENARIOS,
   integrationScenarios,
   NEXTJS_DATABASE_SCENARIOS,
   NODE_RUNTIME_SCENARIOS,
@@ -52,5 +53,10 @@ describe('support matrix evidence', () => {
   it('registers the generated JavaScript frontend-only runtime scenario', () => {
     expect(integrationScenarios('frontend-runtime')).toEqual(FRONTEND_RUNTIME_SCENARIOS)
     expect(FRONTEND_RUNTIME_SCENARIOS).toEqual(['react-js-frontend-only'])
+  })
+
+  it('registers PostgreSQL and MySQL for the generated Docker-module integration runner', () => {
+    expect(integrationScenarios('docker-module')).toEqual(DOCKER_MODULE_SCENARIOS)
+    expect(DOCKER_MODULE_SCENARIOS).toEqual(['postgres', 'mysql'])
   })
 })
