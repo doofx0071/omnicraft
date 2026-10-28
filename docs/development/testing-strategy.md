@@ -67,13 +67,14 @@ PostgreSQL/SQLite, the Laravel SQLite overlay, React frontend-only, Vue/Svelte c
 Next.js adapters, and shadcn's React/Vite overlay. This is a selected set, not the full runtime ×
 framework × ORM × database product.
 
-Hosted native checks now generate Expo and Tauri projects through the production commands, apply the
-production layers, install dependencies, and build and launch the generated app on an iOS simulator and
-Linux desktop respectively. These checks cover only iPhone simulator and Ubuntu desktop targets; they do
-not establish Android, physical iOS device, macOS, or Windows native support. The support matrix records
-the exact hosted run and keeps the broader native rows provisional. `omnicraft add testing` is Supported
-only for React/Vite TypeScript frontend-only: the hosted generated-project scenario installs the module,
-runs its sample assertion, builds and boots the app, and checks bundle and missing-asset responses.
+Hosted native checks now generate Expo and Tauri projects through the production commands and apply the
+production layers. Expo runs iOS prebuild, a native Debug build, simulator installation, and launch; it
+does not run a browser web build. Tauri builds the Vite web frontend, the native executable, and launches
+a visible Linux desktop window. These checks cover only iPhone simulator and Ubuntu desktop targets; they
+do not establish Android, physical iOS device, macOS, or Windows native support. The support matrix
+records the exact hosted run and keeps the broader native rows provisional. `omnicraft add testing` is
+Supported only for React/Vite TypeScript frontend-only: the hosted generated-project scenario installs the
+module, runs its sample assertion, builds and boots the app, and checks bundle and missing-asset responses.
 
 ### Level 2 — Scaffold smoke (`scripts/smoke-e2e.ts`)
 
@@ -103,9 +104,9 @@ case. Examples include:
 - Laravel: install through Composer, migrate/seed, boot Artisan, and exercise API/database behavior.
 - Frontend-only React/Vite: database operations do not apply; install and build the generated app, boot
   its preview server, load the emitted JavaScript bundle, and verify that a missing asset fails.
-- Native apps: record platform-specific prerequisites and test the native build/launch on the named
-  target. A simulator or desktop launch applies only to that platform, and database operations are not
-  required for native scaffolds that do not include a database.
+- Native apps: record the scaffold, web build (when applicable), native build, and launch as separate
+  results for the named target. A simulator or desktop launch applies only to that platform, and database
+  operations are not required for native scaffolds that do not include a database.
 
 Record evidence for the exact combination in the [support matrix](../templates/stack-support-matrix.md).
 Do not infer one database/framework/frontend combination from a successful test of another.
@@ -151,8 +152,9 @@ The current workflow:
    checks the generated app. Both scenarios passed [run #40618652654](https://github.com/doofx0071/omnicraft/actions/runs/40618652654/job/122588485044)
    on commit `b28f5c48fd22820461a76defd3d099def5dd594f`; only these exact module paths are Supported.
 10. Runs `native-platform-integration` for Expo on `macos-26` and Tauri on `ubuntu-24.04`. It generates
-   each project through its production command, applies production layers, installs dependencies,
-   builds a native app, and verifies launch in an iPhone simulator or visible Linux desktop window.
+   each project through its production command, applies production layers, and installs dependencies.
+   Expo runs iOS prebuild and a native Debug build; Tauri builds the Vite frontend and native executable.
+   The job verifies launch in an iPhone simulator or visible Linux desktop window.
    Both targets passed run [#40699127397](https://github.com/doofx0071/omnicraft/actions/runs/40699127397)
    on head `5fff8ad638b203affc168fc948169d75b7cfc719`; the support matrix records the exact limits.
 11. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
