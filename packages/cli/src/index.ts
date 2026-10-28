@@ -2,7 +2,15 @@ import * as p from '@clack/prompts'
 import { HELP_TEXT, parseArgs } from './args.js'
 import { CancelledError, unwrap } from './cancel.js'
 import { runAdd } from './add-run.js'
-import { CLI_VERSION, CNA_PACKAGE, SHADCN_COMPONENTS, SHADCN_PRESET, TEMPLATES_ROOT, TEMPLATE_REPO } from './config.js'
+import {
+  CLI_VERSION,
+  CNA_PACKAGE,
+  SHADCN_BASE,
+  SHADCN_COMPONENTS,
+  SHADCN_PRESET,
+  TEMPLATES_ROOT,
+  TEMPLATE_REPO,
+} from './config.js'
 import { printNextSteps } from './next-steps.js'
 import { runPrompts } from './prompts/run-prompts.js'
 import { composeLayers, planLayerApplication, templateVariables } from './scaffold/compose.js'
@@ -339,7 +347,17 @@ async function main(): Promise<void> {
             spinner.start('Setting up shadcn/ui (init + components — this can take a minute)...')
             const init = runCommand(
               'npx',
-              ['--yes', 'shadcn@latest', 'init', '--template', 'vite', '--base', 'radix', '--preset', SHADCN_PRESET, '--no-monorepo', '--force'],
+              [
+                '--yes',
+                'shadcn@latest',
+                'init',
+                '--base',
+                SHADCN_BASE,
+                '--preset',
+                SHADCN_PRESET,
+                '--no-monorepo',
+                '--force',
+              ],
               clientDir,
             )
             const add =
@@ -353,7 +371,7 @@ async function main(): Promise<void> {
             } else {
               spinner.stop('shadcn setup failed')
               p.log.warn(
-                `Run manually inside ${answers.fullStack ? 'client/' : 'the project'}:\n  npx shadcn@latest init --template vite --base radix --preset ${SHADCN_PRESET} --no-monorepo --force\n  npx shadcn@latest add ${SHADCN_COMPONENTS.join(' ')}`,
+                `Run manually inside ${answers.fullStack ? 'client/' : 'the project'}:\n  npx shadcn@latest init --base ${SHADCN_BASE} --preset ${SHADCN_PRESET} --no-monorepo --force\n  npx shadcn@latest add ${SHADCN_COMPONENTS.join(' ')}`,
               )
             }
           }

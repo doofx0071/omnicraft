@@ -1,8 +1,28 @@
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { INTEGRATION_TARGETS, SUPPORTED_CAPABILITIES } from '../src/support-evidence.js'
+import { MODULES } from '../src/add.js'
+import {
+  isFrontendAllowedByFlags,
+  isProjectTypeAllowedByFlags,
+  isRuntimeAllowedByFlags,
+} from '../src/compatibility.js'
+import { TEMPLATES_ROOT } from '../src/config.js'
+import { buildManifest } from '../src/manifest.js'
+import { resolveAnswers, validateStackFlags } from '../src/prefill.js'
+import { composeLayers } from '../src/scaffold/compose.js'
+import {
+  INTEGRATION_TARGETS,
+  NODE_RUNTIME_SCENARIOS,
+  registeredMatrixRowPrefix,
+  SUPPORTED_CAPABILITIES,
+  type NodeRuntimeScenario,
+  type SupportedCapability,
+  type SupportedCombination,
+} from '../src/support-evidence.js'
+import type { Answers, Database } from '../src/types.js'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 
@@ -29,7 +49,193 @@ function jobDependencies(job: string, name: string): string[] {
   return dependencies
 }
 
-export function validateSupportEvidence(): void {
+function argsFor(combination: SupportedCombination) {
+  return {
+    latest: false,
+    skipInstall: true,
+    debug: false,
+    help: false,
+    version: false,
+    yes: true,
+    ...combination.flags,
+    extras: [...(combination.flags.extras ?? [])],
+  }
+}
+
+function requiredDatabase(answers: Answers, capability: SupportedCapability): Database {
+  assert(answers.database, `Supported capability "${capability.id}" must specify a database.`)
+  return answers.database
+}
+
+function assertExtras(
+  answers: Answers,
+  expected: Answers['extras'],
+  capability: SupportedCapability,
+): void {
+  assert.deepEqual(answers.extras, expected, `"${capability.id}" does not match its generated-project extras.`)
+}
+
+function assertReactTypescriptApi(answers: Answers, capability: SupportedCapability): void {
+  assert.equal(answers.frontend, 'react', `"${capability.id}" must use React/Vite.`)
+  assert.equal(answers.language, 'typescript', `"${capability.id}" must use TypeScript.`)
+  assert.equal(answers.architecture.kind, 'separate-frontend-api', `"${capability.id}" must use a separate API.`)
+  assertExtras(answers, { tailwind: false, eslintPrettier: false, shadcn: false }, capability)
+}
+
+function expectedScenario(
+  capability: SupportedCapability,
+  combination: SupportedCombination,
+  answers: Answers,
+): string {
+  switch (capability.target) {
+    case 'node-runtime': {
+      const database = requiredDatabase(answers, capability)
+      const nodeScenarios: readonly NodeRuntimeScenario[] = NODE_RUNTIME_SCENARIOS
+      const scenario = nodeScenarios.find(
+        (candidate) =>
+          candidate.framework === answers.backendFramework &&
+          candidate.orm === answers.orm &&
+          candidate.database === database &&
+          (candidate.frontend === undefined || candidate.frontend === answers.frontend) &&
+          (candidate.language === undefined || candidate.language === answers.language),
+      )
+      assert(scenario, `No exact Node runtime scenario matches Supported capability "${capability.id}".`)
+      assert.equal(answers.architecture.kind, 'separate-frontend-api', `"${capability.id}" must use a separate API.`)
+      if (scenario.frontend === undefined) {
+        assert.equal(answers.frontend, 'react', `"${capability.id}" must use React/Vite.`)
+      }
+      if (scenario.language === undefined) {
+        assert.equal(answers.language, 'typescript', `"${capability.id}" must use TypeScript.`)
+      }
+      assertExtras(answers, { tailwind: false, eslintPrettier: false, shadcn: false }, capability)
+      return scenario.id
+    }
+    case 'node-express-drizzle': {
+      const database = requiredDatabase(answers, capability)
+      assert.equal(answers.backendRuntime, 'node', `"${capability.id}" must use Node.js.`)
+      assert.equal(answers.backendFramework, 'express', `"${capability.id}" must use Express.`)
+      assert.equal(answers.orm, 'drizzle', `"${capability.id}" must use Drizzle.`)
+      assertReactTypescriptApi(answers, capability)
+      if (capability.matrixFormat === 'auth-module') {
+        assert.equal(combination.module, 'auth', `"${capability.id}" must validate the auth module.`)
+      }
+      return database
+    }
+    case 'nextjs-runtime': {
+      const database = requiredDatabase(answers, capability)
+      assert.equal(answers.frontend, 'nextjs', `"${capability.id}" must use Next.js.`)
+      assert.equal(answers.language, 'typescript', `"${capability.id}" must use TypeScript.`)
+      assert.equal(answers.architecture.kind, 'integrated-fullstack', `"${capability.id}" must use integrated full-stack.`)
+      assert.equal(answers.orm, 'none', `"${capability.id}" must use raw SQL.`)
+      assertExtras(answers, { tailwind: true, eslintPrettier: true, shadcn: false }, capability)
+      return database
+    }
+    case 'frontend-runtime':
+      assert.equal(answers.frontend, 'react', `"${capability.id}" must use React/Vite.`)
+      assert.equal(answers.language, 'javascript', `"${capability.id}" must use JavaScript.`)
+      assert.equal(answers.architecture.kind, 'frontend-only', `"${capability.id}" must be frontend-only.`)
+      assertExtras(answers, { tailwind: false, eslintPrettier: false, shadcn: false }, capability)
+      return 'react-js-frontend-only'
+    case 'python-fastapi': {
+      const database = requiredDatabase(answers, capability)
+      assert.equal(answers.backendRuntime, 'python', `"${capability.id}" must use Python.`)
+      assert.equal(answers.backendFramework, 'fastapi', `"${capability.id}" must use FastAPI.`)
+      assertReactTypescriptApi(answers, capability)
+      return database
+    }
+    case 'php-laravel': {
+      const database = requiredDatabase(answers, capability)
+      assert.equal(answers.backendRuntime, 'php', `"${capability.id}" must use PHP.`)
+      assert.equal(answers.backendFramework, 'laravel', `"${capability.id}" must use Laravel.`)
+      assertReactTypescriptApi(answers, capability)
+      return database
+    }
+    case 'docker-module': {
+      const database = requiredDatabase(answers, capability)
+      assert.equal(combination.module, 'docker', `"${capability.id}" must validate the docker module.`)
+      assert.equal(answers.backendRuntime, 'node', `"${capability.id}" must use Node.js.`)
+      assert.equal(answers.backendFramework, 'express', `"${capability.id}" must use Express.`)
+      assert.equal(answers.orm, 'drizzle', `"${capability.id}" must use Drizzle.`)
+      assert.equal(answers.architecture.kind, 'separate-frontend-api', `"${capability.id}" must use a separate API.`)
+      assert.equal(answers.frontend, 'react', `"${capability.id}" must use React/Vite.`)
+      assert.equal(answers.language, 'typescript', `"${capability.id}" must use TypeScript.`)
+      assertExtras(answers, { tailwind: false, eslintPrettier: false, shadcn: false }, capability)
+      return database
+    }
+    case 'module-runtime':
+      assert.equal(answers.frontend, 'react', `"${capability.id}" must use React/Vite.`)
+      assert.equal(answers.language, 'typescript', `"${capability.id}" must use TypeScript.`)
+      assert.equal(answers.architecture.kind, 'frontend-only', `"${capability.id}" must be frontend-only.`)
+      if (capability.matrixFormat === 'testing-module') {
+        assert.equal(combination.module, 'testing', `"${capability.id}" must validate the testing module.`)
+        assertExtras(answers, { tailwind: false, eslintPrettier: false, shadcn: false }, capability)
+        return 'add-testing-react-vite-ts'
+      }
+      assert.equal(capability.matrixFormat, 'shadcn-extra', `"${capability.id}" has an unsupported module matrix format.`)
+      assert.equal(answers.extras.shadcn, true, `"${capability.id}" must enable shadcn.`)
+      assertExtras(answers, { tailwind: true, eslintPrettier: true, shadcn: true }, capability)
+      assert.equal(combination.module, undefined, `"${capability.id}" must use the shadcn extra, not an add module.`)
+      return 'shadcn-react-vite-ts-frontend-only'
+    default:
+      throw new Error(`Supported capability "${capability.id}" has no exact scenario mapping for "${capability.target}".`)
+  }
+}
+
+function validateCombination(
+  capability: SupportedCapability,
+  combination: SupportedCombination,
+  index: number,
+): string {
+  const args = argsFor(combination)
+  const targetDir = join(tmpdir(), `omnicraft-support-check-${capability.id}-${index}`)
+  validateStackFlags(args)
+  assert(
+    isProjectTypeAllowedByFlags('web', args),
+    `Prompt filtering rejects the project type for "${capability.id}".`,
+  )
+
+  const answers = resolveAnswers(args, `support-${capability.id}`, targetDir)
+  assert(
+    isFrontendAllowedByFlags(answers.frontend, args),
+    `Prompt filtering rejects the frontend for "${capability.id}".`,
+  )
+  if (answers.backendRuntime) {
+    assert(
+      isRuntimeAllowedByFlags(answers.backendRuntime, args),
+      `Prompt filtering rejects runtime "${answers.backendRuntime}" for "${capability.id}".`,
+    )
+  }
+
+  const layers = composeLayers(answers)
+  assert(layers.length > 0, `Composition produced no production layers for "${capability.id}".`)
+  for (const layer of layers) {
+    assert(
+      existsSync(join(TEMPLATES_ROOT, layer.src)),
+      `Supported capability "${capability.id}" references a missing production layer: ${layer.src}.`,
+    )
+  }
+
+  if (combination.module) {
+    const module = MODULES.find((candidate) => candidate.id === combination.module)
+    assert(
+      module,
+      `Supported capability "${capability.id}" references an unavailable module "${combination.module}".`,
+    )
+    const manifest = buildManifest(answers, 'support-evidence', 'npm')
+    const reason = module.incompatible?.(manifest, targetDir) ?? null
+    assert.equal(
+      reason,
+      null,
+      `Module "${combination.module}" rejects Supported capability "${capability.id}": ${reason}`,
+    )
+  }
+
+  return expectedScenario(capability, combination, answers)
+}
+
+export function validateSupportEvidence(
+  capabilities: readonly SupportedCapability[] = SUPPORTED_CAPABILITIES,
+): void {
   const matrixPath = join(repoRoot, 'docs', 'templates', 'stack-support-matrix.md')
   const workflowPath = join(repoRoot, '.github', 'workflows', 'ci.yml')
   const matrix = readFileSync(matrixPath, 'utf8')
@@ -55,14 +261,23 @@ export function validateSupportEvidence(): void {
   }
 
   const registryIds = new Set<string>()
-  for (const capability of SUPPORTED_CAPABILITIES) {
+  for (const capability of capabilities) {
     assert(!registryIds.has(capability.id), `Support registry duplicates id "${capability.id}".`)
     registryIds.add(capability.id)
 
     const row = documentedIds.get(capability.id)
     assert(row, `Support registry entry "${capability.id}" has no Supported matrix row.`)
+    const exactScenarios = capability.combinations.map((combination, index) =>
+      validateCombination(capability, combination, index),
+    )
+    assert.deepEqual(
+      [...capability.scenarios].sort(),
+      [...exactScenarios].sort(),
+      `Supported capability "${capability.id}" must map each exact combination to its matching runtime scenario.`,
+    )
+    const matrixRowPrefix = registeredMatrixRowPrefix(capability)
     assert(
-      row.includes(capability.matrixRowPrefix),
+      row.startsWith(matrixRowPrefix),
       `Supported matrix row "${capability.id}" no longer matches its registered combination.`,
     )
 
