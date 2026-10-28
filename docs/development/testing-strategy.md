@@ -4,17 +4,18 @@ How OmniCraft verifies itself. Commands run from `packages/cli/` unless noted.
 
 The merged 2026-10-27 baseline passed 82 unit tests in 10 files, typecheck, build, and scaffold smoke.
 Its database jobs exercised Express + Drizzle with SQLite, PostgreSQL, and MySQL, and Laravel with
-PostgreSQL and MySQL. The current release matrix also runs FastAPI + SQLite and Laravel + SQLite. Each
-result applies only to the exact generated combinations exercised; source checks and smoke scaffolding
-do not prove that every generated project installs or runs.
+PostgreSQL and MySQL. The current release matrix also runs FastAPI + SQLite/PostgreSQL and Laravel +
+SQLite/PostgreSQL/MySQL. Each result applies only to the exact generated combinations exercised;
+source checks and smoke scaffolding do not prove that every generated project installs or runs.
 
-The 2026-10-28 closeout branch passed `npx vitest run` (**129 tests in 14 files**), `npx tsc --noEmit`,
-`npx tsup`, and `npm run check:support-matrix` (10 Supported rows). The smoke command generated all
+The 2026-10-28 runtime-evidence branch passed `npx vitest run` (**131 tests in 14 files**), `npx tsc --noEmit`,
+`npx tsup`, and `npm run check:support-matrix` (15 Supported rows). The smoke command generated all
 17 listed paths.
 Generated-project integration commands also passed locally:
 
 ```text
 npm run test:integration:db       # Express + Drizzle: SQLite, PostgreSQL, MySQL
+npm run test:integration:node      # Express, Fastify, and Hono ORM/raw-SQL scenarios
 npm run test:integration:python   # FastAPI + SQLite, Python 3.12
 npm run test:integration:php      # Laravel 12: SQLite, PostgreSQL, MySQL, pinned PHP/Composer image
 ```
@@ -25,6 +26,11 @@ smoke, ten-row evidence checker, database integrations, FastAPI + SQLite, Larave
 MySQL, and the aggregate supported-stack release gate. The FastAPI + SQLite and Laravel + SQLite rows
 are Supported based on their generated-project install, migration, boot, and database-operation checks
 in that run.
+
+The follow-up [runtime-evidence run #40609596120](https://github.com/doofx0071/omnicraft/actions/runs/40609596120)
+passed the release gate on commit `b4c26273eaab033fee604bd77c04e0a2ab1d7e19`. It ran Express + Prisma/PostgreSQL,
+Express + raw SQL on SQLite/PostgreSQL/MySQL, and FastAPI + PostgreSQL through generated install/setup,
+boot, real database operations, and failure checks. The exact jobs are linked from their matrix rows.
 
 ## Test levels
 
@@ -106,10 +112,10 @@ The current workflow:
 4. Runs hosted Ubuntu `database-integration` cases for Express + Drizzle + SQLite/PostgreSQL/MySQL.
    Each generated project is installed and typechecked; migrations, API boot, CRUD, and Better Auth
    flows are exercised.
-5. Runs hosted Ubuntu `node-runtime-integration` for Express + Prisma/PostgreSQL and Express + raw SQL
-   on SQLite/PostgreSQL/MySQL. Each generated project is installed, client-built, API-typechecked,
-   initialized or migrated, booted, and checked for CRUD, duplicate, invalid-input, and missing-record
-   behavior.
+5. Runs hosted Ubuntu `node-runtime-integration` for the 15 registered Express, Fastify, and Hono
+   Prisma, Drizzle, and raw-SQL paths. Each generated project is installed, client-built,
+   API-typechecked, initialized or migrated, booted, and checked for CRUD, duplicate, invalid-input,
+   and missing-record behavior. The Fastify/Hono cases are pending their first hosted run.
 6. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
    generated dependencies, runs Alembic migrations, boots Uvicorn, and checks SQLite and PostgreSQL
    CRUD and failure responses. PostgreSQL runs in an isolated Testcontainers instance.

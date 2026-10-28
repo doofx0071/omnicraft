@@ -19,7 +19,8 @@ app.setErrorHandler((err, _req, reply) => {
     return reply.status(503).send({ error: "Database unavailable — see README → Troubleshooting" });
   }
   app.log.error(err);
-  return reply.status(err.statusCode ?? 500).send({ error: "Internal server error" });
+  const statusCode = (err as { statusCode?: number }).statusCode;
+  return reply.status(statusCode ?? 500).send({ error: "Internal server error" });
 });
 
 await app.listen({ port: env.PORT, host: "0.0.0.0" });

@@ -12,6 +12,19 @@ export const NODE_RUNTIME_SCENARIOS = [
   { id: 'express-raw-sqlite', framework: 'express', orm: 'none', database: 'sqlite' },
   { id: 'express-raw-postgres', framework: 'express', orm: 'none', database: 'postgres' },
   { id: 'express-raw-mysql', framework: 'express', orm: 'none', database: 'mysql' },
+  { id: 'fastify-drizzle-postgres', framework: 'fastify', orm: 'drizzle', database: 'postgres' },
+  { id: 'fastify-drizzle-sqlite', framework: 'fastify', orm: 'drizzle', database: 'sqlite' },
+  { id: 'fastify-drizzle-mysql', framework: 'fastify', orm: 'drizzle', database: 'mysql' },
+  { id: 'fastify-prisma-postgres', framework: 'fastify', orm: 'prisma', database: 'postgres' },
+  { id: 'fastify-raw-postgres', framework: 'fastify', orm: 'none', database: 'postgres' },
+  { id: 'fastify-raw-sqlite', framework: 'fastify', orm: 'none', database: 'sqlite' },
+  { id: 'fastify-raw-mysql', framework: 'fastify', orm: 'none', database: 'mysql' },
+  { id: 'hono-drizzle-postgres', framework: 'hono', orm: 'drizzle', database: 'postgres' },
+  { id: 'hono-drizzle-sqlite', framework: 'hono', orm: 'drizzle', database: 'sqlite' },
+  { id: 'hono-drizzle-mysql', framework: 'hono', orm: 'drizzle', database: 'mysql' },
+  { id: 'hono-raw-postgres', framework: 'hono', orm: 'none', database: 'postgres' },
+  { id: 'hono-raw-sqlite', framework: 'hono', orm: 'none', database: 'sqlite' },
+  { id: 'hono-raw-mysql', framework: 'hono', orm: 'none', database: 'mysql' },
 ] as const satisfies readonly NodeRuntimeScenario[]
 
 export const INTEGRATION_TARGETS = {
@@ -88,6 +101,36 @@ export const SUPPORTED_CAPABILITIES = [
     matrixRowPrefix: '| Express | Drizzle | MySQL | **Supported** |',
     target: 'node-express-drizzle',
     scenarios: ['mysql'],
+  },
+  {
+    id: 'express-prisma-postgres',
+    matrixRowPrefix: '| Express | Prisma | PostgreSQL | **Supported** |',
+    target: 'node-runtime',
+    scenarios: ['express-prisma-postgres'],
+  },
+  {
+    id: 'express-raw-sqlite',
+    matrixRowPrefix: '| Express | Raw SQL (`none`) | SQLite | **Supported** |',
+    target: 'node-runtime',
+    scenarios: ['express-raw-sqlite'],
+  },
+  {
+    id: 'express-raw-postgres',
+    matrixRowPrefix: '| Express | Raw SQL (`none`) | PostgreSQL | **Supported** |',
+    target: 'node-runtime',
+    scenarios: ['express-raw-postgres'],
+  },
+  {
+    id: 'express-raw-mysql',
+    matrixRowPrefix: '| Express | Raw SQL (`none`) | MySQL | **Supported** |',
+    target: 'node-runtime',
+    scenarios: ['express-raw-mysql'],
+  },
+  {
+    id: 'fastapi-sqlalchemy-postgres',
+    matrixRowPrefix: '| FastAPI | SQLAlchemy 2 async + Alembic | PostgreSQL | **Supported** |',
+    target: 'python-fastapi',
+    scenarios: ['postgres'],
   },
   {
     id: 'laravel-eloquent-postgres',

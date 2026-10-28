@@ -35,6 +35,7 @@ Run from the repository root:
 ```bash
 npm test --workspace=create-omnicraft
 npm run test:integration:db --workspace=create-omnicraft
+npm run test:integration:node --workspace=create-omnicraft
 npm run test:integration:php --workspace=create-omnicraft
 ```
 
@@ -45,6 +46,7 @@ npm run test:integration:db --workspace=create-omnicraft -- --database sqlite
 npm run test:integration:db --workspace=create-omnicraft -- --database postgres
 npm run test:integration:db --workspace=create-omnicraft -- --database mysql
 npm run test:integration:node --workspace=create-omnicraft -- --scenario express-prisma-postgres
+npm run test:integration:node --workspace=create-omnicraft -- --scenario hono-raw-mysql
 npm run test:integration:python --workspace=create-omnicraft -- --database postgres
 ```
 
@@ -53,10 +55,12 @@ dependencies, applies the generated Alembic migration, boots Uvicorn, and checks
 duplicate and invalid input handling, and missing-record behavior with synthetic Testcontainers
 credentials. The PHP/Laravel suite runs PostgreSQL and MySQL cases.
 
-The separate `node-runtime-integration` target covers Express + Prisma + PostgreSQL and Express + raw
-SQL with SQLite, PostgreSQL, and MySQL. It installs each generated project, builds/typechecks the
-client and API, initializes the schema or applies SQL migrations, boots the API, and checks CRUD plus
-duplicate, invalid-input, and missing-record behavior. These cases do not install or exercise auth.
+The separate `node-runtime-integration` target covers 15 exact paths: Express + Prisma/PostgreSQL and
+Express + raw SQL on SQLite/PostgreSQL/MySQL; Fastify + Drizzle on SQLite/PostgreSQL/MySQL, Prisma on
+PostgreSQL, and raw SQL on SQLite/PostgreSQL/MySQL; and Hono + Drizzle and raw SQL on
+SQLite/PostgreSQL/MySQL. It installs each generated project, builds/typechecks the client and API,
+initializes the schema or applies migrations, boots the API, and checks CRUD plus duplicate,
+invalid-input, and missing-record behavior. These cases do not install or exercise auth.
 
 ## Coverage and isolation
 
@@ -104,6 +108,11 @@ This section records the commands and outcomes actually run for this change.
 - `npm run test:integration:php --workspace=create-omnicraft` — passed for Laravel 12 with PostgreSQL
   and MySQL. Both ran Composer platform checks, migrations, database-driver assertions, API feature
   tests, and cleanup.
+- `npm run test:integration:node --workspace=create-omnicraft -- --scenario ...` — all 15 registered
+  Express, Fastify, and Hono scenarios passed locally through install, client build/API typecheck,
+  database initialization, API boot, CRUD/failure checks, and cleanup. Generated-project checks fixed
+  Fastify's error-handler typing, portable Fastify/Hono Drizzle MySQL row reads, and an unused Drizzle
+  import in the Hono raw-SQL route.
 - `docker ps` — no test containers remained after the integration runs.
 
 The first PHP image build attempted to compile `pdo_sqlite`, which the selected PHP image already
@@ -116,3 +125,8 @@ passed all ten CI jobs. `database-integration` passed for Express + Drizzle + SQ
 including the generated Better Auth flow, and `php-laravel-integration` passed Laravel 12 (Eloquent)
 with PostgreSQL and MySQL. The support matrix promotes only these exact combinations. Other matrix rows and auth
 providers remain unchanged.
+
+Hosted [runtime-evidence run #40609596120](https://github.com/doofx0071/omnicraft/actions/runs/40609596120)
+passed on commit `b4c26273eaab033fee604bd77c04e0a2ab1d7e19`, including all four Express runtime scenarios,
+FastAPI + PostgreSQL, and the aggregate release gate. The Fastify/Hono additions are local-only until
+their new matrix jobs pass hosted CI.

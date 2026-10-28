@@ -93,6 +93,19 @@ jobs:
           - express-raw-sqlite
           - express-raw-postgres
           - express-raw-mysql
+          - fastify-drizzle-postgres
+          - fastify-drizzle-sqlite
+          - fastify-drizzle-mysql
+          - fastify-prisma-postgres
+          - fastify-raw-postgres
+          - fastify-raw-sqlite
+          - fastify-raw-mysql
+          - hono-drizzle-postgres
+          - hono-drizzle-sqlite
+          - hono-drizzle-mysql
+          - hono-raw-postgres
+          - hono-raw-sqlite
+          - hono-raw-mysql
     steps:
       - uses: actions/checkout@v4
 
