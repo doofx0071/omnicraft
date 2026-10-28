@@ -309,6 +309,20 @@ export const SUPPORTED_CAPABILITIES = [
     target: 'nextjs-runtime',
     scenarios: ['mysql'],
   },
+  {
+    id: 'docker-module-postgres',
+    matrixRowPrefix:
+      '| `omnicraft add docker` — Express + Drizzle + PostgreSQL separate API | **Supported** |',
+    target: 'docker-module',
+    scenarios: ['postgres'],
+  },
+  {
+    id: 'docker-module-mysql',
+    matrixRowPrefix:
+      '| `omnicraft add docker` — Express + Drizzle + MySQL separate API | **Supported** |',
+    target: 'docker-module',
+    scenarios: ['mysql'],
+  },
 ] as const satisfies readonly SupportedCapability[]
 
 export function integrationScenarios(target: IntegrationTargetId): readonly string[] {

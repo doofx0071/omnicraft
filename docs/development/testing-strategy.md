@@ -137,7 +137,8 @@ The current workflow:
 8. Runs hosted Ubuntu `docker-module-integration` for the generated Express + Drizzle + PostgreSQL and
    MySQL paths. It checks the default Compose-file conflict, successful module addition and idempotency,
    validates and starts the Compose database, installs and checks the generated app, migrates, boots the
-   API, and verifies CRUD and failure cases. Its hosted cases are pending.
+   API, and verifies CRUD and failure cases. Both scenarios passed hosted run #40615980612 on commit
+   `77ef06645421edb3977019f63683af3ea531ccbb`.
 9. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
    generated dependencies, runs Alembic migrations, boots Uvicorn, and checks SQLite and PostgreSQL
    CRUD and failure responses. PostgreSQL runs in an isolated Testcontainers instance.
