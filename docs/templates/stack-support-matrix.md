@@ -8,10 +8,11 @@ unions, or the presence of a template directory do not prove that every cross-pr
 - **Supported** — the repository records a generated-project install/setup, typecheck or equivalent,
   boot, and successful real operation for the exact combination, with a passing hosted CI run recorded
   on a tested commit.
-- **Scaffold-verified** — an engine test or the smoke script generated the exact combination, or local
-  generated-project checks passed without hosted evidence. A local runtime result may be recorded, but
-  the row remains provisional until the exact hosted CI evidence is recorded; scaffolding alone does not
-  prove dependencies install, the app boots, or database operations work.
+- **Scaffold-verified** — an engine test or the smoke script generated the exact combination, but the
+  full applicable evidence for the row is incomplete. Scoped hosted results may be recorded while the
+  row remains provisional. For cross-platform native stacks, a single simulator or desktop target does
+  not establish support on other platforms; scaffolding alone does not prove dependencies install, the
+  app boots, or database operations work.
 - **Selectable — unverified** — the CLI registry and template layers expose the combination, but no
   exact engine fixture or smoke entry verifies it.
 - **Rejected — unsupported combination** — preflight rejects the combination, or the prompt omits it,
@@ -43,12 +44,16 @@ jobs added after that run.
 | Next.js integrated full-stack + MySQL | **Supported** | The compatibility contract accepts MySQL for integrated Next.js, whose production adapter uses `mysql2/promise` and MySQL-compatible `?` placeholders. Hosted scenario [`nextjs-runtime-integration` MySQL, run #40614408163 on commit `336622e`](https://github.com/doofx0071/omnicraft/actions/runs/40614408163/job/122573416673) installed, built, typechecked, migrated, booted the production server, and verified CRUD and failure behavior. <!-- support-id: nextjs-raw-mysql --> |
 | React + Vite JavaScript, frontend-only | **Supported** | Hosted [`frontend-runtime-integration`, run #40614408163 on commit `336622e`](https://github.com/doofx0071/omnicraft/actions/runs/40614408163/job/122573416539) installed and built production layers, booted Vite preview, loaded the emitted bundle, and checked missing-asset behavior. Database operations are not applicable to the frontend-only architecture. <!-- support-id: frontend-react-js-frontend-only --> |
 | React + Vite JavaScript + Express + Drizzle + SQLite separate API | **Supported** | Hosted scenario [`express-drizzle-sqlite-react-js`, run #40614408163 on commit `336622e`](https://github.com/doofx0071/omnicraft/actions/runs/40614408163/job/122573416494) installed and built the JavaScript client, typechecked the TypeScript API, applied Drizzle migrations, booted the API, and verified CRUD and failure behavior. <!-- support-id: frontend-react-js-express-drizzle-sqlite --> |
-| Expo SDK 58 + TypeScript | **Scaffold-verified** | The prior matrix/changelog record scaffold, install, and TypeScript checks. No simulator/device build or launch is recorded. |
-| Tauri 2 + React UI | **Scaffold-verified** | The prior matrix/changelog record scaffold and frontend install/build. The native desktop build was not run because it requires the Rust toolchain. |
+| Expo SDK 58 + TypeScript | **Scaffold-verified** | Hosted native scenario [`expo-ios-simulator`, run #40699127397](https://github.com/doofx0071/omnicraft/actions/runs/40699127397/job/122853829595) on head `5fff8ad638b203affc168fc948169d75b7cfc719` generated with the production Expo command, installed dependencies and CocoaPods, prebuilt the iOS project, built a native Debug app, installed it, and launched it on an iPhone 17 / iOS 26.5 simulator. No browser web build was run. Android and physical-device builds/launches remain untested, so the cross-platform row stays provisional. |
+| Tauri 2 + React UI | **Scaffold-verified** | Hosted native scenario [`tauri-linux-desktop`, run #40699127397](https://github.com/doofx0071/omnicraft/actions/runs/40699127397/job/122853830096) on head `5fff8ad638b203affc168fc948169d75b7cfc719` generated with the production Tauri command, installed dependencies, built the Vite web frontend, built the native executable, and launched a visible window under Ubuntu 24.04/Xvfb. macOS and Windows desktop builds remain untested, so the cross-platform row stays provisional. |
 
 The smoke script covers React frontend-only, Vue and Svelte with Express + Drizzle + SQLite, and Next.js
 with SQLite. The runtime targets cover the JavaScript React frontend-only path and the exact React,
-Vue, and Svelte client/API rows above. They do not cover Expo or Tauri. Its Next.js step invokes
+Vue, and Svelte client/API rows above. Expo and Tauri have separate hosted native build/launch checks
+limited to the simulator and Linux desktop targets recorded above; they do not exercise database
+operations or prove app functionality beyond successful launch. Expo's iOS prebuild/native build is
+separate from browser web output, while Tauri's Vite frontend build and native executable build are both
+recorded. The Next.js step invokes
 `create-next-app`; if that command
 fails, the script logs the failure and skips the overlay without failing the whole smoke run.
 
@@ -104,12 +109,14 @@ The repository has no `templates/server/node/hono/prisma/` layer.
 | `omnicraft add auth` — Express + Drizzle + SQLite | **Supported** | `database-integration` checks registration, login, session persistence across restart, protected-route behavior, logout, stored password hash, and CRUD on SQLite. <!-- support-id: auth-express-drizzle-sqlite --> |
 | `omnicraft add auth` — Express + Drizzle + PostgreSQL/MySQL | **Supported** | `database-integration` checks registration, login, session persistence across restart, protected-route behavior, logout, stored password hash, and CRUD on both databases. <!-- support-id: auth-express-drizzle-postgres-mysql --> |
 | `omnicraft add auth` — Fastify/Hono + Drizzle | **Rejected — unsupported combination** | The module guard rejects these frameworks because its route patches target Express files. |
-| `omnicraft add testing` | **Scaffold-verified** | Unit tests verify files, dependencies, scripts, and manifest changes; the generated sample test is not installed and executed in CI. |
+| `omnicraft add testing` — React/Vite TypeScript frontend-only | **Supported** | Hosted [`add-testing-react-vite-ts`, run #40618652654 on commit `b28f5c48fd22820461a76defd3d099def5dd594f`](https://github.com/doofx0071/omnicraft/actions/runs/40618652654/job/122587016924) generated from production layers, installed the module, verified collision and idempotency behavior, ran the generated sample assertion, built the app, booted Vite preview, and checked bundle and missing-asset responses. <!-- support-id: testing-module-react-vite-ts-frontend-only --> |
+| `omnicraft add testing` — other non-native project paths | **Selectable — unverified** | The module is selectable, but generated-project installation and sample execution are recorded only for React/Vite TypeScript frontend-only. |
 | `omnicraft add docker` — Express + Drizzle + PostgreSQL separate API | **Supported** | Hosted PostgreSQL scenario passed run [#40615980612](https://github.com/doofx0071/omnicraft/actions/runs/40615980612/job/122578451067) on commit `77ef06645421edb3977019f63683af3ea531ccbb`, covering the default Compose-file conflict, successful add after removing that scaffold collision, idempotency, Compose startup, migrations, CRUD, and API failure cases. The local run remapped the host port because 5432 was occupied. <!-- support-id: docker-module-postgres --> |
 | `omnicraft add docker` — Express + Drizzle + MySQL separate API | **Supported** | Hosted MySQL scenario passed run [#40615980612](https://github.com/doofx0071/omnicraft/actions/runs/40615980612/job/122578450966) on commit `77ef06645421edb3977019f63683af3ea531ccbb`, covering the default Compose-file conflict, successful add after removing that scaffold collision, idempotency, Compose startup, migrations, CRUD, and API failure cases. <!-- support-id: docker-module-mysql --> |
 | Tailwind CSS | **Scaffold-verified** | Generated in the current smoke paths; prior matrix records a generated-project build. |
 | ESLint + Prettier | **Scaffold-verified** | Current smoke paths include the extra; CI lint is limited to Express + Drizzle + PostgreSQL on the Windows job. |
-| shadcn/ui — React/Vite | **Scaffold-verified** | Engine test checks the overlay; the post-scaffold shadcn CLI install is not covered by the current suite. Other frontend/platform combinations omit shadcn from the prompt and reject incompatible flags. |
+| shadcn/ui — React/Vite TypeScript frontend-only | **Supported** | Hosted [`shadcn-react-vite-ts-frontend-only`, run #40618652654 on commit `b28f5c48fd22820461a76defd3d099def5dd594f`](https://github.com/doofx0071/omnicraft/actions/runs/40618652654/job/122587017146) ran the production shadcn init and component install, installed the generated project, built it, booted Vite preview, and checked bundle and missing-asset responses. <!-- support-id: shadcn-react-vite-ts-frontend-only --> |
+| shadcn/ui — React/Vite separate frontend + API | **Scaffold-verified** | The engine fixture verifies the overlay. Hosted post-scaffold shadcn initialization and component installation are recorded only for frontend-only; other frontend/platform combinations omit shadcn or reject incompatible flags. |
 
 ## Planned and registry gaps
 
@@ -120,7 +127,11 @@ an option selectable.
 `src/capabilities.ts` is the typed source for selectable dimension and module options; prompts and flag
 validation derive their available values from it. `src/compatibility.ts` holds cross-option constraints
 shared by prompt filtering, flag validation, composition, and Better Auth. Exact `Supported` rows carry
-an id linked by `src/support-evidence.ts` to a CI job and scenario. The support-evidence check rejects
-missing rows, stale ids, missing scripts, changed CI commands, and targets omitted from the aggregate
-release gate. Compatibility tests cover JavaScript frontend limits, Next.js raw-SQL behavior, Hono ORM
-choices, shadcn frontend choices, and Express-only auth patching; those tests do not promote any stack.
+an id linked by `src/support-evidence.ts` to a flag-level stack/module combination, CI job, and scenario.
+The support-evidence check resolves each exact combination through available choices, prompt/flag and
+answer compatibility, production composition, and any module guard. It renders the matrix row label from
+that combination and requires a matching runtime scenario, script, workflow command, and aggregate
+release dependency. Runtime support still requires the independent hosted generated-project evidence;
+passing this consistency check does not promote a stack. Compatibility tests cover JavaScript frontend
+limits, Next.js raw-SQL behavior, Hono ORM choices, shadcn frontend choices, and Express-only auth
+patching.

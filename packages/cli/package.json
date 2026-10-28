@@ -25,6 +25,8 @@
     "test:integration:nextjs": "tsx scripts/nextjs-runtime-integration.ts",
     "test:integration:frontend": "tsx scripts/frontend-runtime-integration.ts",
     "test:integration:docker-module": "tsx scripts/docker-module-integration.ts",
+    "test:integration:modules": "tsx scripts/module-runtime-integration.ts",
+    "test:integration:native": "tsx scripts/native-platform-integration.ts",
     "test:integration:python": "tsx scripts/fastapi-integration.ts",
     "test:integration:php": "tsx scripts/php-laravel-e2e.ts",
     "check:support-matrix": "tsx scripts/check-support-evidence.ts",

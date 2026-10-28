@@ -119,6 +119,7 @@ const VITEST_CONFIG = `import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "jsdom",
+    setupFiles: ["./src/setupTests.ts"],
   },
 });
 `
@@ -130,7 +131,7 @@ import App from "./App";
 describe("App", () => {
   it("renders the app title", () => {
     render(<App />);
-    expect(document.body).toBeDefined();
+    expect(screen.getByRole("heading", { name: "⚡ {{projectName}}" })).toBeInTheDocument();
   });
 });
 `
