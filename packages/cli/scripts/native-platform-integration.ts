@@ -334,17 +334,19 @@ function findIosProject(iosRoot: string): { projectPath: string; workspacePath: 
   }
 }
 
-function iosBundleIdentifier(projectPath: string): string {
-  const projectFile = join(projectPath, 'project.pbxproj')
-  const source = readFileSync(projectFile, 'utf8')
-  const ids = [...source.matchAll(/PRODUCT_BUNDLE_IDENTIFIER\s*=\s*([^;]+);/g)]
-    .map((match) => match[1]?.trim() ?? '')
-    .filter((value) => value && !value.includes('$') && !/\.tests?$/i.test(value))
-  const unique = [...new Set(ids)]
-  if (unique.length !== 1) {
-    throw new Error(`Expected one Expo app bundle identifier, found: ${unique.join(', ') || 'none'}.`)
+function iosBundleIdentifier(appPath: string, projectRoot: string): string {
+  const infoPlist = join(appPath, 'Info.plist')
+  requirePath(infoPlist, 'Built Expo app Info.plist')
+  const bundleId = runRequired(
+    'Read the built Expo app bundle identifier',
+    'plutil',
+    ['-extract', 'CFBundleIdentifier', 'raw', '-o', '-', infoPlist],
+    projectRoot,
+  ).trim()
+  if (!/^[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/.test(bundleId)) {
+    throw new Error(`Built Expo app has an invalid CFBundleIdentifier: ${bundleId || 'empty'}.`)
   }
-  return unique[0] ?? ''
+  return bundleId
 }
 
 interface TauriConfig {
@@ -472,7 +474,7 @@ async function runExpoIosSimulator(): Promise<void> {
     )
 
     const iosRoot = join(projectRoot, 'ios')
-    const { projectPath, workspacePath } = findIosProject(iosRoot)
+    const { workspacePath } = findIosProject(iosRoot)
     runRequired('Install generated CocoaPods dependencies', 'pod', ['install'], iosRoot)
     requirePath(workspacePath, 'Expo CocoaPods workspace')
 
@@ -533,18 +535,8 @@ async function runExpoIosSimulator(): Promise<void> {
 
     const expectedAppPath = join(appTarget.target.targetBuildDir, appTarget.target.fullProductName)
     const appPath = existsSync(expectedAppPath) ? expectedAppPath : findIosAppBundle(derivedData)
-    const bundleId = iosBundleIdentifier(projectPath)
+    const bundleId = iosBundleIdentifier(appPath, projectRoot)
     runRequired('Install the native app in the simulator', 'xcrun', ['simctl', 'install', simulatorId, appPath], projectRoot, 120_000)
-    const launchOutput = runRequired(
-      'Launch the native app in the simulator',
-      'xcrun',
-      ['simctl', 'launch', '--terminate-running-process', simulatorId, bundleId],
-      projectRoot,
-      60_000,
-    )
-    if (!/:\s*\d+\b/.test(launchOutput)) {
-      throw new Error(`simctl did not report a launched app process for ${bundleId}: ${tail(launchOutput)}`)
-    }
     const appContainer = runRequired(
       'Verify the installed simulator app container',
       'xcrun',
@@ -553,6 +545,40 @@ async function runExpoIosSimulator(): Promise<void> {
       60_000,
     )
     requirePath(appContainer.trim(), 'Installed Expo app container')
+    let launchOutput = ''
+    try {
+      launchOutput = runRequired(
+        'Launch the native app in the simulator',
+        'xcrun',
+        ['simctl', 'launch', '--terminate-running-process', simulatorId, bundleId],
+        projectRoot,
+        60_000,
+      )
+    } catch (error) {
+      const logs = runCommand(
+        'xcrun',
+        [
+          'simctl',
+          'spawn',
+          simulatorId,
+          'log',
+          'show',
+          '--last',
+          '3m',
+          '--style',
+          'compact',
+          '--predicate',
+          `process == "${bundleId}" OR eventMessage CONTAINS[c] "${bundleId}"`,
+        ],
+        projectRoot,
+        { timeoutMs: 30_000, maxBuffer: 4 * 1024 * 1024 },
+      )
+      const message = error instanceof Error ? error.message : String(error)
+      throw new Error(`${message}\nRecent simulator logs:\n${tail(redact(logs.output), 6_000)}`)
+    }
+    if (!/:\s*\d+\b/.test(launchOutput)) {
+      throw new Error(`simctl did not report a launched app process for ${bundleId}: ${tail(launchOutput)}`)
+    }
     await delay(4_000)
     const screenshotPath = join(parent, 'expo-ios-simulator.png')
     runRequired('Capture the running simulator screen', 'xcrun', ['simctl', 'io', simulatorId, 'screenshot', screenshotPath], projectRoot, 60_000)
