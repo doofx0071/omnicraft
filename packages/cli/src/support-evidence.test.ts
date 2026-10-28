@@ -6,7 +6,10 @@ import {
   integrationScenarios,
   MODULE_RUNTIME_SCENARIOS,
   NEXTJS_DATABASE_SCENARIOS,
+  NATIVE_PLATFORM_SCENARIOS,
   NODE_RUNTIME_SCENARIOS,
+  SUPPORTED_CAPABILITIES,
+  type SupportedCapability,
 } from './support-evidence.js'
 
 describe('support matrix evidence', () => {
@@ -67,5 +70,64 @@ describe('support matrix evidence', () => {
       'add-testing-react-vite-ts',
       'shadcn-react-vite-ts-frontend-only',
     ])
+  })
+
+  it('rejects Supported combinations that the CLI compatibility rules disallow', () => {
+    const capabilities = SUPPORTED_CAPABILITIES.map((capability) => {
+      if (capability.id !== 'fastify-prisma-postgres') return capability
+      const combination = capability.combinations[0]
+      if (!combination) throw new Error('Fastify Prisma evidence is missing its combination.')
+      return {
+        ...capability,
+        combinations: [
+          {
+            ...combination,
+            flags: { ...combination.flags, backend: 'hono', orm: 'prisma' },
+          },
+        ],
+      } as SupportedCapability
+    })
+
+    expect(() => validateSupportEvidence(capabilities)).toThrow(/Prisma is not available for Hono/)
+  })
+
+  it('rejects matrix text that no longer describes its registered exact combination', () => {
+    const capabilities = SUPPORTED_CAPABILITIES.map((capability) => {
+      if (capability.id !== 'express-drizzle-postgres') return capability
+      const combination = capability.combinations[0]
+      if (!combination) throw new Error('React Express evidence is missing its combination.')
+      return {
+        ...capability,
+        scenarios: ['sqlite'],
+        combinations: [
+          { ...combination, flags: { ...combination.flags, db: 'sqlite' } },
+        ],
+      } as SupportedCapability
+    })
+
+    expect(() => validateSupportEvidence(capabilities)).toThrow(
+      /no longer matches its registered combination/,
+    )
+  })
+
+  it('keeps combination extras aligned with the generated-project scenario', () => {
+    const capabilities = SUPPORTED_CAPABILITIES.map((capability) => {
+      if (capability.id !== 'fastify-drizzle-postgres') return capability
+      const combination = capability.combinations[0]
+      if (!combination) throw new Error('Fastify Drizzle evidence is missing its combination.')
+      return {
+        ...capability,
+        combinations: [
+          { ...combination, flags: { ...combination.flags, extras: ['tailwind'] } },
+        ],
+      } as SupportedCapability
+    })
+
+    expect(() => validateSupportEvidence(capabilities)).toThrow(/generated-project extras/)
+  })
+
+  it('registers exact Expo simulator and Tauri desktop scenarios', () => {
+    expect(integrationScenarios('native-platform')).toEqual(NATIVE_PLATFORM_SCENARIOS)
+    expect(NATIVE_PLATFORM_SCENARIOS).toEqual(['expo-ios-simulator', 'tauri-linux-desktop'])
   })
 })
