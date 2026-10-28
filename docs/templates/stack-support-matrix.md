@@ -122,7 +122,11 @@ an option selectable.
 `src/capabilities.ts` is the typed source for selectable dimension and module options; prompts and flag
 validation derive their available values from it. `src/compatibility.ts` holds cross-option constraints
 shared by prompt filtering, flag validation, composition, and Better Auth. Exact `Supported` rows carry
-an id linked by `src/support-evidence.ts` to a CI job and scenario. The support-evidence check rejects
-missing rows, stale ids, missing scripts, changed CI commands, and targets omitted from the aggregate
-release gate. Compatibility tests cover JavaScript frontend limits, Next.js raw-SQL behavior, Hono ORM
-choices, shadcn frontend choices, and Express-only auth patching; those tests do not promote any stack.
+an id linked by `src/support-evidence.ts` to a flag-level stack/module combination, CI job, and scenario.
+The support-evidence check resolves each exact combination through available choices, prompt/flag and
+answer compatibility, production composition, and any module guard. It renders the matrix row label from
+that combination and requires a matching runtime scenario, script, workflow command, and aggregate
+release dependency. Runtime support still requires the independent hosted generated-project evidence;
+passing this consistency check does not promote a stack. Compatibility tests cover JavaScript frontend
+limits, Next.js raw-SQL behavior, Hono ORM choices, shadcn frontend choices, and Express-only auth
+patching.

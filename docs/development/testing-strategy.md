@@ -58,7 +58,7 @@ The current suite covers:
 | `src/engine.test.ts` | Selected generated files, layer overrides, manifests, env files, token scans, protected-path examples, and selected engine combinations. |
 | `src/capabilities.test.ts` | Available prompt/flag choices derive from the typed capability registry, and the module menu matches its registered module IDs. |
 | `src/add-run.test.ts` | Module dry-run, success, idempotency, collisions, unsupported stacks, missing patch anchors, and rollback after a failed write. |
-| `src/support-evidence.test.ts` | Every Supported matrix row maps to an existing CI script, scenario, job, and aggregate release check. |
+| `src/support-evidence.test.ts` | Every Supported row resolves through selectable values, prompt/flag/composition and module guards, renders from its exact combination, and maps to the matching scenario, script, job, and aggregate release check. |
 | `src/modules/auth.test.ts` | Better Auth compatibility and secret setup guidance. |
 
 The engine fixtures cover Express + Drizzle with PostgreSQL/SQLite/MySQL, Express + Prisma + PostgreSQL,
@@ -67,9 +67,10 @@ PostgreSQL/SQLite, the Laravel SQLite overlay, React frontend-only, Vue/Svelte c
 Next.js adapters, and shadcn's React/Vite overlay. This is a selected set, not the full runtime ×
 framework × ORM × database product.
 
-Native Expo/Tauri build tests remain unavailable because their platform SDK/toolchains are not installed
-in the hosted CLI matrix. `omnicraft add testing` is scaffold-verified; the unit suite checks its
-generated files and manifest changes, while the generated sample test is not installed and run in CI.
+Expo and Tauri require platform-specific hosted checks; see the support matrix for their current
+status and limits. `omnicraft add testing` is Supported only for React/Vite TypeScript frontend-only:
+the hosted generated-project scenario installs the module, runs its sample assertion, builds and boots
+the app, and checks bundle and missing-asset responses.
 
 ### Level 2 — Scaffold smoke (`scripts/smoke-e2e.ts`)
 
@@ -152,9 +153,11 @@ The current workflow:
    pinned PHP/Composer test image without a database service; networked databases use isolated Compose
    services. Each case installs Composer dependencies, checks platform requirements, migrates, and
    runs database/API feature tests.
-12. Runs `support-evidence` to check matrix row ids, registered test scenarios, job commands, and the
-   release aggregate. `supported-matrix` fails unless the OS/Node matrix, runtime jobs, support evidence,
-   and package artifact all pass. It runs for PRs, main pushes, nightly, and version-tag pushes;
+12. Runs `support-evidence` to resolve every exact Supported flag combination through available values,
+   prompt/flag and answer compatibility, production composition, and module guards; it also checks the
+   rendered matrix label, matching scenario, job command, and release aggregate dependency.
+   `supported-matrix` fails unless the OS/Node matrix, runtime jobs, support evidence, and package
+   artifact all pass. It runs for PRs, main pushes, nightly, and version-tag pushes;
    `workflow_dispatch` supports an explicit pre-release run. The scheduled run uses GitHub-hosted jobs.
 13. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
    the release job publishes to npm using OIDC, creates the GitHub Release from the version's changelog
