@@ -1,10 +1,10 @@
 # OmniCraft Existing-Stack Runtime Evidence Plan
 
-**Status:** Active
+**Status:** Complete — all in-scope criteria have recorded evidence
 **Created:** 2026-10-28
 **Source:** Explicit runtime and registry-to-documentation deferrals from the
-[post-masterplan audit](../completed/omnicraft-post-masterplan-audit.md) and
-[testing-infrastructure plan](../completed/omnicraft-testing-infrastructure-plan.md).
+[post-masterplan audit](omnicraft-post-masterplan-audit.md) and
+[testing-infrastructure plan](omnicraft-testing-infrastructure-plan.md).
 
 ## Goal
 
@@ -81,13 +81,30 @@ rejected or provisional.
 
 ## Definition of done
 
-- [ ] Every path in Phase 1 has an explicit status and a tested/not-tested reason in the support matrix.
-- [ ] Each path promoted to `Supported` passes generated install/setup, runtime, and real-operation checks in hosted CI for its exact combination.
-- [ ] Every `Supported` row maps to an existing script, scenario, workflow job, and aggregate release check.
-- [ ] Every exact `Supported` row is checked against the selectable capability and compatibility definitions without duplicating the selectable catalog.
-- [ ] The full Supported matrix passes on the exact commit before release.
-- [ ] Deferred paths remain accurately labeled, with no support claim inferred from an adjacent framework, frontend, ORM, database, or platform.
-- [ ] Native platform evidence distinguishes scaffold, web build, native build, and device/simulator launch.
+- [x] Every path in Phase 1 has an explicit status and a tested/not-tested reason in the support matrix.
+- [x] Each path promoted to `Supported` passes generated install/setup, runtime, and real-operation checks in hosted CI for its exact combination.
+- [x] Every `Supported` row maps to an existing script, scenario, workflow job, and aggregate release check.
+- [x] Every exact `Supported` row is checked against the selectable capability and compatibility definitions without duplicating the selectable catalog.
+- [x] The full Supported matrix passes on the exact commit before release.
+- [x] Deferred paths remain accurately labeled, with no support claim inferred from an adjacent framework, frontend, ORM, database, or platform.
+- [x] Native platform evidence distinguishes scaffold, web build, native build, and device/simulator launch.
+
+## Closeout evidence
+
+- The support matrix records the status and exact hosted runtime evidence for every Phase 1 path. The
+  Next.js + MySQL path was checked against `compatibility.ts` and its production `mysql2/promise`
+  adapter before its SQLite/PostgreSQL/MySQL runtime scenarios were exercised.
+- Local validation on the combined branch passed `npx tsc --noEmit`, `npx vitest run` (142 tests in 14
+  files), `npx tsup`, and `npm run check:support-matrix` (34 Supported rows).
+- The complete hosted run [#40704589475](https://github.com/doofx0071/omnicraft/actions/runs/40704589475)
+  passed on tested commit `107f2d1ff4d8a93ee087a48dac6d9aaa7e033adc`: all 43 required workflow jobs
+  succeeded, including `support-evidence`, both native-platform scenarios, and
+  `supported-stack-release-gate`. The npm/GitHub Release job was skipped for this pull request and is
+  outside the PR release gate.
+- Hosted Expo evidence is limited to an iPhone 17 / iOS 26.5 simulator build, install, and launch; Tauri
+  evidence covers the Vite frontend build, native executable, and visible Ubuntu 24.04/Xvfb window.
+  Android, physical iOS devices, macOS desktop, and Windows desktop remain untested, so the broad Expo and
+  Tauri matrix rows remain `Scaffold-verified`.
 
 ## Out of scope
 
