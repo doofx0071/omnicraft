@@ -139,18 +139,24 @@ The current workflow:
    validates and starts the Compose database, installs and checks the generated app, migrates, boots the
    API, and verifies CRUD and failure cases. Both scenarios passed hosted run #40615980612 on commit
    `77ef06645421edb3977019f63683af3ea531ccbb`.
-9. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
+9. Runs hosted Ubuntu `module-runtime-integration` for `omnicraft add testing` and shadcn on the exact
+   React/Vite TypeScript frontend-only path. The testing case installs the module into a generated app,
+   runs its sample assertion, builds and boots the app, and checks bundle and missing-asset responses.
+   The shadcn case runs the production init and component install commands, installs, builds, boots, and
+   checks the generated app. Both scenarios passed [run #40618652654](https://github.com/doofx0071/omnicraft/actions/runs/40618652654/job/122588485044)
+   on commit `b28f5c48fd22820461a76defd3d099def5dd594f`; only these exact module paths are Supported.
+10. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
    generated dependencies, runs Alembic migrations, boots Uvicorn, and checks SQLite and PostgreSQL
    CRUD and failure responses. PostgreSQL runs in an isolated Testcontainers instance.
-10. Runs hosted Ubuntu `php-laravel-integration` for SQLite/PostgreSQL/MySQL. The SQLite case uses the
+11. Runs hosted Ubuntu `php-laravel-integration` for SQLite/PostgreSQL/MySQL. The SQLite case uses the
    pinned PHP/Composer test image without a database service; networked databases use isolated Compose
    services. Each case installs Composer dependencies, checks platform requirements, migrates, and
    runs database/API feature tests.
-11. Runs `support-evidence` to check matrix row ids, registered test scenarios, job commands, and the
+12. Runs `support-evidence` to check matrix row ids, registered test scenarios, job commands, and the
    release aggregate. `supported-matrix` fails unless the OS/Node matrix, runtime jobs, support evidence,
    and package artifact all pass. It runs for PRs, main pushes, nightly, and version-tag pushes;
    `workflow_dispatch` supports an explicit pre-release run. The scheduled run uses GitHub-hosted jobs.
-12. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
+13. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
    the release job publishes to npm using OIDC, creates the GitHub Release from the version's changelog
    section, and updates the release snapshots in `ROADMAP.md` and `docs/architecture/system-overview.md`.
    The self-hosted Windows job runs only for main-branch pushes and same-repository pull requests.
