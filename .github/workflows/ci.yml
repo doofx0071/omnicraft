@@ -82,6 +82,160 @@ jobs:
       - name: Test generated Express + Drizzle against SQLite, PostgreSQL, and MySQL
         run: npm run test:integration:db --workspace=create-omnicraft
 
+  node-runtime-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario:
+          - express-prisma-postgres
+          - express-raw-sqlite
+          - express-raw-postgres
+          - express-raw-mysql
+          - express-drizzle-sqlite-vue
+          - express-drizzle-sqlite-svelte
+          - express-drizzle-sqlite-react-js
+          - fastify-drizzle-postgres
+          - fastify-drizzle-sqlite
+          - fastify-drizzle-mysql
+          - fastify-prisma-postgres
+          - fastify-raw-postgres
+          - fastify-raw-sqlite
+          - fastify-raw-mysql
+          - hono-drizzle-postgres
+          - hono-drizzle-sqlite
+          - hono-drizzle-mysql
+          - hono-raw-postgres
+          - hono-raw-sqlite
+          - hono-raw-mysql
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Test generated Node runtime project (${{ matrix.scenario }})
+        run: npm run test:integration:node --workspace=create-omnicraft -- --scenario ${{ matrix.scenario }}
+
+  nextjs-runtime-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [sqlite, postgres, mysql]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Test generated Next.js project (${{ matrix.database }})
+        run: npm run test:integration:nextjs --workspace=create-omnicraft -- --database ${{ matrix.database }}
+
+  frontend-runtime-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Test generated React/Vite JavaScript frontend-only project
+        run: npm run test:integration:frontend --workspace=create-omnicraft
+
+  docker-module-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [postgres, mysql]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Test generated Docker module path (${{ matrix.database }})
+        run: npm run test:integration:docker-module --workspace=create-omnicraft -- --database ${{ matrix.database }}
+
+  module-runtime-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [add-testing-react-vite-ts, shadcn-react-vite-ts-frontend-only]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Test generated module path (${{ matrix.scenario }})
+        run: npm run test:integration:modules --workspace=create-omnicraft -- --scenario ${{ matrix.scenario }}
+
+  native-platform-integration:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scenario: expo-ios-simulator
+            runner: macos-26
+          - scenario: tauri-linux-desktop
+            runner: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install Tauri Linux and virtual display dependencies
+        if: matrix.scenario == 'tauri-linux-desktop'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            build-essential curl wget file libwebkit2gtk-4.1-dev libxdo-dev \
+            libssl-dev libayatana-appindicator3-dev librsvg2-dev xvfb xdotool
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Test generated native platform path (${{ matrix.scenario }})
+        run: npm run test:integration:native --workspace=create-omnicraft -- --scenario ${{ matrix.scenario }}
+
   php-laravel-integration:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -122,7 +276,7 @@ jobs:
       - name: Install workspace dependencies
         run: npm ci
 
-      - name: Test generated FastAPI + SQLAlchemy + SQLite project
+      - name: Test generated FastAPI + SQLAlchemy + SQLite and PostgreSQL projects
         run: npm run test:integration:python --workspace=create-omnicraft
 
   support-evidence:
@@ -225,6 +379,12 @@ jobs:
     needs:
       - unix
       - database-integration
+      - node-runtime-integration
+      - nextjs-runtime-integration
+      - frontend-runtime-integration
+      - docker-module-integration
+      - module-runtime-integration
+      - native-platform-integration
       - python-fastapi-integration
       - php-laravel-integration
       - support-evidence
@@ -235,12 +395,18 @@ jobs:
         env:
           UNIX_MATRIX: ${{ needs.unix.result }}
           NODE_DATABASE: ${{ needs.database-integration.result }}
+          NODE_RUNTIME: ${{ needs.node-runtime-integration.result }}
+          NEXTJS_RUNTIME: ${{ needs.nextjs-runtime-integration.result }}
+          FRONTEND_RUNTIME: ${{ needs.frontend-runtime-integration.result }}
+          DOCKER_MODULE: ${{ needs.docker-module-integration.result }}
+          MODULE_RUNTIME: ${{ needs.module-runtime-integration.result }}
+          NATIVE_PLATFORM: ${{ needs.native-platform-integration.result }}
           PYTHON_DATABASE: ${{ needs.python-fastapi-integration.result }}
           PHP_DATABASE: ${{ needs.php-laravel-integration.result }}
           SUPPORT_EVIDENCE: ${{ needs.support-evidence.result }}
           PACKAGE_ARTIFACT: ${{ needs.package.result }}
         run: |
-          for result in "$UNIX_MATRIX" "$NODE_DATABASE" "$PYTHON_DATABASE" "$PHP_DATABASE" "$SUPPORT_EVIDENCE" "$PACKAGE_ARTIFACT"; do
+          for result in "$UNIX_MATRIX" "$NODE_DATABASE" "$NODE_RUNTIME" "$NEXTJS_RUNTIME" "$FRONTEND_RUNTIME" "$DOCKER_MODULE" "$MODULE_RUNTIME" "$NATIVE_PLATFORM" "$PYTHON_DATABASE" "$PHP_DATABASE" "$SUPPORT_EVIDENCE" "$PACKAGE_ARTIFACT"; do
             if [ "$result" != "success" ]; then
               echo "A required release check finished with status: $result"
               exit 1

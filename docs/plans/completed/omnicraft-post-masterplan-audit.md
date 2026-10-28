@@ -23,7 +23,7 @@
   mappings and fails the aggregate release gate on missing/failed evidence. The matrix is still
   hand-authored and is not yet cross-checked against the selectable capability/compatibility
   definitions. That focused consistency task is recorded in Phase 3 of the [existing-stack runtime
-  evidence plan](../active/omnicraft-stack-runtime-evidence-plan.md).
+  evidence plan](omnicraft-stack-runtime-evidence-plan.md).
 - **Module and auth verification:** Better Auth rejects incompatible stacks before writing; module-add
   tests cover dry-run, idempotency, collisions, missing anchors, rollback, and output paths. Existing
   Express + Drizzle Better Auth flows run against SQLite, PostgreSQL, and MySQL in the DB integration
@@ -34,7 +34,7 @@
   `Supported` and mapped in the ten-row release evidence registry.
 - **Deferred work:** remaining selectable runtime paths, native build evidence, and the matrix-to-
   capability consistency check are tracked in the [existing-stack runtime evidence
-  plan](../active/omnicraft-stack-runtime-evidence-plan.md). `doctor`, project inspection, and upgrade ideas
+  plan](omnicraft-stack-runtime-evidence-plan.md). `doctor`, project inspection, and upgrade ideas
   remain in the roadmap. Auth-provider/PHP expansion remains in its separate active plan.
 - **Remote template reproducibility:** `--latest` resolves to the immutable `v<CLI_VERSION>` tag and
   fails with a specific missing-tag instruction. The audit found and fixed the missing `v1.0.1` tag;

@@ -1,6 +1,11 @@
 import mysql from "mysql2/promise";
 
-export const pool = mysql.createPool(process.env.DATABASE_URL);
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is required — copy .env.example to .env");
+}
+
+export const pool = mysql.createPool(databaseUrl);
 
 /**
  * Uniform raw-SQL entry point used by the routes: pass SQL with ?/? and

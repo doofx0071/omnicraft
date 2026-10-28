@@ -8,7 +8,9 @@ slow checks; `npm test`, the scaffold smoke script, typechecking, and the CLI bu
 - Node.js 20.12 or newer and npm for the CLI, fast checks, SQLite-only integration, and Laravel
   orchestration; PostgreSQL/MySQL Testcontainers runs require Node.js 22.22 or newer, as required by
   [Testcontainers v12](https://github.com/testcontainers/testcontainers-node/releases/tag/v12.0.0).
-- Docker Engine or Docker Desktop with the Docker Compose v2 plugin for PostgreSQL/MySQL cases.
+- Python 3.12 and `uv` for FastAPI; Docker Engine is also required for its PostgreSQL case.
+- Docker Engine or Docker Desktop for PostgreSQL/MySQL Testcontainers cases; Docker Compose v2 is also
+  required for the containerized PHP/Laravel runner.
 - Docker image pulls, PHP image package downloads, and Composer package downloads must be reachable
   from the machine running Docker. The generated Node project also installs dependencies from npm.
 - No host PHP or Composer installation is required. Laravel runs in the PHP test image.
@@ -33,6 +35,8 @@ Run from the repository root:
 ```bash
 npm test --workspace=create-omnicraft
 npm run test:integration:db --workspace=create-omnicraft
+npm run test:integration:node --workspace=create-omnicraft
+npm run test:integration:nextjs --workspace=create-omnicraft
 npm run test:integration:php --workspace=create-omnicraft
 ```
 
@@ -42,9 +46,31 @@ The Node/Drizzle suite defaults to SQLite, PostgreSQL, and MySQL. Run one databa
 npm run test:integration:db --workspace=create-omnicraft -- --database sqlite
 npm run test:integration:db --workspace=create-omnicraft -- --database postgres
 npm run test:integration:db --workspace=create-omnicraft -- --database mysql
+npm run test:integration:node --workspace=create-omnicraft -- --scenario express-prisma-postgres
+npm run test:integration:node --workspace=create-omnicraft -- --scenario hono-raw-mysql
+npm run test:integration:nextjs --workspace=create-omnicraft -- --database mysql
+npm run test:integration:python --workspace=create-omnicraft -- --database postgres
 ```
 
-The SQLite case does not require Docker. The PHP/Laravel suite runs PostgreSQL and MySQL cases.
+The FastAPI SQLite case does not require Docker. Its PostgreSQL case installs the generated Python
+dependencies, applies the generated Alembic migration, boots Uvicorn, and checks PostgreSQL CRUD,
+duplicate and invalid input handling, and missing-record behavior with synthetic Testcontainers
+credentials. The PHP/Laravel suite runs PostgreSQL and MySQL cases.
+
+The separate `node-runtime-integration` target covers 15 exact paths: Express + Prisma/PostgreSQL and
+Express + raw SQL on SQLite/PostgreSQL/MySQL; Fastify + Drizzle on SQLite/PostgreSQL/MySQL, Prisma on
+PostgreSQL, and raw SQL on SQLite/PostgreSQL/MySQL; and Hono + Drizzle and raw SQL on
+SQLite/PostgreSQL/MySQL. It installs each generated project, builds/typechecks the client and API,
+initializes the schema or applies migrations, boots the API, and checks CRUD plus duplicate,
+invalid-input, and missing-record behavior. These cases do not install or exercise auth.
+
+The `nextjs-runtime-integration` target covers Next.js integrated full-stack + raw SQL on SQLite,
+PostgreSQL, and MySQL. It runs the pinned-major `create-next-app@16`, applies production layers,
+installs and builds the generated app, typechecks it, applies the generated SQL migrations, boots the
+production Next.js server, and checks the users page plus persisted CRUD and failure behavior. The
+PostgreSQL and MySQL cases use synthetic Testcontainers credentials; SQLite uses a file in the
+isolated generated project. This target validates the selectable MySQL adapter against its
+`mysql2/promise` driver and MySQL SQL migrations.
 
 ## Coverage and isolation
 
@@ -92,6 +118,17 @@ This section records the commands and outcomes actually run for this change.
 - `npm run test:integration:php --workspace=create-omnicraft` — passed for Laravel 12 with PostgreSQL
   and MySQL. Both ran Composer platform checks, migrations, database-driver assertions, API feature
   tests, and cleanup.
+- `npm run test:integration:node --workspace=create-omnicraft -- --scenario ...` — all 15 registered
+  Express, Fastify, and Hono scenarios passed locally through install, client build/API typecheck,
+  database initialization, API boot, CRUD/failure checks, and cleanup. Generated-project checks fixed
+  Fastify's error-handler typing, portable Fastify/Hono Drizzle MySQL row reads, and an unused Drizzle
+  import in the Hono raw-SQL route.
+- `npm run test:integration:nextjs --workspace=create-omnicraft -- --database ...` — SQLite,
+  PostgreSQL, and MySQL passed locally through official generator, production layers, install, build,
+  typecheck, migration, production boot, CRUD/failure checks, and cleanup. These hosted rows are
+  pending their first CI run. The checks fixed the Next.js PostgreSQL query typing and migration URL,
+  added the missing direct dotenv dependency for migration commands, and checked the previously
+  unverified MySQL adapter end to end.
 - `docker ps` — no test containers remained after the integration runs.
 
 The first PHP image build attempted to compile `pdo_sqlite`, which the selected PHP image already
@@ -104,3 +141,12 @@ passed all ten CI jobs. `database-integration` passed for Express + Drizzle + SQ
 including the generated Better Auth flow, and `php-laravel-integration` passed Laravel 12 (Eloquent)
 with PostgreSQL and MySQL. The support matrix promotes only these exact combinations. Other matrix rows and auth
 providers remain unchanged.
+
+Hosted [runtime-evidence run #40609596120](https://github.com/doofx0071/omnicraft/actions/runs/40609596120)
+passed on commit `b4c26273eaab033fee604bd77c04e0a2ab1d7e19`, including all four Express runtime scenarios,
+FastAPI + PostgreSQL, and the aggregate release gate.
+
+Hosted [Fastify/Hono run #40612114736](https://github.com/doofx0071/omnicraft/actions/runs/40612114736)
+passed all 15 Node runtime scenarios and the aggregate release gate on commit
+`14adbf9d9805e74f44f66d8101077d0d68878f0d`. Exact Fastify/Hono jobs now support the corresponding
+matrix rows. The Next.js SQLite/PostgreSQL/MySQL jobs are still pending hosted CI.

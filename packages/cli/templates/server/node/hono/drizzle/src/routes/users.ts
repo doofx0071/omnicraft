@@ -26,7 +26,9 @@ export const usersRoutes = new Hono()
       return c.json({ error: z.prettifyError(parsed.error) }, 400);
     }
     try {
-      const [user] = await db.insert(users).values(parsed.data).returning();
+      await db.insert(users).values(parsed.data);
+      const [user] = await db.select().from(users).where(eq(users.email, parsed.data.email)).limit(1);
+      if (!user) throw new Error("Created user could not be loaded.");
       return c.json(user, 201);
     } catch (err) {
       if (isUniqueViolation(err)) {
@@ -40,9 +42,10 @@ export const usersRoutes = new Hono()
     if (!Number.isInteger(id)) {
       return c.json({ error: "Invalid user id" }, 400);
     }
-    const [deleted] = await db.delete(users).where(eq(users.id, id)).returning();
+    const [deleted] = await db.select().from(users).where(eq(users.id, id)).limit(1);
     if (!deleted) {
       return c.json({ error: "User not found" }, 404);
     }
+    await db.delete(users).where(eq(users.id, id));
     return c.json(deleted);
   });
