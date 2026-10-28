@@ -72,6 +72,20 @@ describe('support matrix evidence', () => {
     ])
   })
 
+  it('registers creation-time Better Auth only for the three supported Express + Drizzle databases', () => {
+    const capability = SUPPORTED_CAPABILITIES.find(
+      ({ id }) => id === 'creation-auth-better-auth-express-drizzle',
+    )
+
+    expect(capability?.target).toBe('node-express-drizzle')
+    expect(capability?.scenarios).toEqual(['sqlite', 'postgres', 'mysql'])
+    expect(capability?.combinations.map(({ flags }) => [flags.auth, flags.db])).toEqual([
+      ['better-auth', 'sqlite'],
+      ['better-auth', 'postgres'],
+      ['better-auth', 'mysql'],
+    ])
+  })
+
   it('rejects Supported combinations that the CLI compatibility rules disallow', () => {
     const capabilities = SUPPORTED_CAPABILITIES.map((capability) => {
       if (capability.id !== 'fastify-prisma-postgres') return capability

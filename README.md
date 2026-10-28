@@ -78,7 +78,7 @@ The prompt and flags expose these choices. A choice in one row does not imply ev
 | Data access | Separate Node API: Drizzle, Prisma, or raw SQL · Next.js route handlers: raw SQL · Python: SQLAlchemy + Alembic · PHP: Eloquent | Prisma is PostgreSQL-only and unavailable for Hono. Raw SQL is not an ORM. |
 | Database | PostgreSQL, SQLite, MySQL (availability varies by runtime) | The matrix lists which combinations have scaffold or runtime evidence. |
 | Extras | Tailwind CSS, ESLint + Prettier, shadcn/ui | Next.js always includes Tailwind + ESLint from create-next-app; shadcn/ui is web React/Vite-only and implies Tailwind. |
-| Authentication setup | `None`, Better Auth email/password | The create-time prompt and `--auth` flag expose Better Auth only for the exact TypeScript React/Vite + Node/Express + Drizzle + SQLite/PostgreSQL/MySQL paths. Its creation-time support remains provisional until hosted evidence is linked in the matrix. |
+| Authentication setup | `None`, Better Auth email/password | The create-time prompt and `--auth` flag expose Better Auth only for the exact TypeScript React/Vite + Node/Express + Drizzle + SQLite/PostgreSQL/MySQL paths, now backed by hosted generated-project evidence in the support matrix. |
 | `omnicraft add` modules | `docker`, `testing`, Better Auth email/password (`auth`) | Auth requires a React frontend with a separate Node + Express + Drizzle API; hosted database flows cover SQLite, PostgreSQL, and MySQL. Focused tests verify that `omnicraft add auth` applies the module to a bare compatible project. |
 
 ## Options

@@ -59,7 +59,7 @@ The current suite covers:
 | `src/compatibility.test.ts`, `src/manifest.test.ts` | Exact creation-time auth choices and constraints, plus manifest separation between active authentication and `modules`. |
 | `src/capabilities.test.ts` | Available prompt/flag choices derive from the typed capability registry, and the module menu matches its registered module IDs. |
 | `src/add-run.test.ts` | Module dry-run, success, idempotency, creation-time auth application, collisions, unsupported stacks, missing patch anchors, and rollback after a failed write. |
-| `src/support-evidence.test.ts` | Every Supported row resolves through selectable values, prompt/flag/composition and module guards, renders from its exact combination, and maps to the matching scenario, script, job, and aggregate release check. |
+| `src/support-evidence.test.ts` | Every Supported row resolves through selectable values, prompt/flag/composition, module and creation-time auth guards, renders from its exact combination, and maps to the matching scenario, script, job, and aggregate release check. |
 | `src/modules/auth.test.ts` | Better Auth compatibility and secret setup guidance. |
 
 The engine fixtures cover Express + Drizzle with PostgreSQL/SQLite/MySQL, Express + Prisma + PostgreSQL,

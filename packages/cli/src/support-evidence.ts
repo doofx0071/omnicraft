@@ -4,6 +4,7 @@ import {
   DATABASE_LABELS,
   FRONTEND_LABELS,
   ORM_LABELS,
+  type AuthenticationSetup,
   type BackendFramework,
   type BackendRuntime,
   type Database,
@@ -149,6 +150,7 @@ export interface SupportedCombination {
     backend?: BackendFramework
     orm?: Orm
     db?: Database
+    auth?: AuthenticationSetup
     extras: readonly (typeof AVAILABLE.extras)[number][]
   }
   module?: ModuleId
@@ -163,6 +165,7 @@ export type SupportMatrixFormat =
   | 'python-backend'
   | 'php-backend'
   | 'auth-module'
+  | 'creation-auth'
   | 'docker-module'
   | 'testing-module'
   | 'shadcn-extra'
@@ -211,6 +214,11 @@ function nodeStack(
   module?: ModuleId,
 ): SupportedCombination {
   return webStack(frontend, language, 'node', backend, orm, database, module)
+}
+
+function creationAuthStack(database: Database): SupportedCombination {
+  const stack = nodeStack('express', 'drizzle', database)
+  return { ...stack, flags: { ...stack.flags, auth: 'better-auth' } }
 }
 
 function pythonStack(database: Database): SupportedCombination {
@@ -332,6 +340,9 @@ export function registeredMatrixRowPrefix(capability: SupportedCapability): stri
       break
     case 'auth-module':
       label = `\`omnicraft add auth\` — Express + Drizzle + ${databaseList('/')}`
+      break
+    case 'creation-auth':
+      label = `Creation-time Better Auth — ${frontendLabel} + Express + Drizzle + ${databaseList('/')}`
       break
     case 'docker-module':
       label = `\`omnicraft add docker\` — Express + Drizzle + ${oneDatabase()} separate API`
@@ -525,6 +536,17 @@ export const SUPPORTED_CAPABILITIES = [
     combinations: [
       nodeStack('express', 'drizzle', 'postgres', 'react', 'typescript', 'auth'),
       nodeStack('express', 'drizzle', 'mysql', 'react', 'typescript', 'auth'),
+    ],
+  },
+  {
+    id: 'creation-auth-better-auth-express-drizzle',
+    matrixFormat: 'creation-auth',
+    target: 'node-express-drizzle',
+    scenarios: ['sqlite', 'postgres', 'mysql'],
+    combinations: [
+      creationAuthStack('sqlite'),
+      creationAuthStack('postgres'),
+      creationAuthStack('mysql'),
     ],
   },
   {

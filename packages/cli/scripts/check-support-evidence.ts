@@ -119,6 +119,11 @@ function expectedScenario(
       if (capability.matrixFormat === 'auth-module') {
         assert.equal(combination.module, 'auth', `"${capability.id}" must validate the auth module.`)
       }
+      if (capability.matrixFormat === 'creation-auth') {
+        assert.equal(answers.authentication, 'better-auth', `"${capability.id}" must select Better Auth.`)
+        assert.equal(combination.flags.auth, 'better-auth', `"${capability.id}" must pass --auth better-auth.`)
+        assert.equal(combination.module, undefined, `"${capability.id}" must not model auth as an add module.`)
+      }
       return database
     }
     case 'nextjs-runtime': {
@@ -227,6 +232,20 @@ function validateCombination(
       reason,
       null,
       `Module "${combination.module}" rejects Supported capability "${capability.id}": ${reason}`,
+    )
+  }
+
+  if (combination.flags.auth === 'better-auth') {
+    const module = MODULES.find((candidate) => candidate.id === 'auth')
+    assert(module, `Supported capability "${capability.id}" requires the existing auth module.`)
+    const manifest = buildManifest(answers, 'support-evidence', 'npm')
+    assert.equal(manifest.authentication, 'better-auth')
+    assert.deepEqual(manifest.modules, [], `"${capability.id}" must keep auth separate from module history.`)
+    const reason = module.incompatible?.(manifest, targetDir) ?? null
+    assert.equal(
+      reason,
+      null,
+      `The existing auth module rejects Supported creation-time capability "${capability.id}": ${reason}`,
     )
   }
 
