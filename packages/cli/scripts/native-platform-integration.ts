@@ -386,7 +386,9 @@ async function runTauriLinuxDesktop(): Promise<void> {
       parent,
     )
     applyProductionLayers(projectRoot, answers)
-    runRequired('Install generated Tauri dependencies', 'npm', ['ci', '--no-audit', '--no-fund'], projectRoot)
+    // create-tauri-app does not include a package-lock.json in its template.
+    // Use npm install for this generated project rather than npm ci.
+    runRequired('Install generated Tauri dependencies', 'npm', ['install', '--no-audit', '--no-fund'], projectRoot)
     runRequired('Build the generated Tauri frontend', 'npm', ['run', 'build'], projectRoot)
     runRequired('Verify Rust toolchain', 'cargo', ['--version'], projectRoot, 30_000)
     runRequired(
