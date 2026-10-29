@@ -1,6 +1,6 @@
 # OmniCraft `add testing` React Runtime Fix Plan
 
-**Status:** Active
+**Status:** Completed
 **Created:** 2026-10-29
 **Base:** PR #47 head `7f0f8075939304e0d46c4e2561b8037161ff9d40`
 **Scope:** Existing production compositions and the existing `testing` module only.
@@ -55,7 +55,7 @@ reject those stacks or change their existing stack support.
 - [x] Relevant local unit, typecheck, build, and generated-project checks pass.
 - [x] Support evidence and documentation match observed results; no path is promoted before its exact
       hosted generated-project checks pass.
-- [ ] Final hosted CI passes on the exact PR head and the PR remains open and unmerged.
+- [x] Final hosted CI passes on the exact PR head and the PR remains open and unmerged.
 
 ## Verified results
 
@@ -78,7 +78,12 @@ npm run check:support-matrix     # 39 Supported rows map to CI evidence
 git diff --check                 # passed
 ```
 
-The final documentation/evidence head still requires hosted CI before this plan can be closed.
+The evidence/documentation head `e61ba3e50ecea11aadc04d2ea7fd88e63acfa434` passed hosted run
+[#40884780195, attempt 2](https://github.com/doofx0071/omnicraft/actions/runs/40884780195). All 51 jobs
+succeeded; only the tag-only publish job was skipped. The support-evidence check and strict release gate
+passed, all six exact React/Vite module scenarios passed, and all three incompatible module scenarios
+rejected before writes. The first attempt hit the existing Windows scaffold unit test's 5-second timeout;
+the same Windows job then passed on retry with all 148 unit tests. PR #50 remains open and unmerged.
 
 ## Out of scope
 
