@@ -4,7 +4,11 @@ import { resolve } from "node:path";
 const database = process.env.OMNICRAFT_TEST_DATABASE;
 const databaseUrl = process.env.DATABASE_URL;
 
-assert(database && databaseUrl, "The auth session error fixture environment is incomplete.");
+assert(
+  database === "sqlite" || database === "postgres",
+  `This fixture only drops SQLite or PostgreSQL session tables (received ${database}).`,
+);
+assert(databaseUrl, "The auth session error fixture DATABASE_URL is missing.");
 
 if (database === "sqlite") {
   const { default: Database } = await import("better-sqlite3");
@@ -14,7 +18,7 @@ if (database === "sqlite") {
   } finally {
     connection.close();
   }
-} else if (database === "postgres") {
+} else {
   const { Client } = await import("pg");
   const connection = new Client({ connectionString: databaseUrl });
   await connection.connect();
@@ -23,16 +27,6 @@ if (database === "sqlite") {
   } finally {
     await connection.end();
   }
-} else if (database === "mysql") {
-  const { createConnection } = await import("mysql2/promise");
-  const connection = await createConnection(databaseUrl);
-  try {
-    await connection.query("DROP TABLE `session`");
-  } finally {
-    await connection.end();
-  }
-} else {
-  throw new Error(`Unsupported database for the auth session error fixture: ${database}`);
 }
 
-console.log("Dropped the session table in the disposable integration database.");
+console.log(`Dropped the session table in the disposable ${database} database.`);

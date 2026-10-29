@@ -538,7 +538,7 @@ function dropAuthSessionTable(
   diagnostics: string[],
 ): void {
   runRequired(
-    'Remove the disposable Better Auth session table to exercise its database error response',
+    `Remove the disposable ${database} Better Auth session table to exercise its database error response`,
     'node',
     ['.omnicraft-auth-session-table-drop.mjs'],
     serverDir,
@@ -737,7 +737,17 @@ async function runDatabaseCase(database: TestDatabase, authFlow: AuthFlow): Prom
     )
     await waitForHealth(origin, child)
     const productionCookie = await verifyProductionCookie(origin, auth.email, secrets)
-    dropAuthSessionTable(database, serverDir, databaseUrl, secrets, diagnostics)
+    if (database === 'mysql') {
+      assert(container, `The disposable ${database} database container should be running.`)
+      console.log(`[database:${database}][auth:${authFlow}] stop disposable database for auth error check`)
+      await container.stop()
+      container = undefined
+    } else {
+      dropAuthSessionTable(database, serverDir, databaseUrl, secrets, diagnostics)
+    }
+    console.log(
+      `[database:${database}][auth:${authFlow}] session-store failure injected; checking Better Auth response`,
+    )
     const sessionDatabaseError = await request(origin, '/api/auth/get-session', {
       cookie: productionCookie,
     })
@@ -759,6 +769,9 @@ async function runDatabaseCase(database: TestDatabase, authFlow: AuthFlow): Prom
     assertNoSecrets(JSON.stringify(errorBody), secrets, 'Better Auth error response')
     assertNoSecrets(child.output, secrets, 'Generated server logs after auth database error')
     serverOutput += child.output
+    console.log(
+      `[database:${database}][auth:${authFlow}] Better Auth returned the generic session error response`,
+    )
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error)
     if (child) serverOutput += child.output

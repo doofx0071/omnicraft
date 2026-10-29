@@ -130,8 +130,9 @@ The current workflow:
    then builds, migrates, boots, and exercises CRUD and authentication. Both paths also verify their
    manifest state and repeated `add auth` idempotency. The generated API also checks Better Auth's default
    session-cookie attributes in development HTTP and production HTTPS-base-URL modes, then removes the
-   disposable session table and verifies that a failed session lookup returns a generic 500 response
-   without database details or secrets.
+   disposable SQLite/PostgreSQL session table or stops the disposable MySQL database container and
+   verifies that a failed session lookup returns a generic 500 response without database details or
+   secrets.
 5. Runs hosted Ubuntu `node-runtime-integration` for the 20 registered Express, Fastify, and Hono
    Prisma, Drizzle, and raw-SQL paths, including the exact Vue, Svelte, and JavaScript React client/API
    pairings. Each generated project is installed, client-built, API-typechecked, initialized or
