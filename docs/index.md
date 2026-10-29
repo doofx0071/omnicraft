@@ -52,6 +52,8 @@ For the current CI coverage and repository-recorded manual results, see the per-
 
 ## Plans
 
+- [Active: `add testing` React runtime fixes](plans/active/omnicraft-add-testing-react-runtime-fix-plan.md) — correct existing React/Vite module paths and preflight-reject
+  incompatible framework paths.
 - [Completed: `add testing` runtime evidence](plans/completed/omnicraft-add-testing-runtime-evidence-plan.md) — hosted generated-test outcomes for existing
   non-native module paths; paths with failing generated tests remain unverified.
 - [Completed: master engineering plan](plans/completed/omnicraft-master-plan.md) — preserved as the historical plan based on the 0.3.0 baseline.

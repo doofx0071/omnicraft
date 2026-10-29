@@ -114,23 +114,29 @@ volumes:
   mysqldata:
 `
 
-const VITEST_CONFIG = `import { defineConfig } from "vitest/config";
+function vitestConfig(isSeparateApi: boolean): string {
+  return `import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+${isSeparateApi ? '  root: "client",\n' : ''}  esbuild: {
+    jsxInject: 'import React from "react"',
+  },
   test: {
     environment: "jsdom",
     setupFiles: ["./src/setupTests.ts"],
   },
 });
 `
+}
 
 const SAMPLE_TEST = `import { describe, expect, it } from "vitest";
+import { createElement } from "react";
 import { render, screen } from "@testing-library/react";
 import App from "./App";
 
 describe("App", () => {
   it("renders the app title", () => {
-    render(<App />);
+    render(createElement(App));
     expect(screen.getByRole("heading", { name: "⚡ {{projectName}}" })).toBeInTheDocument();
   });
 });
@@ -168,17 +174,23 @@ const MODULE_DEFINITIONS: Record<ModuleId, ModuleDefinition> = {
       if (manifest.stack.architecture.kind === 'native-app') {
         return 'native apps use their own test runners (not covered yet)'
       }
-      const clientDir = manifest.stack.architecture.kind === 'separate-frontend-api' ? 'client' : '.'
-      if (existsSync(join(targetDir, clientDir, 'vitest.config.ts'))) {
+      if (manifest.stack.frontend !== 'react') {
+        return 'the sample test requires a React/Vite frontend'
+      }
+      const configPaths = ['vitest.config.ts']
+      if (manifest.stack.architecture.kind === 'separate-frontend-api') {
+        configPaths.push('client/vitest.config.ts')
+      }
+      if (configPaths.some((path) => existsSync(join(targetDir, path)))) {
         return 'a vitest config already exists'
       }
       return null
     },
-    files(ctx) {
-      const isWorkspaces = existsSync(join(ctx.targetDir, 'client'))
-      const prefix = isWorkspaces ? 'client/' : ''
+    files(_ctx, manifest) {
+      const isSeparateApi = manifest.stack.architecture.kind === 'separate-frontend-api'
+      const prefix = isSeparateApi ? 'client/' : ''
       return {
-        [`${prefix}vitest.config.ts`]: VITEST_CONFIG,
+        'vitest.config.ts': vitestConfig(isSeparateApi),
         [`${prefix}src/App.test.tsx`]: SAMPLE_TEST,
         [`${prefix}src/setupTests.ts`]: `import "@testing-library/jest-dom/vitest";\n`,
       }

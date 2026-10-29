@@ -40,15 +40,10 @@ const SCENARIOS = [
   'add-testing-nextjs-sqlite',
   'shadcn-react-vite-ts-frontend-only',
 ] as const
-const KNOWN_UNVERIFIED_TEST_FAILURES: Partial<Record<(typeof SCENARIOS)[number], string>> = {
-  'add-testing-react-vite-js-frontend-only': 'React is not defined',
-  'add-testing-react-vite-ts-separate-api': 'document is not defined',
-  'add-testing-react-vite-js-separate-api': 'React is not defined',
-  'add-testing-vue-express-drizzle-sqlite': 'Does the file exist',
-  'add-testing-svelte-express-drizzle-sqlite': 'Does the file exist',
-  'add-testing-fastapi-sqlite': 'document is not defined',
-  'add-testing-laravel-sqlite': 'document is not defined',
-  'add-testing-nextjs-sqlite': 'Does the file exist',
+const EXPECTED_TESTING_REJECTIONS: Partial<Record<(typeof SCENARIOS)[number], string>> = {
+  'add-testing-vue-express-drizzle-sqlite': 'the sample test requires a React/Vite frontend',
+  'add-testing-svelte-express-drizzle-sqlite': 'the sample test requires a React/Vite frontend',
+  'add-testing-nextjs-sqlite': 'the sample test requires a React/Vite frontend',
 }
 const CHILD_TIMEOUT_MS = 10 * 60 * 1000
 const HTTP_TIMEOUT_MS = 15_000
@@ -125,17 +120,6 @@ function runGeneratedTestingCommand(
   diagnostics.push(`Generated npm test (exit ${result.exitCode ?? 'unknown'}):\n${tail(output)}`)
   console.log(`[integration] generated npm test completed: ${scenario} (exit ${result.exitCode ?? 'unknown'})`)
   console.log(`[integration] generated npm test output:\n${tail(output, 4_000)}`)
-
-  const expectedFailure = KNOWN_UNVERIFIED_TEST_FAILURES[scenario]
-  if (expectedFailure) {
-    assert.equal(result.ok, false, `The generated test should expose its known failure: ${expectedFailure}`)
-    assert(
-      output.includes(expectedFailure),
-      `Expected the generated test failure "${expectedFailure}":\n${tail(output)}`,
-    )
-    console.log(`[module:${scenario}] observed generated test failure; path remains unverified`)
-    return
-  }
 
   assert(result.ok, `Generated npm test failed for ${scenario}:\n${tail(output)}`)
 }
@@ -269,23 +253,30 @@ async function runTestingScenario(
   diagnostics: string[],
 ): Promise<void> {
   const testRoot = existsSync(join(projectRoot, 'client')) ? join(projectRoot, 'client') : projectRoot
-  const configPath = join(testRoot, 'vitest.config.ts')
+  const configPath = join(projectRoot, 'vitest.config.ts')
   const packagePath = join(projectRoot, 'package.json')
   const manifestPath = join(projectRoot, '.omnicraft', 'project.json')
   const originalPackage = readFileSync(packagePath, 'utf8')
   const originalManifest = readFileSync(manifestPath, 'utf8')
 
-  writeFileSync(configPath, '// collision sentinel\n')
-  const conflict = invokeAddTesting(projectRoot)
-  assert.equal(conflict.ok, false, 'The testing module must reject an existing Vitest config.')
-  assert(
-    conflict.output.includes('a vitest config already exists'),
-    `The generated add command returned an unexpected conflict: ${tail(conflict.output)}`,
-  )
-  assert.equal(readFileSync(packagePath, 'utf8'), originalPackage, 'A rejected add changed package.json.')
-  assert.equal(readFileSync(manifestPath, 'utf8'), originalManifest, 'A rejected add changed the manifest.')
-  assert(!existsSync(join(testRoot, 'src', 'App.test.tsx')))
-  unlinkSync(configPath)
+  const collisionPaths = [
+    'vitest.config.ts',
+    ...(testRoot === projectRoot ? [] : ['client/vitest.config.ts']),
+  ]
+  for (const relativePath of collisionPaths) {
+    const collisionPath = join(projectRoot, relativePath)
+    writeFileSync(collisionPath, '// collision sentinel\n')
+    const conflict = invokeAddTesting(projectRoot)
+    assert.equal(conflict.ok, false, 'The testing module must reject an existing Vitest config.')
+    assert(
+      conflict.output.includes('a vitest config already exists'),
+      `The generated add command returned an unexpected conflict: ${tail(conflict.output)}`,
+    )
+    assert.equal(readFileSync(packagePath, 'utf8'), originalPackage, 'A rejected add changed package.json.')
+    assert.equal(readFileSync(manifestPath, 'utf8'), originalManifest, 'A rejected add changed the manifest.')
+    assert(!existsSync(join(testRoot, 'src', 'App.test.tsx')))
+    unlinkSync(collisionPath)
+  }
 
   const added = invokeAddTesting(projectRoot)
   assert(added.ok, `The generated-project add command failed:\n${tail(added.output)}`)
@@ -295,7 +286,13 @@ async function runTestingScenario(
   const installedConfig = readFileSync(configPath, 'utf8')
   const installedTest = readFileSync(join(testRoot, 'src', 'App.test.tsx'), 'utf8')
   assert(installedConfig.includes('setupFiles: ["./src/setupTests.ts"]'))
+  assert.equal(
+    installedConfig.includes('root: "client"'),
+    testRoot !== projectRoot,
+    'The root Vitest config must discover tests from the generated client workspace.',
+  )
   assert(installedTest.includes(`name: "⚡ ${answers.projectName}"`))
+  assert(installedTest.includes('render(createElement(App))'))
   const installedPackage = JSON.parse(readFileSync(packagePath, 'utf8')) as {
     scripts?: Record<string, string>
   }
@@ -313,7 +310,9 @@ async function runTestingScenario(
   runRequired('Install generated testing dependencies', 'npm', ['install', '--no-audit', '--no-fund'], projectRoot, diagnostics)
   if (
     scenario === 'add-testing-react-vite-ts' ||
-    scenario === 'add-testing-react-vite-ts-separate-api'
+    scenario === 'add-testing-react-vite-ts-separate-api' ||
+    scenario === 'add-testing-fastapi-sqlite' ||
+    scenario === 'add-testing-laravel-sqlite'
   ) {
     runRequired(
       'Typecheck generated React/Vite project with sample test',
@@ -324,12 +323,37 @@ async function runTestingScenario(
     )
   }
   runGeneratedTestingCommand(projectRoot, scenario, diagnostics)
-  if (
-    scenario === 'add-testing-react-vite-ts' ||
-    scenario === 'add-testing-react-vite-ts-separate-api'
-  ) {
-    runRequired('Build generated React/Vite app', 'npm', ['run', 'build'], testRoot, diagnostics)
+  runRequired('Build generated React/Vite app', 'npm', ['run', 'build'], testRoot, diagnostics)
+}
+
+async function runExpectedTestingRejection(
+  projectRoot: string,
+  scenario: Scenario,
+  reason: string,
+): Promise<void> {
+  const packagePath = join(projectRoot, 'package.json')
+  const manifestPath = join(projectRoot, '.omnicraft', 'project.json')
+  const packageBefore = readFileSync(packagePath, 'utf8')
+  const manifestBefore = readFileSync(manifestPath, 'utf8')
+  const result = invokeAddTesting(projectRoot)
+  assert.equal(result.ok, false, `The ${scenario} path must be rejected before applying the module.`)
+  assert(
+    result.output.includes(reason),
+    `Expected the ${scenario} rejection reason "${reason}":\n${tail(result.output)}`,
+  )
+  assert.equal(readFileSync(packagePath, 'utf8'), packageBefore, 'A rejected add changed package.json.')
+  assert.equal(readFileSync(manifestPath, 'utf8'), manifestBefore, 'A rejected add changed the manifest.')
+  for (const relativePath of [
+    'vitest.config.ts',
+    'client/vitest.config.ts',
+    'src/App.test.tsx',
+    'src/setupTests.ts',
+    'client/src/App.test.tsx',
+    'client/src/setupTests.ts',
+  ]) {
+    assert(!existsSync(join(projectRoot, relativePath)), `A rejected add wrote ${relativePath}.`)
   }
+  console.log(`[module:${scenario}] rejected before module writes: ${reason}`)
 }
 
 async function runShadcnScenario(projectRoot: string, diagnostics: string[]): Promise<void> {
@@ -416,25 +440,36 @@ async function runScenario(scenario: Scenario): Promise<void> {
     scaffold(projectRoot, answers)
     if (scenario === 'shadcn-react-vite-ts-frontend-only') {
       await runShadcnScenario(projectRoot, diagnostics)
+    } else if (EXPECTED_TESTING_REJECTIONS[scenario]) {
+      await runExpectedTestingRejection(
+        projectRoot,
+        scenario,
+        EXPECTED_TESTING_REJECTIONS[scenario] as string,
+      )
     } else {
       await runTestingScenario(projectRoot, answers, scenario, diagnostics)
     }
 
-    if (
-      scenario === 'add-testing-react-vite-ts' ||
+    const shouldBootReactApp =
+      (scenario.startsWith('add-testing-') && !EXPECTED_TESTING_REJECTIONS[scenario]) ||
       scenario === 'shadcn-react-vite-ts-frontend-only'
-    ) {
+    if (shouldBootReactApp) {
       const port = await reservePort()
       const origin = `http://127.0.0.1:${port}`
+      const appRoot = existsSync(join(projectRoot, 'client'))
+        ? join(projectRoot, 'client')
+        : projectRoot
       child = await startCommand(
         'npm',
         ['run', 'preview', '--', '--host', '127.0.0.1', '--port', `${port}`, '--strictPort'],
-        projectRoot,
+        appRoot,
         { env: isolatedEnvironment() },
       )
       await waitForApp(origin, child)
       await verifyPreview(origin, scenario)
       console.log(`[module:${scenario}] install, build, boot, bundle, and failure checks passed`)
+    } else if (EXPECTED_TESTING_REJECTIONS[scenario]) {
+      console.log(`[module:${scenario}] generation and pre-write module rejection passed`)
     } else {
       console.log(`[module:${scenario}] generation, add, install, and sample test outcome recorded`)
     }
