@@ -67,6 +67,14 @@ export const FRONTEND_RUNTIME_SCENARIOS = ['react-js-frontend-only'] as const
 export const DOCKER_MODULE_SCENARIOS = ['postgres', 'mysql'] as const satisfies readonly Extract<Database, 'postgres' | 'mysql'>[]
 export const MODULE_RUNTIME_SCENARIOS = [
   'add-testing-react-vite-ts',
+  'add-testing-react-vite-js-frontend-only',
+  'add-testing-react-vite-ts-separate-api',
+  'add-testing-react-vite-js-separate-api',
+  'add-testing-vue-express-drizzle-sqlite',
+  'add-testing-svelte-express-drizzle-sqlite',
+  'add-testing-fastapi-sqlite',
+  'add-testing-laravel-sqlite',
+  'add-testing-nextjs-sqlite',
   'shadcn-react-vite-ts-frontend-only',
 ] as const
 export const NATIVE_PLATFORM_SCENARIOS = ['expo-ios-simulator', 'tauri-linux-desktop'] as const

@@ -68,6 +68,14 @@ describe('support matrix evidence', () => {
     expect(integrationScenarios('module-runtime')).toEqual(MODULE_RUNTIME_SCENARIOS)
     expect(MODULE_RUNTIME_SCENARIOS).toEqual([
       'add-testing-react-vite-ts',
+      'add-testing-react-vite-js-frontend-only',
+      'add-testing-react-vite-ts-separate-api',
+      'add-testing-react-vite-js-separate-api',
+      'add-testing-vue-express-drizzle-sqlite',
+      'add-testing-svelte-express-drizzle-sqlite',
+      'add-testing-fastapi-sqlite',
+      'add-testing-laravel-sqlite',
+      'add-testing-nextjs-sqlite',
       'shadcn-react-vite-ts-frontend-only',
     ])
   })
