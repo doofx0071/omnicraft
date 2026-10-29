@@ -125,7 +125,7 @@ The repository has no `templates/server/node/hono/prisma/` layer.
 | Tailwind CSS | **Scaffold-verified** | Generated in the current smoke paths; prior matrix records a generated-project build. |
 | ESLint + Prettier | **Scaffold-verified** | Current smoke paths include the extra; CI lint is limited to Express + Drizzle + PostgreSQL on the Windows job. |
 | shadcn/ui — React/Vite TypeScript frontend-only | **Supported** | Hosted [`shadcn-react-vite-ts-frontend-only`, run #40618652654 on commit `b28f5c48fd22820461a76defd3d099def5dd594f`](https://github.com/doofx0071/omnicraft/actions/runs/40618652654/job/122587017146) ran the production shadcn init and component install, installed the generated project, built it, booted Vite preview, and checked bundle and missing-asset responses. <!-- support-id: shadcn-react-vite-ts-frontend-only --> |
-| shadcn/ui — React/Vite separate frontend + API | **Scaffold-verified** | The engine fixture verifies the overlay. Hosted post-scaffold shadcn initialization and component installation are recorded only for frontend-only; other frontend/platform combinations omit shadcn or reject incompatible flags. |
+| shadcn/ui — React/Vite separate frontend + API | **Scaffold-verified** | The engine fixture verifies the overlay. Hosted run [#40903557153 (attempt 2)](https://github.com/doofx0071/omnicraft/actions/runs/40903557153) on commit `ccd48955bcb23b05b798a0293506c2c3d8930a6b` also ran production shadcn initialization, component add, formatting, and installation for TypeScript separate-API paths in the React/Vite add-testing groups. This is evidence in those testing-module combinations; the status remains Scaffold-verified and does not claim standalone shadcn or backend/database support. |
 
 ## Planned and registry gaps
 
