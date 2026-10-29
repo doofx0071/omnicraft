@@ -127,8 +127,11 @@ The current workflow:
 4. Runs hosted Ubuntu `database-integration` cases for Express + Drizzle + SQLite/PostgreSQL/MySQL.
    For each database, generated projects exercise both creation-time Better Auth and a fresh
    auth-module application through the `add auth` handler. Each project is installed and typechecked,
-   then migrates, boots, and exercises CRUD and authentication. Both paths also verify their manifest
-   state and repeated `add auth` idempotency.
+   then builds, migrates, boots, and exercises CRUD and authentication. Both paths also verify their
+   manifest state and repeated `add auth` idempotency. The generated API also checks Better Auth's default
+   session-cookie attributes in development HTTP and production HTTPS-base-URL modes, then removes the
+   disposable session table and verifies that a failed session lookup returns a generic 500 response
+   without database details or secrets.
 5. Runs hosted Ubuntu `node-runtime-integration` for the 20 registered Express, Fastify, and Hono
    Prisma, Drizzle, and raw-SQL paths, including the exact Vue, Svelte, and JavaScript React client/API
    pairings. Each generated project is installed, client-built, API-typechecked, initialized or

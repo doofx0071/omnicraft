@@ -253,15 +253,49 @@ function assertAuthSecretNotPersisted(projectRoot: string, authSecret: string): 
   }
 }
 
-function cookieHeader(response: Response): string {
+function sessionSetCookieHeader(response: Response): string {
   const headers = response.headers as Headers & { getSetCookie?: () => string[] }
   const setCookies = headers.getSetCookie?.() ?? [response.headers.get('set-cookie') ?? '']
-  const pairs = setCookies
-    .map((setCookie) => setCookie.split(';', 1)[0]?.trim() ?? '')
-    .filter(Boolean)
-  const result = pairs.join('; ')
+  const sessionCookie = setCookies.find((setCookie) => /session_token=/i.test(setCookie))
+  assert(sessionCookie, 'Better Auth did not set a session cookie.')
+  return sessionCookie
+}
+
+function cookieHeader(response: Response): string {
+  const result = sessionSetCookieHeader(response).split(';', 1)[0]?.trim() ?? ''
   assert.match(result, /session_token=/i, 'Better Auth did not set a session cookie.')
   return result
+}
+
+function assertSessionCookieAttributes(
+  response: Response,
+  secure: boolean,
+  environment: 'development' | 'production',
+): void {
+  const setCookie = sessionSetCookieHeader(response)
+  assert.match(
+    setCookie,
+    /;\s*httponly(?:;|$)/i,
+    `${environment} session cookie should be HttpOnly.`,
+  )
+  assert.match(
+    setCookie,
+    /;\s*samesite=lax(?:;|$)/i,
+    `${environment} session cookie should use SameSite=Lax.`,
+  )
+  if (secure) {
+    assert.match(
+      setCookie,
+      /;\s*secure(?:;|$)/i,
+      'Production HTTPS session cookie should be Secure.',
+    )
+  } else {
+    assert.doesNotMatch(
+      setCookie,
+      /;\s*secure(?:;|$)/i,
+      'Development HTTP session cookie should omit Secure.',
+    )
+  }
 }
 
 async function jsonResponse(response: Response): Promise<unknown> {
@@ -294,6 +328,7 @@ async function request(
   options: { method?: string; body?: unknown; cookie?: string } = {},
 ): Promise<{ response: Response; body: unknown }> {
   const headers = new Headers()
+  headers.set('origin', origin)
   if (options.body !== undefined) headers.set('content-type', 'application/json')
   if (options.cookie) headers.set('cookie', options.cookie)
   const response = await fetch(`${origin}${path}`, {
@@ -369,7 +404,11 @@ async function verifyAuth(
     method: 'POST',
     body: { name: 'Auth Integration', email, password: AUTH_PASSWORD },
   })
-  assert(registration.response.ok, 'A valid email/password registration should succeed.')
+  assert(
+    registration.response.ok,
+    `A valid email/password registration should succeed (HTTP ${registration.response.status}).`,
+  )
+  assertSessionCookieAttributes(registration.response, false, 'development')
   const signupCookie = cookieHeader(registration.response)
   secrets.push(signupCookie)
 
@@ -401,7 +440,8 @@ async function verifyAuth(
     method: 'POST',
     body: { email, password: AUTH_PASSWORD },
   })
-  assert(login.response.ok, 'Valid credentials should sign in.')
+  assert.equal(login.response.status, 200, 'Valid credentials should sign in.')
+  assertSessionCookieAttributes(login.response, false, 'development')
   const cookie = cookieHeader(login.response)
   secrets.push(cookie)
 
@@ -432,6 +472,26 @@ async function verifyAuth(
   return { email, cookie }
 }
 
+async function verifyProductionCookie(
+  origin: string,
+  email: string,
+  secrets: string[],
+): Promise<string> {
+  const login = await request(origin, '/api/auth/sign-in/email', {
+    method: 'POST',
+    body: { email, password: AUTH_PASSWORD },
+  })
+  assert.equal(
+    login.response.status,
+    200,
+    'Existing credentials should sign in in production mode.',
+  )
+  assertSessionCookieAttributes(login.response, true, 'production')
+  const cookie = cookieHeader(login.response)
+  secrets.push(cookie)
+  return cookie
+}
+
 async function verifyLogout(origin: string, cookie: string): Promise<void> {
   const logout = await request(origin, '/api/auth/sign-out', { method: 'POST', cookie })
   assert(logout.response.ok, 'Logout should succeed.')
@@ -453,8 +513,6 @@ function verifyStoredPassword(
   secrets: string[],
   diagnostics: string[],
 ): void {
-  const fixture = fileURLToPath(new URL('./fixtures/auth-password-check.mjs', import.meta.url))
-  copyFileSync(fixture, join(serverDir, '.omnicraft-auth-password-check.mjs'))
   const env = isolatedEnvironment({
     DATABASE_URL: databaseUrl,
     OMNICRAFT_TEST_DATABASE: database,
@@ -472,22 +530,57 @@ function verifyStoredPassword(
   )
 }
 
+function dropAuthSessionTable(
+  database: TestDatabase,
+  serverDir: string,
+  databaseUrl: string,
+  secrets: string[],
+  diagnostics: string[],
+): void {
+  runRequired(
+    'Remove the disposable Better Auth session table to exercise its database error response',
+    'node',
+    ['.omnicraft-auth-session-table-drop.mjs'],
+    serverDir,
+    isolatedEnvironment({
+      DATABASE_URL: databaseUrl,
+      OMNICRAFT_TEST_DATABASE: database,
+    }),
+    secrets,
+    diagnostics,
+    30_000,
+  )
+}
+
+function prepareAuthFixtures(serverDir: string): void {
+  const fixtures = [
+    ['auth-password-check.mjs', '.omnicraft-auth-password-check.mjs'],
+    ['auth-session-table-drop.mjs', '.omnicraft-auth-session-table-drop.mjs'],
+  ] as const
+  for (const [source, destination] of fixtures) {
+    const fixture = fileURLToPath(new URL(`./fixtures/${source}`, import.meta.url))
+    copyFileSync(fixture, join(serverDir, destination))
+  }
+}
+
 async function startServer(
   projectRoot: string,
   port: number,
   databaseUrl: string,
   authSecret: string,
+  nodeEnvironment: 'development' | 'production',
+  authBaseUrl?: string,
 ): Promise<StartedCommand> {
   const origin = `http://127.0.0.1:${port}`
   const env = isolatedEnvironment({
     DATABASE_URL: databaseUrl,
     BETTER_AUTH_SECRET: authSecret,
-    BETTER_AUTH_URL: origin,
+    BETTER_AUTH_URL: authBaseUrl ?? origin,
     PORT: `${port}`,
     CORS_ORIGIN: origin,
-    NODE_ENV: 'test',
+    NODE_ENV: nodeEnvironment,
   })
-  return startCommand('npm', ['run', 'dev', '--workspace=server'], projectRoot, { env })
+  return startCommand('node', ['dist/index.js'], join(projectRoot, 'server'), { env })
 }
 
 async function runDatabaseCase(database: TestDatabase, authFlow: AuthFlow): Promise<void> {
@@ -548,6 +641,7 @@ async function runDatabaseCase(database: TestDatabase, authFlow: AuthFlow): Prom
       secrets,
       diagnostics,
     )
+    prepareAuthFixtures(serverDir)
     runRequired(
       'Typecheck generated client',
       'npx',
@@ -562,6 +656,16 @@ async function runDatabaseCase(database: TestDatabase, authFlow: AuthFlow): Prom
       'Typecheck generated API',
       'npx',
       ['tsc', '--noEmit', '-p', 'server'],
+      projectRoot,
+      installEnv,
+      secrets,
+      diagnostics,
+      120_000,
+    )
+    runRequired(
+      'Build generated API for production auth checks',
+      'npm',
+      ['run', 'build', '--workspace=server'],
       projectRoot,
       installEnv,
       secrets,
@@ -593,7 +697,7 @@ async function runDatabaseCase(database: TestDatabase, authFlow: AuthFlow): Prom
 
     const port = await reservePort()
     let origin = `http://127.0.0.1:${port}`
-    child = await startServer(projectRoot, port, databaseUrl, authSecret)
+    child = await startServer(projectRoot, port, databaseUrl, authSecret, 'development')
     await waitForHealth(origin, child)
     console.log(`[database:${database}][auth:${authFlow}] API healthy; checking CRUD and authentication`)
     await verifyUserCrud(origin)
@@ -606,7 +710,7 @@ async function runDatabaseCase(database: TestDatabase, authFlow: AuthFlow): Prom
 
     const restartedPort = await reservePort()
     origin = `http://127.0.0.1:${restartedPort}`
-    child = await startServer(projectRoot, restartedPort, databaseUrl, authSecret)
+    child = await startServer(projectRoot, restartedPort, databaseUrl, authSecret, 'development')
     await waitForHealth(origin, child)
     const persistedSession = await request(origin, '/api/me', { cookie: auth.cookie })
     assert.equal(
@@ -617,6 +721,43 @@ async function runDatabaseCase(database: TestDatabase, authFlow: AuthFlow): Prom
     assert.equal(userEmailFromSession(persistedSession.body), auth.email)
     await verifyLogout(origin, auth.cookie)
     assertNoSecrets(child.output, secrets, 'Generated server logs after restart')
+    serverOutput += child.output
+    await child.stop()
+    child = undefined
+
+    const productionPort = await reservePort()
+    origin = `http://127.0.0.1:${productionPort}`
+    child = await startServer(
+      projectRoot,
+      productionPort,
+      databaseUrl,
+      authSecret,
+      'production',
+      `https://127.0.0.1:${productionPort}`,
+    )
+    await waitForHealth(origin, child)
+    const productionCookie = await verifyProductionCookie(origin, auth.email, secrets)
+    dropAuthSessionTable(database, serverDir, databaseUrl, secrets, diagnostics)
+    const sessionDatabaseError = await request(origin, '/api/auth/get-session', {
+      cookie: productionCookie,
+    })
+    assert.equal(
+      sessionDatabaseError.response.status,
+      500,
+      `Expected HTTP 500 from Better Auth session lookup (received ${sessionDatabaseError.response.status}).`,
+    )
+    const errorBody = record(sessionDatabaseError.body, 'Better Auth session database error')
+    assert.equal(errorBody.code, 'FAILED_TO_GET_SESSION')
+    assert.equal(errorBody.message, 'Failed to get session')
+    assert.equal('cause' in errorBody, false, 'The API response must not expose the database cause.')
+    assert.equal('stack' in errorBody, false, 'The API response must not expose a stack trace.')
+    assert.doesNotMatch(
+      JSON.stringify(errorBody),
+      /SQLITE_ERROR|no such table|relation .* does not exist|doesn't exist|ER_NO_SUCH_TABLE/i,
+      'The API response must not expose database-specific error details.',
+    )
+    assertNoSecrets(JSON.stringify(errorBody), secrets, 'Better Auth error response')
+    assertNoSecrets(child.output, secrets, 'Generated server logs after auth database error')
     serverOutput += child.output
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error)
