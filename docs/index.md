@@ -52,6 +52,7 @@ For the current CI coverage and repository-recorded manual results, see the per-
 
 ## Plans
 
+- [Active: `add testing` React/Vite combination coverage](plans/active/omnicraft-add-testing-react-vite-combinations-plan.md) — exhaustively verify remaining registry-valid React/Vite paths.
 - [Completed: `add testing` React runtime fixes](plans/completed/omnicraft-add-testing-react-runtime-fix-plan.md) — corrected the existing React/Vite module paths and preflight-rejected
   incompatible framework paths.
 - [Completed: `add testing` runtime evidence](plans/completed/omnicraft-add-testing-runtime-evidence-plan.md) — hosted generated-test outcomes for existing
