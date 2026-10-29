@@ -8,6 +8,7 @@ import {
   NEXTJS_DATABASE_SCENARIOS,
   NATIVE_PLATFORM_SCENARIOS,
   NODE_RUNTIME_SCENARIOS,
+  registeredMatrixRowPrefix,
   SUPPORTED_CAPABILITIES,
   type SupportedCapability,
 } from './support-evidence.js'
@@ -77,6 +78,50 @@ describe('support matrix evidence', () => {
       'add-testing-laravel-sqlite',
       'add-testing-nextjs-sqlite',
       'shadcn-react-vite-ts-frontend-only',
+    ])
+  })
+
+  it('ties each Supported add-testing row to one exact generated-project path', () => {
+    const testingCapabilities = SUPPORTED_CAPABILITIES.filter(
+      ({ matrixFormat }) => matrixFormat === 'testing-module',
+    )
+    expect(
+      testingCapabilities.map((capability) => [
+        capability.id,
+        capability.scenarios,
+        registeredMatrixRowPrefix(capability),
+      ]),
+    ).toEqual([
+      [
+        'testing-module-react-vite-ts-frontend-only',
+        ['add-testing-react-vite-ts'],
+        '| `omnicraft add testing` — React/Vite TypeScript frontend-only | **Supported** |',
+      ],
+      [
+        'testing-module-react-vite-js-frontend-only',
+        ['add-testing-react-vite-js-frontend-only'],
+        '| `omnicraft add testing` — React/Vite JavaScript frontend-only | **Supported** |',
+      ],
+      [
+        'testing-module-react-vite-ts-express-drizzle-sqlite',
+        ['add-testing-react-vite-ts-separate-api'],
+        '| `omnicraft add testing` — React + Vite + TypeScript + Express + Drizzle + SQLite separate API | **Supported** |',
+      ],
+      [
+        'testing-module-react-vite-js-express-drizzle-sqlite',
+        ['add-testing-react-vite-js-separate-api'],
+        '| `omnicraft add testing` — React + Vite JavaScript + Express + Drizzle + SQLite separate API | **Supported** |',
+      ],
+      [
+        'testing-module-react-vite-ts-fastapi-sqlite',
+        ['add-testing-fastapi-sqlite'],
+        '| `omnicraft add testing` — React + Vite + TypeScript + FastAPI + SQLAlchemy 2 async + Alembic + SQLite separate API | **Supported** |',
+      ],
+      [
+        'testing-module-react-vite-ts-laravel-sqlite',
+        ['add-testing-laravel-sqlite'],
+        '| `omnicraft add testing` — React + Vite + TypeScript + Laravel + Eloquent + SQLite separate API | **Supported** |',
+      ],
     ])
   })
 

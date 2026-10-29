@@ -163,14 +163,94 @@ function expectedScenario(
       return database
     }
     case 'module-runtime':
-      assert.equal(answers.frontend, 'react', `"${capability.id}" must use React/Vite.`)
-      assert.equal(answers.language, 'typescript', `"${capability.id}" must use TypeScript.`)
-      assert.equal(answers.architecture.kind, 'frontend-only', `"${capability.id}" must be frontend-only.`)
       if (capability.matrixFormat === 'testing-module') {
         assert.equal(combination.module, 'testing', `"${capability.id}" must validate the testing module.`)
         assertExtras(answers, { tailwind: false, eslintPrettier: false, shadcn: false }, capability)
-        return 'add-testing-react-vite-ts'
+        const testingScenarios = [
+          {
+            id: 'add-testing-react-vite-ts',
+            frontend: 'react',
+            language: 'typescript',
+            fullStack: false,
+            architecture: 'frontend-only',
+            backendRuntime: null,
+            backendFramework: null,
+            orm: null,
+            database: null,
+          },
+          {
+            id: 'add-testing-react-vite-js-frontend-only',
+            frontend: 'react',
+            language: 'javascript',
+            fullStack: false,
+            architecture: 'frontend-only',
+            backendRuntime: null,
+            backendFramework: null,
+            orm: null,
+            database: null,
+          },
+          {
+            id: 'add-testing-react-vite-ts-separate-api',
+            frontend: 'react',
+            language: 'typescript',
+            fullStack: true,
+            architecture: 'separate-frontend-api',
+            backendRuntime: 'node',
+            backendFramework: 'express',
+            orm: 'drizzle',
+            database: 'sqlite',
+          },
+          {
+            id: 'add-testing-react-vite-js-separate-api',
+            frontend: 'react',
+            language: 'javascript',
+            fullStack: true,
+            architecture: 'separate-frontend-api',
+            backendRuntime: 'node',
+            backendFramework: 'express',
+            orm: 'drizzle',
+            database: 'sqlite',
+          },
+          {
+            id: 'add-testing-fastapi-sqlite',
+            frontend: 'react',
+            language: 'typescript',
+            fullStack: true,
+            architecture: 'separate-frontend-api',
+            backendRuntime: 'python',
+            backendFramework: 'fastapi',
+            orm: null,
+            database: 'sqlite',
+          },
+          {
+            id: 'add-testing-laravel-sqlite',
+            frontend: 'react',
+            language: 'typescript',
+            fullStack: true,
+            architecture: 'separate-frontend-api',
+            backendRuntime: 'php',
+            backendFramework: 'laravel',
+            orm: null,
+            database: 'sqlite',
+          },
+        ] as const
+        const scenario = testingScenarios.find(
+          (candidate) =>
+            candidate.frontend === answers.frontend &&
+            candidate.language === answers.language &&
+            candidate.fullStack === answers.fullStack &&
+            candidate.architecture === answers.architecture.kind &&
+            candidate.backendRuntime === answers.backendRuntime &&
+            candidate.backendFramework === answers.backendFramework &&
+            candidate.orm === answers.orm &&
+            candidate.database === answers.database,
+        )
+        assert(scenario, `No exact testing module scenario matches Supported capability "${capability.id}".`)
+        return scenario.id
       }
+      assert.equal(answers.frontend, 'react', `"${capability.id}" must use React/Vite.`)
+      assert.equal(answers.language, 'typescript', `"${capability.id}" must use TypeScript.`)
+      assert.equal(answers.architecture.kind, 'frontend-only', `"${capability.id}" must be frontend-only.`)
       assert.equal(capability.matrixFormat, 'shadcn-extra', `"${capability.id}" has an unsupported module matrix format.`)
       assert.equal(answers.extras.shadcn, true, `"${capability.id}" must enable shadcn.`)
       assertExtras(answers, { tailwind: true, eslintPrettier: true, shadcn: true }, capability)

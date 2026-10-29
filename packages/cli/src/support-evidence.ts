@@ -344,9 +344,23 @@ export function registeredMatrixRowPrefix(capability: SupportedCapability): stri
     case 'docker-module':
       label = `\`omnicraft add docker\` — Express + Drizzle + ${oneDatabase()} separate API`
       break
-    case 'testing-module':
-      label = '`omnicraft add testing` — React/Vite TypeScript frontend-only'
+    case 'testing-module': {
+      const flags = requireOneCombination(capability).flags
+      const testingTarget = '`omnicraft add testing` — '
+      if (!flags.fullStack) {
+        label = `${testingTarget}React/Vite ${language === 'javascript' ? 'JavaScript' : 'TypeScript'} frontend-only`
+      } else {
+        const backend = flags.backend as BackendFramework
+        const dataAccess =
+          flags.runtime === 'node'
+            ? displayOrm(flags.orm)
+            : flags.runtime === 'python'
+              ? 'SQLAlchemy 2 async + Alembic'
+              : 'Eloquent'
+        label = `${testingTarget}${frontendLabel} + ${BACKEND_FRAMEWORK_LABELS[backend]} + ${dataAccess} + ${oneDatabase()} separate API`
+      }
       break
+    }
     case 'shadcn-extra':
       label = 'shadcn/ui — React/Vite TypeScript frontend-only'
       break
@@ -604,6 +618,41 @@ export const SUPPORTED_CAPABILITIES = [
     target: 'module-runtime',
     scenarios: ['add-testing-react-vite-ts'],
     combinations: [frontendOnlyStack('typescript', [], 'testing')],
+  },
+  {
+    id: 'testing-module-react-vite-js-frontend-only',
+    matrixFormat: 'testing-module',
+    target: 'module-runtime',
+    scenarios: ['add-testing-react-vite-js-frontend-only'],
+    combinations: [frontendOnlyStack('javascript', [], 'testing')],
+  },
+  {
+    id: 'testing-module-react-vite-ts-express-drizzle-sqlite',
+    matrixFormat: 'testing-module',
+    target: 'module-runtime',
+    scenarios: ['add-testing-react-vite-ts-separate-api'],
+    combinations: [nodeStack('express', 'drizzle', 'sqlite', 'react', 'typescript', 'testing')],
+  },
+  {
+    id: 'testing-module-react-vite-js-express-drizzle-sqlite',
+    matrixFormat: 'testing-module',
+    target: 'module-runtime',
+    scenarios: ['add-testing-react-vite-js-separate-api'],
+    combinations: [nodeStack('express', 'drizzle', 'sqlite', 'react', 'javascript', 'testing')],
+  },
+  {
+    id: 'testing-module-react-vite-ts-fastapi-sqlite',
+    matrixFormat: 'testing-module',
+    target: 'module-runtime',
+    scenarios: ['add-testing-fastapi-sqlite'],
+    combinations: [webStack('react', 'typescript', 'python', 'fastapi', undefined, 'sqlite', 'testing')],
+  },
+  {
+    id: 'testing-module-react-vite-ts-laravel-sqlite',
+    matrixFormat: 'testing-module',
+    target: 'module-runtime',
+    scenarios: ['add-testing-laravel-sqlite'],
+    combinations: [webStack('react', 'typescript', 'php', 'laravel', undefined, 'sqlite', 'testing')],
   },
   {
     id: 'shadcn-react-vite-ts-frontend-only',
