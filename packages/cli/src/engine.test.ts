@@ -108,6 +108,22 @@ describe('composition compatibility', () => {
       composeLayers(makeAnswers({ authentication: 'better-auth', language: 'javascript' })),
     ).toThrow(/Better Auth creation currently requires TypeScript/)
   })
+
+  it('scaffolds None without Better Auth files or dependencies', () => {
+    const dir = makeTempDir('auth-none')
+    scaffoldInto(dir, makeAnswers({ authentication: 'none' }))
+
+    const serverPackage = readJson(join(dir, 'server/package.json'))
+    const dependencies = serverPackage.dependencies as Record<string, unknown>
+    const serverIndex = readFileSync(join(dir, 'server/src/index.ts'), 'utf8')
+
+    expect(existsSync(join(dir, 'server/src/auth.ts'))).toBe(false)
+    expect(existsSync(join(dir, 'server/src/db/auth-schema.ts'))).toBe(false)
+    expect(existsSync(join(dir, 'client/src/lib/auth-client.ts'))).toBe(false)
+    expect(dependencies['better-auth']).toBeUndefined()
+    expect(dependencies['@better-auth/drizzle-adapter']).toBeUndefined()
+    expect(serverIndex).not.toContain('/api/auth/')
+  })
 })
 
 describe('full-stack combos', () => {

@@ -171,6 +171,43 @@ describe('runPrompts flow', () => {
     expect(languageOptions?.options.map((option) => option.value)).toEqual(['typescript'])
   })
 
+  it('keeps an interactive None selection aligned with --yes --auth none', async () => {
+    script.push(
+      { prompt: 'text', answer: 'auth-app' },
+      { prompt: 'select', answer: 'web' },
+      { prompt: 'select', answer: 'react' },
+      { prompt: 'select', answer: 'typescript' },
+      { prompt: 'confirm', answer: true },
+      { prompt: 'select', answer: 'node' },
+      { prompt: 'select', answer: 'express' },
+      { prompt: 'select', answer: 'postgres' },
+      { prompt: 'select', answer: 'drizzle' },
+      { prompt: 'select', answer: 'none' },
+      { prompt: 'multiselect', answer: ['tailwind', 'eslint'] },
+      { prompt: 'confirm', answer: true },
+    )
+
+    const interactive = await runPrompts()
+    const nonInteractive = resolveAnswers(
+      parseArgs(['--yes', '--auth', 'none']),
+      interactive.projectName,
+      interactive.targetDir,
+    )
+
+    expect(interactive).toMatchObject({
+      frontend: nonInteractive.frontend,
+      language: nonInteractive.language,
+      fullStack: nonInteractive.fullStack,
+      backendRuntime: nonInteractive.backendRuntime,
+      backendFramework: nonInteractive.backendFramework,
+      orm: nonInteractive.orm,
+      database: nonInteractive.database,
+      authentication: 'none',
+      extras: nonInteractive.extras,
+      architecture: nonInteractive.architecture,
+    })
+  })
+
   it('takes the frontend-only shortcut when full-stack is declined', async () => {
     script.push(
       { prompt: 'text', answer: 'front-only' },

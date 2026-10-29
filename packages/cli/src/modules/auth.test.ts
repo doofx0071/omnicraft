@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { authModule } from './auth.js'
 import type { ProjectManifest } from '../manifest.js'
+import { authenticationCompatibilityReason } from '../compatibility.js'
 
 function manifest(
   overrides: Partial<ProjectManifest['stack']> = {},
@@ -39,6 +40,14 @@ describe('auth module compatibility', () => {
       )
     },
   )
+
+  it('uses the same catalog compatibility decision as creation-time composition', () => {
+    const unsupported = manifest({ backendFramework: 'fastify' })
+
+    expect(authModule.incompatible?.(unsupported)).toBe(
+      authenticationCompatibilityReason('better-auth', unsupported.stack),
+    )
+  })
 
   it.each([
     { frontend: 'vue', reason: 'React frontend' },

@@ -8,22 +8,14 @@ import type {
   Orm,
   ProjectType,
 } from './types.js'
-import { AVAILABLE, CAPABILITY_REGISTRY } from './capabilities.js'
+import { AUTHENTICATION_CATALOG, AVAILABLE, CAPABILITY_REGISTRY } from './capabilities.js'
 
 export const RUNTIME_BACKENDS = AVAILABLE.backend
 export const RUNTIME_DATABASES = AVAILABLE.db
 export const NODE_FRAMEWORK_ORMS = CAPABILITY_REGISTRY.ormsByNodeBackend
 
 export const MODULE_COMPATIBILITY = {
-  auth: {
-    frontend: 'react',
-    language: 'typescript',
-    backendRuntime: 'node',
-    backendFramework: 'express',
-    orm: 'drizzle',
-    architecture: 'separate-frontend-api',
-    databases: ['postgres', 'sqlite', 'mysql'],
-  },
+  auth: AUTHENTICATION_CATALOG['better-auth'].requirements,
 } as const
 
 export interface AuthenticationContext {
@@ -40,9 +32,13 @@ export function authenticationCompatibilityReason(
   setup: AuthenticationSetup,
   context: AuthenticationContext,
 ): string | null {
-  if (setup === 'none') return null
+  const definition = AUTHENTICATION_CATALOG[setup]
+  if (definition.category === 'none') return null
 
-  const supported = MODULE_COMPATIBILITY.auth
+  const supported = definition.requirements
+  if (!supported) {
+    throw new Error(`Authentication setup "${setup}" is missing its stack requirements.`)
+  }
   if (context.frontend !== supported.frontend) {
     return `Better Auth currently requires the React frontend; ${context.frontend} is not covered yet.`
   }

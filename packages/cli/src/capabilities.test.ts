@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AVAILABLE, CAPABILITY_REGISTRY } from './capabilities.js'
+import { AUTHENTICATION_CATALOG, AVAILABLE, CAPABILITY_REGISTRY } from './capabilities.js'
 import { MODULES } from './add.js'
 
 function selectedValues<T extends readonly { value: string; available: boolean }[]>(
@@ -22,6 +22,32 @@ describe('capability registry', () => {
     expect(AVAILABLE.db.php).toEqual(selectedValues(CAPABILITY_REGISTRY.database.php))
     expect(AVAILABLE.orm.node).toEqual(selectedValues(CAPABILITY_REGISTRY.orm))
     expect(AVAILABLE.extras).toEqual(selectedValues(CAPABILITY_REGISTRY.extras))
+    expect(AVAILABLE.authentication).toEqual(selectedValues(CAPABILITY_REGISTRY.authentication))
+  })
+
+  it('models None as no auth and Better Auth as the existing application library', () => {
+    expect(AUTHENTICATION_CATALOG.none).toMatchObject({
+      value: 'none',
+      category: 'none',
+      requirements: null,
+    })
+    expect(AUTHENTICATION_CATALOG['better-auth']).toMatchObject({
+      value: 'better-auth',
+      category: 'application-library',
+      requirements: {
+        frontend: 'react',
+        language: 'typescript',
+        backendRuntime: 'node',
+        backendFramework: 'express',
+        orm: 'drizzle',
+        architecture: 'separate-frontend-api',
+        databases: ['postgres', 'sqlite', 'mysql'],
+      },
+    })
+    expect(CAPABILITY_REGISTRY.authentication.map(({ value }) => value)).toEqual([
+      'none',
+      'better-auth',
+    ])
   })
 
   it('builds the module menu from the registry module ids', () => {
