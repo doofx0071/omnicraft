@@ -114,14 +114,20 @@ volumes:
   mysqldata:
 `
 
-function vitestConfig(isSeparateApi: boolean): string {
+function vitestConfig(isSeparateApi: boolean, hasShadcn: boolean): string {
   return `import { defineConfig } from "vitest/config";
+${hasShadcn ? 'import { fileURLToPath } from "node:url";\n' : ''}
 
 export default defineConfig({
 ${isSeparateApi ? '  root: "client",\n' : ''}  esbuild: {
     jsxInject: 'import React from "react"',
   },
-  test: {
+${hasShadcn ? `  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("${isSeparateApi ? './client/src' : './src'}", import.meta.url)),
+    },
+  },
+` : ''}  test: {
     environment: "jsdom",
     setupFiles: ["./src/setupTests.ts"],
   },
@@ -137,7 +143,7 @@ import App from "./App";
 describe("App", () => {
   it("renders the app title", () => {
     render(createElement(App));
-    expect(screen.getByRole("heading", { name: "⚡ {{projectName}}" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "{{appTitle}}" })).toBeInTheDocument();
   });
 });
 `
@@ -177,6 +183,15 @@ const MODULE_DEFINITIONS: Record<ModuleId, ModuleDefinition> = {
       if (manifest.stack.frontend !== 'react') {
         return 'the sample test requires a React/Vite frontend'
       }
+      if (manifest.stack.extras.includes('shadcn')) {
+        const appRoot =
+          manifest.stack.architecture.kind === 'separate-frontend-api'
+            ? join(targetDir, 'client')
+            : targetDir
+        if (existsSync(join(appRoot, 'src', 'main.jsx'))) {
+          return 'the current shadcn templates require the TypeScript React/Vite app template'
+        }
+      }
       const configPaths = ['vitest.config.ts']
       if (manifest.stack.architecture.kind === 'separate-frontend-api') {
         configPaths.push('client/vitest.config.ts')
@@ -189,8 +204,9 @@ const MODULE_DEFINITIONS: Record<ModuleId, ModuleDefinition> = {
     files(_ctx, manifest) {
       const isSeparateApi = manifest.stack.architecture.kind === 'separate-frontend-api'
       const prefix = isSeparateApi ? 'client/' : ''
+      const hasShadcn = manifest.stack.extras.includes('shadcn')
       return {
-        'vitest.config.ts': vitestConfig(isSeparateApi),
+        'vitest.config.ts': vitestConfig(isSeparateApi, hasShadcn),
         [`${prefix}src/App.test.tsx`]: SAMPLE_TEST,
         [`${prefix}src/setupTests.ts`]: `import "@testing-library/jest-dom/vitest";\n`,
       }
@@ -219,6 +235,9 @@ export function renderModuleContent(content: string, vars: Record<string, string
 export function moduleVars(manifest: ProjectManifest): Record<string, string> {
   return {
     projectName: manifest.projectName,
+    appTitle: manifest.stack.extras.includes('shadcn')
+      ? manifest.projectName
+      : `⚡ ${manifest.projectName}`,
     databaseName: manifest.projectName.replace(/-/g, '_'),
   }
 }
