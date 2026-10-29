@@ -284,6 +284,13 @@ export interface SupportedCapability {
   combinations: readonly SupportedCombination[]
 }
 
+export interface RejectedModuleCapability {
+  id: string
+  target: IntegrationTargetId
+  reason: string
+  combinations: readonly SupportedCombination[]
+}
+
 function webStack(
   frontend: Frontend,
   language: Language,
@@ -394,7 +401,11 @@ export function registeredMatrixRowPrefix(capability: SupportedCapability): stri
   const databases = combinations.flatMap((combination) =>
     combination.flags.db ? [combination.flags.db] : [],
   )
-  if (databases.length > 0 && new Set(databases).size !== databases.length) {
+  if (
+    capability.matrixFormat !== 'testing-module-react-vite-family' &&
+    databases.length > 0 &&
+    new Set(databases).size !== databases.length
+  ) {
     throw new Error(`Supported row "${capability.id}" repeats a database combination.`)
   }
 
@@ -469,6 +480,11 @@ export function registeredMatrixRowPrefix(capability: SupportedCapability): stri
       break
   }
   return `| ${label} | **Supported** |`
+}
+
+export function registeredRejectedMatrixRowPrefix(capability: RejectedModuleCapability): string {
+  const label = `\`omnicraft add testing\` — React/Vite JavaScript + shadcn (${capability.combinations.length} exact module paths)`
+  return `| ${label} | **Rejected — unsupported combination** |`
 }
 
 /**
@@ -758,6 +774,15 @@ export const SUPPORTED_CAPABILITIES = [
     combinations: [webStack('react', 'typescript', 'php', 'laravel', undefined, 'sqlite', 'testing')],
   },
   {
+    id: 'testing-module-react-vite-other-exact-paths',
+    matrixFormat: 'testing-module-react-vite-family',
+    target: 'module-runtime-react-vite',
+    scenarios: REACT_VITE_TESTING_NONREJECTED_COMBINATIONS.map(({ flags }) =>
+      reactViteTestingGroupId(flags),
+    ),
+    combinations: REACT_VITE_TESTING_NONREJECTED_COMBINATIONS,
+  },
+  {
     id: 'shadcn-react-vite-ts-frontend-only',
     matrixFormat: 'shadcn-extra',
     target: 'module-runtime',
@@ -765,6 +790,15 @@ export const SUPPORTED_CAPABILITIES = [
     combinations: [frontendOnlyStack('typescript', ['tailwind', 'eslint', 'shadcn'])],
   },
 ] as const satisfies readonly SupportedCapability[]
+
+export const REJECTED_MODULE_CAPABILITIES = [
+  {
+    id: 'testing-module-react-vite-js-shadcn',
+    target: 'module-runtime-react-vite',
+    reason: 'the current shadcn templates require the TypeScript React/Vite app template',
+    combinations: REACT_VITE_TESTING_REJECTED_COMBINATIONS,
+  },
+] as const satisfies readonly RejectedModuleCapability[]
 
 export function integrationScenarios(target: IntegrationTargetId): readonly string[] {
   return INTEGRATION_TARGETS[target].scenarios

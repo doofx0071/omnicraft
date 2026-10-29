@@ -1,5 +1,12 @@
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -16,10 +23,13 @@ import { composeLayers } from '../src/scaffold/compose.js'
 import {
   INTEGRATION_TARGETS,
   NODE_RUNTIME_SCENARIOS,
+  REJECTED_MODULE_CAPABILITIES,
+  registeredRejectedMatrixRowPrefix,
   registeredMatrixRowPrefix,
   reactViteTestingGroupId,
   SUPPORTED_CAPABILITIES,
   type NodeRuntimeScenario,
+  type RejectedModuleCapability,
   type SupportedCapability,
   type SupportedCombination,
 } from '../src/support-evidence.js'
@@ -342,6 +352,63 @@ function validateCombination(
   return expectedScenario(capability, combination, answers)
 }
 
+function validateRejectedCombination(
+  capability: RejectedModuleCapability,
+  combination: SupportedCombination,
+  index: number,
+): string {
+  const args = argsFor(combination)
+  const targetDir = mkdtempSync(join(tmpdir(), `omnicraft-rejected-support-check-${capability.id}-${index}-`))
+  try {
+    validateStackFlags(args)
+    assert(
+      isProjectTypeAllowedByFlags('web', args),
+      `Prompt filtering rejects the project type for "${capability.id}".`,
+    )
+    const answers = resolveAnswers(args, `support-${capability.id}`, targetDir)
+    assert(
+      isFrontendAllowedByFlags(answers.frontend, args),
+      `Prompt filtering rejects the frontend for "${capability.id}".`,
+    )
+    if (answers.backendRuntime) {
+      assert(
+        isRuntimeAllowedByFlags(answers.backendRuntime, args),
+        `Prompt filtering rejects runtime "${answers.backendRuntime}" for "${capability.id}".`,
+      )
+    }
+    assert.equal(answers.frontend, 'react')
+    assert.equal(answers.language, 'javascript')
+    assert(
+      answers.extras.shadcn,
+      `Rejected capability "${capability.id}" must enable shadcn.`,
+    )
+
+    const layers = composeLayers(answers)
+    assert(layers.length > 0, `Composition produced no production layers for "${capability.id}".`)
+    for (const layer of layers) {
+      assert(
+        existsSync(join(TEMPLATES_ROOT, layer.src)),
+        `Rejected capability "${capability.id}" references a missing production layer: ${layer.src}.`,
+      )
+    }
+
+    const module = MODULES.find((candidate) => candidate.id === combination.module)
+    assert(module, `Rejected capability "${capability.id}" references a missing module.`)
+    const appRoot = answers.architecture.kind === 'separate-frontend-api' ? join(targetDir, 'client') : targetDir
+    mkdirSync(join(appRoot, 'src'), { recursive: true })
+    writeFileSync(join(appRoot, 'src', 'main.jsx'), 'export default function App() {}\n')
+    const manifest = buildManifest(answers, 'support-evidence', 'npm')
+    assert.equal(
+      module.incompatible?.(manifest, targetDir) ?? null,
+      capability.reason,
+      `Rejected module capability "${capability.id}" no longer matches the production preflight guard.`,
+    )
+    return reactViteTestingGroupId(combination.flags)
+  } finally {
+    rmSync(targetDir, { recursive: true, force: true })
+  }
+}
+
 export function validateSupportEvidence(
   capabilities: readonly SupportedCapability[] = SUPPORTED_CAPABILITIES,
 ): void {
@@ -367,6 +434,20 @@ export function validateSupportEvidence(
     const id = ids[0] ?? ''
     assert(!documentedIds.has(id), `Support id "${id}" appears more than once in the matrix.`)
     documentedIds.set(id, row)
+  }
+
+  const rejectedRows = matrixLines.filter(
+    (line) => line.startsWith('|') && line.includes('**Rejected — unsupported combination**'),
+  )
+  const rejectionIdPattern = /<!-- rejection-id: ([a-z0-9-]+) -->/g
+  const documentedRejections = new Map<string, string>()
+  for (const row of rejectedRows) {
+    const ids = [...row.matchAll(rejectionIdPattern)].map((match) => match[1] ?? '')
+    if (ids.length === 0) continue
+    assert.equal(ids.length, 1, `Every registered rejection row must have exactly one rejection id: ${row}`)
+    const id = ids[0] ?? ''
+    assert(!documentedRejections.has(id), `Rejection id "${id}" appears more than once in the matrix.`)
+    documentedRejections.set(id, row)
   }
 
   const registryIds = new Set<string>()
@@ -402,6 +483,34 @@ export function validateSupportEvidence(
     [...documentedIds.keys()].sort(),
     [...registryIds].sort(),
     'The Supported matrix rows and the evidence registry must contain the same ids.',
+  )
+
+  const rejectionRegistryIds = new Set<string>()
+  for (const capability of REJECTED_MODULE_CAPABILITIES) {
+    assert(
+      !rejectionRegistryIds.has(capability.id),
+      `Rejection registry duplicates id "${capability.id}".`,
+    )
+    rejectionRegistryIds.add(capability.id)
+    const row = documentedRejections.get(capability.id)
+    assert(row, `Rejection registry entry "${capability.id}" has no Rejected matrix row.`)
+    const exactScenarios = capability.combinations.map((combination, index) =>
+      validateRejectedCombination(capability, combination, index),
+    )
+    const targetScenarios = INTEGRATION_TARGETS[capability.target].scenarios
+    assert(
+      exactScenarios.every((scenario) => targetScenarios.includes(scenario)),
+      `Rejection capability "${capability.id}" references a scenario missing from target "${capability.target}".`,
+    )
+    assert(
+      row.startsWith(registeredRejectedMatrixRowPrefix(capability)),
+      `Rejected matrix row "${capability.id}" no longer matches its registered combinations.`,
+    )
+  }
+  assert.deepEqual(
+    [...documentedRejections.keys()].sort(),
+    [...rejectionRegistryIds].sort(),
+    'Registered Rejected matrix rows and the rejection registry must contain the same ids.',
   )
 
   for (const [id, target] of Object.entries(INTEGRATION_TARGETS)) {

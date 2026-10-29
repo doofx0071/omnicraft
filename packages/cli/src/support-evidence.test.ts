@@ -8,10 +8,13 @@ import {
   NEXTJS_DATABASE_SCENARIOS,
   NATIVE_PLATFORM_SCENARIOS,
   NODE_RUNTIME_SCENARIOS,
+  REJECTED_MODULE_CAPABILITIES,
   REACT_VITE_TESTING_FOLLOWUP_COMBINATIONS,
   REACT_VITE_TESTING_FOLLOWUP_SCENARIOS,
   REACT_VITE_TESTING_REJECTED_COMBINATIONS,
   REACT_VITE_TESTING_NONREJECTED_COMBINATIONS,
+  reactViteTestingGroupId,
+  registeredRejectedMatrixRowPrefix,
   registeredMatrixRowPrefix,
   SUPPORTED_CAPABILITIES,
   type SupportedCapability,
@@ -145,8 +148,25 @@ describe('support matrix evidence', () => {
     expect(integrationScenarios('module-runtime-react-vite')).toEqual(
       REACT_VITE_TESTING_FOLLOWUP_SCENARIOS,
     )
-    expect(SUPPORTED_CAPABILITIES.map(({ id }) => id)).not.toContain(
-      'testing-module-react-vite-other-exact-paths',
+    const supportedFamily = SUPPORTED_CAPABILITIES.find(
+      ({ id }) => id === 'testing-module-react-vite-other-exact-paths',
+    )
+    if (!supportedFamily) throw new Error('The supported React/Vite add-testing family is missing.')
+    expect(supportedFamily?.combinations).toHaveLength(254)
+    expect(supportedFamily?.scenarios).toEqual(
+      REACT_VITE_TESTING_NONREJECTED_COMBINATIONS.map(({ flags }) =>
+        reactViteTestingGroupId(flags),
+      ),
+    )
+    expect(registeredMatrixRowPrefix(supportedFamily)).toBe(
+      '| `omnicraft add testing` — 254 other exact React/Vite paths | **Supported** |',
+    )
+    const [rejectedFamily] = REJECTED_MODULE_CAPABILITIES
+    if (!rejectedFamily) throw new Error('The rejected JavaScript + shadcn family is missing.')
+    expect(REJECTED_MODULE_CAPABILITIES).toHaveLength(1)
+    expect(rejectedFamily.combinations).toHaveLength(52)
+    expect(registeredRejectedMatrixRowPrefix(rejectedFamily)).toBe(
+      '| `omnicraft add testing` — React/Vite JavaScript + shadcn (52 exact module paths) | **Rejected — unsupported combination** |',
     )
   })
 
