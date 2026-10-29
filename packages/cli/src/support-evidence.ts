@@ -1,4 +1,4 @@
-import { AVAILABLE, type ModuleId } from './capabilities.js'
+import { AVAILABLE, CAPABILITY_REGISTRY, type ModuleId } from './capabilities.js'
 import {
   BACKEND_FRAMEWORK_LABELS,
   DATABASE_LABELS,
@@ -77,6 +77,99 @@ export const MODULE_RUNTIME_SCENARIOS = [
   'add-testing-nextjs-sqlite',
   'shadcn-react-vite-ts-frontend-only',
 ] as const
+type SupportedExtras = SupportedCombination['flags']['extras']
+
+function availableExtraSets(): SupportedExtras[] {
+  const extras = AVAILABLE.extras
+  const sets: SupportedExtras[] = []
+  for (let mask = 0; mask < 1 << extras.length; mask += 1) {
+    const selected = extras.filter((_, index) => (mask & (1 << index)) !== 0)
+    if (selected.includes('shadcn') && !selected.includes('tailwind')) continue
+    sets.push(selected)
+  }
+  return sets
+}
+
+function testingExtraGroup(extras: readonly string[]): string {
+  if (extras.includes('shadcn')) return extras.includes('eslint') ? 'shadcn-eslint' : 'shadcn'
+  if (extras.length === 0) return 'none'
+  return [...extras].sort().join('-')
+}
+
+export function reactViteTestingGroupId(flags: SupportedCombination['flags']): string {
+  const family = flags.fullStack ? (flags.runtime ?? 'node') : 'frontend-only'
+  return `react-vite-testing-${family}-${testingExtraGroup(flags.extras)}`
+}
+
+function exactTestingCombinationAlreadySupported(flags: SupportedCombination['flags']): boolean {
+  if (flags.extras.length !== 0) return false
+  if (!flags.fullStack) return true
+  if (flags.runtime === 'node') {
+    return (
+      flags.backend === 'express' &&
+      flags.orm === 'drizzle' &&
+      flags.db === 'sqlite' &&
+      (flags.lang === 'typescript' || flags.lang === 'javascript')
+    )
+  }
+  return (
+    flags.lang === 'typescript' &&
+    flags.db === 'sqlite' &&
+    ((flags.runtime === 'python' && flags.backend === 'fastapi') ||
+      (flags.runtime === 'php' && flags.backend === 'laravel'))
+  )
+}
+
+function allReactViteTestingCombinations(): SupportedCombination[] {
+  const combinations: SupportedCombination[] = []
+  const extrasSets = availableExtraSets()
+
+  for (const language of AVAILABLE.lang) {
+    for (const extras of extrasSets) {
+      combinations.push(frontendOnlyStack(language, extras, 'testing'))
+
+      for (const backend of AVAILABLE.backend.node) {
+        for (const orm of CAPABILITY_REGISTRY.ormsByNodeBackend[backend]) {
+          for (const database of AVAILABLE.db.node) {
+            if (orm === 'prisma' && database !== 'postgres') continue
+            const combination = webStack('react', language, 'node', backend, orm, database, 'testing')
+            combination.flags.extras = [...extras]
+            combinations.push(combination)
+          }
+        }
+      }
+
+      for (const database of AVAILABLE.db.python) {
+        const combination = webStack('react', language, 'python', 'fastapi', undefined, database, 'testing')
+        combination.flags.extras = [...extras]
+        combinations.push(combination)
+      }
+
+      for (const database of AVAILABLE.db.php) {
+        const combination = webStack('react', language, 'php', 'laravel', undefined, database, 'testing')
+        combination.flags.extras = [...extras]
+        combinations.push(combination)
+      }
+    }
+  }
+
+  return combinations
+}
+
+export const REACT_VITE_TESTING_FOLLOWUP_COMBINATIONS = allReactViteTestingCombinations().filter(
+  (combination) => !exactTestingCombinationAlreadySupported(combination.flags),
+)
+export const REACT_VITE_TESTING_REJECTED_COMBINATIONS =
+  REACT_VITE_TESTING_FOLLOWUP_COMBINATIONS.filter(
+    ({ flags }) => flags.lang === 'javascript' && flags.extras.includes('shadcn'),
+  )
+export const REACT_VITE_TESTING_NONREJECTED_COMBINATIONS =
+  REACT_VITE_TESTING_FOLLOWUP_COMBINATIONS.filter(
+    (combination) => !REACT_VITE_TESTING_REJECTED_COMBINATIONS.includes(combination),
+  )
+export const REACT_VITE_TESTING_FOLLOWUP_SCENARIOS = [
+  ...new Set(REACT_VITE_TESTING_FOLLOWUP_COMBINATIONS.map(({ flags }) => reactViteTestingGroupId(flags))),
+]
 export const NATIVE_PLATFORM_SCENARIOS = ['expo-ios-simulator', 'tauri-linux-desktop'] as const
 
 export const INTEGRATION_TARGETS = {
@@ -110,6 +203,13 @@ export const INTEGRATION_TARGETS = {
     workflowJob: 'module-runtime-integration',
     workflowCommand: 'npm run test:integration:modules --workspace=create-omnicraft -- --scenario',
     scenarios: MODULE_RUNTIME_SCENARIOS,
+  },
+  'module-runtime-react-vite': {
+    script: 'scripts/module-runtime-integration.ts',
+    workflowJob: 'react-vite-add-testing-integration',
+    workflowCommand:
+      'npm run test:integration:modules --workspace=create-omnicraft -- --scenario-group',
+    scenarios: REACT_VITE_TESTING_FOLLOWUP_SCENARIOS,
   },
   'native-platform': {
     script: 'scripts/native-platform-integration.ts',
@@ -173,6 +273,7 @@ export type SupportMatrixFormat =
   | 'auth-module'
   | 'docker-module'
   | 'testing-module'
+  | 'testing-module-react-vite-family'
   | 'shadcn-extra'
 
 export interface SupportedCapability {
@@ -183,8 +284,6 @@ export interface SupportedCapability {
   combinations: readonly SupportedCombination[]
 }
 
-type SupportedExtras = SupportedCombination['flags']['extras']
-
 function webStack(
   frontend: Frontend,
   language: Language,
@@ -193,6 +292,7 @@ function webStack(
   orm: Orm | undefined,
   database: Database,
   module?: ModuleId,
+  extras: SupportedExtras = [],
 ): SupportedCombination {
   return {
     flags: {
@@ -204,7 +304,7 @@ function webStack(
       backend,
       ...(orm ? { orm } : {}),
       db: database,
-      extras: [],
+      extras: [...extras],
     },
     ...(module ? { module } : {}),
   }
@@ -361,6 +461,9 @@ export function registeredMatrixRowPrefix(capability: SupportedCapability): stri
       }
       break
     }
+    case 'testing-module-react-vite-family':
+      label = `\`omnicraft add testing\` — ${combinations.length} other exact React/Vite paths`
+      break
     case 'shadcn-extra':
       label = 'shadcn/ui — React/Vite TypeScript frontend-only'
       break

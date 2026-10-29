@@ -17,6 +17,7 @@ import {
   INTEGRATION_TARGETS,
   NODE_RUNTIME_SCENARIOS,
   registeredMatrixRowPrefix,
+  reactViteTestingGroupId,
   SUPPORTED_CAPABILITIES,
   type NodeRuntimeScenario,
   type SupportedCapability,
@@ -47,6 +48,18 @@ function jobDependencies(job: string, name: string): string[] {
   }
   assert(dependencies.length > 0, `The "${name}" job must require at least one job.`)
   return dependencies
+}
+
+function matrixList(job: string, key: string): string[] {
+  const lines = job.split(/\r?\n/)
+  const start = lines.findIndex((line) => line === `        ${key}:`)
+  assert(start >= 0, `The integration job is missing matrix key "${key}".`)
+  const values: string[] = []
+  for (const line of lines.slice(start + 1)) {
+    if (!line.startsWith('          - ')) break
+    values.push(line.slice('          - '.length).trim())
+  }
+  return values
 }
 
 function argsFor(combination: SupportedCombination) {
@@ -256,6 +269,22 @@ function expectedScenario(
       assertExtras(answers, { tailwind: true, eslintPrettier: true, shadcn: true }, capability)
       assert.equal(combination.module, undefined, `"${capability.id}" must use the shadcn extra, not an add module.`)
       return 'shadcn-react-vite-ts-frontend-only'
+    case 'module-runtime-react-vite':
+      assert.equal(capability.matrixFormat, 'testing-module-react-vite-family')
+      assert.equal(combination.module, 'testing', `"${capability.id}" must validate the testing module.`)
+      assertExtras(
+        answers,
+        {
+          tailwind:
+            combination.flags.extras.includes('tailwind') ||
+            combination.flags.extras.includes('shadcn'),
+          eslintPrettier: combination.flags.extras.includes('eslint'),
+          shadcn: combination.flags.extras.includes('shadcn'),
+        },
+        capability,
+      )
+      assert.equal(answers.frontend, 'react')
+      return reactViteTestingGroupId(combination.flags)
     default:
       throw new Error(`Supported capability "${capability.id}" has no exact scenario mapping for "${capability.target}".`)
   }
@@ -386,6 +415,13 @@ export function validateSupportEvidence(
       job.includes(target.workflowCommand),
       `CI job "${target.workflowJob}" no longer runs the registered command: ${target.workflowCommand}.`,
     )
+    if (id === 'module-runtime-react-vite') {
+      assert.deepEqual(
+        [...matrixList(job, 'group')].sort(),
+        [...target.scenarios].sort(),
+        'Every registered React/Vite add-testing group must run in the hosted matrix.',
+      )
+    }
   }
 
   const releaseGate = workflowJob(workflowLines, 'supported-matrix')

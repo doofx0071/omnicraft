@@ -22,11 +22,18 @@ import {
   TEMPLATES_ROOT,
 } from '../src/config.js'
 import { buildManifest } from '../src/manifest.js'
+import { resolveAnswers } from '../src/prefill.js'
 import { createEnvFiles } from '../src/scaffold/env.js'
 import { applyLayers } from '../src/scaffold/engine.js'
 import { composeLayers, templateVariables } from '../src/scaffold/compose.js'
 import { saveManifest } from '../src/add.js'
 import type { Answers } from '../src/types.js'
+import {
+  reactViteTestingGroupId,
+  REACT_VITE_TESTING_FOLLOWUP_COMBINATIONS,
+  REACT_VITE_TESTING_FOLLOWUP_SCENARIOS,
+  type SupportedCombination,
+} from '../src/support-evidence.js'
 
 const SCENARIOS = [
   'add-testing-react-vite-ts',
@@ -53,6 +60,7 @@ const SECRETS = Object.entries(process.env)
   .map(([, value]) => value as string)
 
 type Scenario = (typeof SCENARIOS)[number]
+type ScenarioGroup = (typeof REACT_VITE_TESTING_FOLLOWUP_SCENARIOS)[number]
 
 function requestedScenario(argv: string[]): Scenario {
   const options = argv.filter((arg) => arg === '--scenario' || arg.startsWith('--scenario='))
@@ -64,6 +72,20 @@ function requestedScenario(argv: string[]): Scenario {
     throw new Error(`Unknown scenario "${value}". Choose: ${SCENARIOS.join(', ')}.`)
   }
   return value as Scenario
+}
+
+function requestedScenarioGroup(argv: string[]): ScenarioGroup {
+  const options = argv.filter(
+    (arg) => arg === '--scenario-group' || arg.startsWith('--scenario-group='),
+  )
+  if (options.length > 1) throw new Error('Pass --scenario-group only once.')
+  const index = argv.indexOf('--scenario-group')
+  const value = index >= 0 ? argv[index + 1] : options[0]?.split('=', 2)[1]
+  if (!value) throw new Error(`Pass --scenario-group ${REACT_VITE_TESTING_FOLLOWUP_SCENARIOS.join('|')}.`)
+  if (!REACT_VITE_TESTING_FOLLOWUP_SCENARIOS.includes(value)) {
+    throw new Error(`Unknown scenario group "${value}". Choose: ${REACT_VITE_TESTING_FOLLOWUP_SCENARIOS.join(', ')}.`)
+  }
+  return value
 }
 
 function redact(value: string): string {
@@ -108,7 +130,7 @@ function runRequired(
 
 function runGeneratedTestingCommand(
   projectRoot: string,
-  scenario: Scenario,
+  scenario: string,
   diagnostics: string[],
 ): void {
   const result = runCommand('npm', ['test'], projectRoot, {
@@ -222,7 +244,7 @@ async function waitForApp(origin: string, child: StartedCommand): Promise<string
   throw new Error(`Generated Vite app did not become ready:\n${tail(redact(child.output))}`)
 }
 
-async function verifyPreview(origin: string, scenario: Scenario): Promise<void> {
+async function verifyPreview(origin: string, answers: Answers): Promise<void> {
   const response = await fetch(origin, { signal: AbortSignal.timeout(HTTP_TIMEOUT_MS) })
   assert.equal(response.status, 200, 'The generated React page did not load.')
   const page = await response.text()
@@ -234,7 +256,7 @@ async function verifyPreview(origin: string, scenario: Scenario): Promise<void> 
   assert.equal(entry.status, 200, 'The generated JavaScript bundle did not load from Vite preview.')
   const bundle = await entry.text()
   assert(bundle.includes('createRoot'), 'The generated JavaScript bundle did not include React mounting code.')
-  if (scenario === 'shadcn-react-vite-ts-frontend-only') {
+  if (answers.extras.shadcn) {
     assert(bundle.includes('shadcn/ui'), 'The generated shadcn app was not present in the served bundle.')
     assert(bundle.includes('Add user'), 'The generated user form was not present in the served bundle.')
   }
@@ -249,7 +271,7 @@ async function verifyPreview(origin: string, scenario: Scenario): Promise<void> 
 async function runTestingScenario(
   projectRoot: string,
   answers: Answers,
-  scenario: Scenario,
+  scenario: string,
   diagnostics: string[],
 ): Promise<void> {
   const testRoot = existsSync(join(projectRoot, 'client')) ? join(projectRoot, 'client') : projectRoot
@@ -291,7 +313,8 @@ async function runTestingScenario(
     testRoot !== projectRoot,
     'The root Vitest config must discover tests from the generated client workspace.',
   )
-  assert(installedTest.includes(`name: "⚡ ${answers.projectName}"`))
+  const expectedTitle = answers.extras.shadcn ? answers.projectName : `⚡ ${answers.projectName}`
+  assert(installedTest.includes(`name: "${expectedTitle}"`))
   assert(installedTest.includes('render(createElement(App))'))
   const installedPackage = JSON.parse(readFileSync(packagePath, 'utf8')) as {
     scripts?: Record<string, string>
@@ -308,12 +331,7 @@ async function runTestingScenario(
   assert.equal(readFileSync(manifestPath, 'utf8'), manifestAfterAdd)
 
   runRequired('Install generated testing dependencies', 'npm', ['install', '--no-audit', '--no-fund'], projectRoot, diagnostics)
-  if (
-    scenario === 'add-testing-react-vite-ts' ||
-    scenario === 'add-testing-react-vite-ts-separate-api' ||
-    scenario === 'add-testing-fastapi-sqlite' ||
-    scenario === 'add-testing-laravel-sqlite'
-  ) {
+  if (answers.language === 'typescript') {
     runRequired(
       'Typecheck generated React/Vite project with sample test',
       'npx',
@@ -328,7 +346,7 @@ async function runTestingScenario(
 
 async function runExpectedTestingRejection(
   projectRoot: string,
-  scenario: Scenario,
+  scenario: string,
   reason: string,
 ): Promise<void> {
   const packagePath = join(projectRoot, 'package.json')
@@ -356,13 +374,17 @@ async function runExpectedTestingRejection(
   console.log(`[module:${scenario}] rejected before module writes: ${reason}`)
 }
 
-async function runShadcnScenario(projectRoot: string, diagnostics: string[]): Promise<void> {
-  const packageJson = JSON.parse(readFileSync(join(projectRoot, 'package.json'), 'utf8')) as {
+async function prepareShadcnScenario(
+  projectRoot: string,
+  appRoot: string,
+  diagnostics: string[],
+): Promise<void> {
+  const packageJson = JSON.parse(readFileSync(join(appRoot, 'package.json'), 'utf8')) as {
     devDependencies?: Record<string, string>
   }
   assert(packageJson.devDependencies?.['@tailwindcss/vite'], 'Tailwind Vite dependencies must be in the app manifest.')
   assert(packageJson.devDependencies?.tailwindcss, 'Tailwind CSS dependencies must be in the app manifest.')
-  assert(!existsSync(join(projectRoot, 'src', 'package.json')), 'The src directory must not become a package workspace.')
+  assert(!existsSync(join(appRoot, 'src', 'package.json')), 'The src directory must not become a package workspace.')
 
   runRequired('Install generated React/Vite dependencies', 'npm', ['install', '--no-audit', '--no-fund'], projectRoot, diagnostics)
   runRequired(
@@ -372,31 +394,62 @@ async function runShadcnScenario(projectRoot: string, diagnostics: string[]): Pr
       '--yes', 'shadcn@latest', 'init', '--base', SHADCN_BASE,
       '--preset', SHADCN_PRESET, '--no-monorepo', '--force',
     ],
-    projectRoot,
+    appRoot,
     diagnostics,
   )
   runRequired(
     'Run production shadcn component install path',
     'npx',
     ['--yes', 'shadcn@latest', 'add', ...SHADCN_COMPONENTS, '--yes', '--overwrite'],
-    projectRoot,
+    appRoot,
     diagnostics,
   )
   runRequired(
     'Run production shadcn formatting step',
     'npx',
     ['--yes', 'prettier@latest', '--write', '.'],
-    projectRoot,
+    appRoot,
     diagnostics,
   )
 
   for (const component of SHADCN_COMPONENTS) {
     assert(
-      existsSync(join(projectRoot, 'src', 'components', 'ui', `${component}.tsx`)),
+      existsSync(join(appRoot, 'src', 'components', 'ui', `${component}.tsx`)),
       `The shadcn CLI did not generate the ${component} component.`,
     )
   }
   runRequired('Install shadcn component dependencies', 'npm', ['install', '--no-audit', '--no-fund'], projectRoot, diagnostics)
+}
+
+function verifyJavaScriptShadcnSetupLimitation(
+  appRoot: string,
+  diagnostics: string[],
+): void {
+  const result = runCommand(
+    'npx',
+    [
+      '--yes', 'shadcn@latest', 'init', '--base', SHADCN_BASE,
+      '--preset', SHADCN_PRESET, '--no-monorepo', '--force',
+    ],
+    appRoot,
+    {
+      env: isolatedEnvironment(),
+      timeoutMs: CHILD_TIMEOUT_MS,
+      maxBuffer: 32 * 1024 * 1024,
+    },
+  )
+  const output = redact(result.output)
+  diagnostics.push(`Production shadcn init limitation (exit ${result.exitCode ?? 'unknown'}):\n${tail(output)}`)
+  assert.equal(result.ok, false, 'The current JavaScript shadcn path unexpectedly initialized successfully.')
+  assert(
+    output.includes('Could not find valid path aliases'),
+    `The JavaScript shadcn path failed for an unexpected reason:\n${tail(output)}`,
+  )
+  console.log('[integration] production shadcn init failed because the JavaScript template has no path alias')
+}
+
+async function runShadcnScenario(projectRoot: string, diagnostics: string[]): Promise<void> {
+  await prepareShadcnScenario(projectRoot, projectRoot, diagnostics)
   runRequired('Build generated shadcn React/Vite app', 'npm', ['run', 'build'], projectRoot, diagnostics)
 }
 
@@ -466,7 +519,7 @@ async function runScenario(scenario: Scenario): Promise<void> {
         { env: isolatedEnvironment() },
       )
       await waitForApp(origin, child)
-      await verifyPreview(origin, scenario)
+      await verifyPreview(origin, answers)
       console.log(`[module:${scenario}] install, build, boot, bundle, and failure checks passed`)
     } else if (EXPECTED_TESTING_REJECTIONS[scenario]) {
       console.log(`[module:${scenario}] generation and pre-write module rejection passed`)
@@ -495,7 +548,124 @@ async function runScenario(scenario: Scenario): Promise<void> {
   if (failure) throw failure
 }
 
+function generatedTestingPathLabel(combination: SupportedCombination): string {
+  const { flags } = combination
+  const stack = flags.fullStack
+    ? [flags.runtime, flags.backend, flags.orm ?? 'builtin', flags.db].join('-')
+    : 'frontend-only'
+  const extras = flags.extras.length > 0 ? flags.extras.join('-') : 'no-extras'
+  return `${flags.lang}-${stack}-${extras}`
+}
+
+function answersForCombination(
+  projectRoot: string,
+  projectName: string,
+  combination: SupportedCombination,
+): Answers {
+  return resolveAnswers(
+    {
+      latest: false,
+      skipInstall: true,
+      debug: false,
+      help: false,
+      version: false,
+      yes: true,
+      ...combination.flags,
+      extras: [...combination.flags.extras],
+    },
+    projectName,
+    projectRoot,
+  )
+}
+
+async function runCombinationScenario(combination: SupportedCombination): Promise<void> {
+  const pathLabel = generatedTestingPathLabel(combination)
+  const tempRoot = mkdtempSync(join(tmpdir(), `omnicraft-add-testing-${pathLabel.slice(0, 30)}-`))
+  const projectName = `omnicraft-${randomBytes(5).toString('hex')}`
+  const diagnostics: string[] = []
+  let child: StartedCommand | undefined
+  let failure: unknown
+
+  try {
+    const answers = answersForCombination(tempRoot, projectName, combination)
+    console.log(
+      `[module-path:${pathLabel}] exact flags: ${JSON.stringify(combination.flags)}`,
+    )
+    scaffold(tempRoot, answers)
+    const appRoot = answers.fullStack ? join(tempRoot, 'client') : tempRoot
+    const moduleLabel = `add-testing-react-vite-${pathLabel}`
+    if (answers.language === 'javascript' && answers.extras.shadcn) {
+      runRequired(
+        'Install generated JavaScript shadcn base project',
+        'npm',
+        ['install', '--no-audit', '--no-fund'],
+        tempRoot,
+        diagnostics,
+      )
+      verifyJavaScriptShadcnSetupLimitation(appRoot, diagnostics)
+      await runExpectedTestingRejection(
+        tempRoot,
+        moduleLabel,
+        'the current shadcn templates require the TypeScript React/Vite app template',
+      )
+      console.log(`[module-path:${pathLabel}] existing shadcn setup limitation and pre-write testing rejection verified`)
+    } else {
+      if (answers.extras.shadcn) await prepareShadcnScenario(tempRoot, appRoot, diagnostics)
+      await runTestingScenario(tempRoot, answers, moduleLabel, diagnostics)
+
+      const port = await reservePort()
+      const origin = `http://127.0.0.1:${port}`
+      child = await startCommand(
+        'npm',
+        ['run', 'preview', '--', '--host', '127.0.0.1', '--port', `${port}`, '--strictPort'],
+        appRoot,
+        { env: isolatedEnvironment() },
+      )
+      await waitForApp(origin, child)
+      await verifyPreview(origin, answers)
+      console.log(`[module-path:${pathLabel}] install, test, build, boot, bundle, and missing-asset checks passed`)
+    }
+  } catch (error) {
+    const detail = redact(error instanceof Error ? error.message : String(error))
+    const childOutput = child ? tail(redact(child.output)) : ''
+    failure = new Error(
+      `[module-path:${pathLabel}] failed\n${detail}${diagnostics.length ? `\n\n${diagnostics.slice(-5).join('\n\n')}` : ''}${childOutput ? `\n\nGenerated Vite output:\n${childOutput}` : ''}`,
+      { cause: error },
+    )
+  } finally {
+    try {
+      if (child) await child.stop()
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true, maxRetries: 10, retryDelay: 250 })
+      console.log(`[module-path:${pathLabel}] isolated project resources cleaned`)
+    }
+  }
+
+  if (failure) throw failure
+}
+
+async function runScenarioGroup(group: ScenarioGroup): Promise<void> {
+  const combinations = REACT_VITE_TESTING_FOLLOWUP_COMBINATIONS.filter(
+    (combination) => reactViteTestingGroupId(combination.flags) === group,
+  )
+  assert(combinations.length > 0, `Scenario group "${group}" does not contain a path.`)
+  console.log(`[module-group:${group}] running ${combinations.length} exact generated-project paths`)
+  for (const combination of combinations) await runCombinationScenario(combination)
+  console.log(`[module-group:${group}] all ${combinations.length} exact paths passed`)
+}
+
 async function main(argv = process.argv.slice(2)): Promise<void> {
+  const groupOptions = argv.filter(
+    (arg) => arg === '--scenario-group' || arg.startsWith('--scenario-group='),
+  )
+  const scenarioOptions = argv.filter((arg) => arg === '--scenario' || arg.startsWith('--scenario='))
+  if (groupOptions.length > 0 && scenarioOptions.length > 0) {
+    throw new Error('Pass either --scenario or --scenario-group, not both.')
+  }
+  if (groupOptions.length > 0) {
+    await runScenarioGroup(requestedScenarioGroup(argv))
+    return
+  }
   await runScenario(requestedScenario(argv))
 }
 

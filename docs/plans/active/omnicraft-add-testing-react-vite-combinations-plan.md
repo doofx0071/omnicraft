@@ -47,9 +47,8 @@ Every one of the 306 remaining paths currently passes answer validation, product
 - [ ] This plan is moved to `docs/plans/completed/` with all items evidenced; completed plans and other checkout changes remain untouched.
 - [ ] A separate `codex/` PR is open and unmerged, based on PR #50's current head.
 
-## Initial open questions to resolve from generated-project results
+## Initial generated-project findings
 
-- Whether the current Vitest configuration resolves shadcn's existing `@/` import aliases without the client Vite config.
-- Whether the fixed default React heading assertion matches the existing shadcn React app.
-- Whether each existing backend/data-access template installs successfully when the test module is applied to the generated workspace.
+- The JavaScript + shadcn combinations fail production shadcn initialization because the existing JavaScript template has no path-alias configuration. Their testing module guard now rejects that template path before module writes; runtime coverage verifies the production failure and pre-write rejection.
+- The testing module now configures Vitest's `@/` alias from the generated app root and uses the shadcn app's actual heading. The TypeScript frontend-only shadcn path passes the generated install, test, typecheck, build, preview, bundle, and missing-asset checks locally.
 

@@ -8,6 +8,10 @@ import {
   NEXTJS_DATABASE_SCENARIOS,
   NATIVE_PLATFORM_SCENARIOS,
   NODE_RUNTIME_SCENARIOS,
+  REACT_VITE_TESTING_FOLLOWUP_COMBINATIONS,
+  REACT_VITE_TESTING_FOLLOWUP_SCENARIOS,
+  REACT_VITE_TESTING_REJECTED_COMBINATIONS,
+  REACT_VITE_TESTING_NONREJECTED_COMBINATIONS,
   registeredMatrixRowPrefix,
   SUPPORTED_CAPABILITIES,
   type SupportedCapability,
@@ -123,6 +127,27 @@ describe('support matrix evidence', () => {
         '| `omnicraft add testing` — React + Vite + TypeScript + Laravel + Eloquent + SQLite separate API | **Supported** |',
       ],
     ])
+  })
+
+  it('enumerates every remaining compatible React/Vite add-testing path by exact runtime group', () => {
+    const combinations = REACT_VITE_TESTING_FOLLOWUP_COMBINATIONS
+    const exactKeys = combinations.map(({ flags }) => JSON.stringify(flags))
+    expect(combinations).toHaveLength(306)
+    expect(REACT_VITE_TESTING_NONREJECTED_COMBINATIONS).toHaveLength(254)
+    expect(REACT_VITE_TESTING_REJECTED_COMBINATIONS).toHaveLength(52)
+    expect(
+      REACT_VITE_TESTING_REJECTED_COMBINATIONS.every(
+        ({ flags }) => flags.lang === 'javascript' && flags.extras.includes('shadcn'),
+      ),
+    ).toBe(true)
+    expect(new Set(exactKeys).size).toBe(combinations.length)
+    expect(REACT_VITE_TESTING_FOLLOWUP_SCENARIOS).toHaveLength(23)
+    expect(integrationScenarios('module-runtime-react-vite')).toEqual(
+      REACT_VITE_TESTING_FOLLOWUP_SCENARIOS,
+    )
+    expect(SUPPORTED_CAPABILITIES.map(({ id }) => id)).not.toContain(
+      'testing-module-react-vite-other-exact-paths',
+    )
   })
 
   it('rejects Supported combinations that the CLI compatibility rules disallow', () => {
