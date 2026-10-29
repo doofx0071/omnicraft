@@ -52,6 +52,8 @@ For the current CI coverage and repository-recorded manual results, see the per-
 
 ## Plans
 
+- [Active: `add testing` runtime evidence](plans/active/omnicraft-add-testing-runtime-evidence-plan.md) — fresh-project checks for existing
+  non-native module paths.
 - [Completed: master engineering plan](plans/completed/omnicraft-master-plan.md) — preserved as the historical plan based on the 0.3.0 baseline.
 - [Completed: post-masterplan audit](plans/completed/omnicraft-post-masterplan-audit.md) — release, compatibility, support evidence, and explicit deferrals.
 - [Completed: testing infrastructure](plans/completed/omnicraft-testing-infrastructure-plan.md) — database/auth integration coverage and the ten-row CI release gate.
