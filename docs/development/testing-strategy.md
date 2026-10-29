@@ -75,6 +75,9 @@ do not establish Android, physical iOS device, macOS, or Windows native support.
 records the exact hosted run and keeps the broader native rows provisional. `omnicraft add testing` is
 Supported only for React/Vite TypeScript frontend-only: the hosted generated-project scenario installs the
 module, runs its sample assertion, builds and boots the app, and checks bundle and missing-asset responses.
+The eight additional existing paths exercised by hosted run
+[#40801915094](https://github.com/doofx0071/omnicraft/actions/runs/40801915094) all reproduce generated-test
+failures and remain Selectable — unverified; their exact outcomes are recorded in the support matrix.
 
 ### Level 2 — Scaffold smoke (`scripts/smoke-e2e.ts`)
 
@@ -145,12 +148,16 @@ The current workflow:
    validates and starts the Compose database, installs and checks the generated app, migrates, boots the
    API, and verifies CRUD and failure cases. Both scenarios passed hosted run #40615980612 on commit
    `77ef06645421edb3977019f63683af3ea531ccbb`.
-9. Runs hosted Ubuntu `module-runtime-integration` for `omnicraft add testing` and shadcn on the exact
-   React/Vite TypeScript frontend-only path. The testing case installs the module into a generated app,
-   runs its sample assertion, builds and boots the app, and checks bundle and missing-asset responses.
-   The shadcn case runs the production init and component install commands, installs, builds, boots, and
-   checks the generated app. Both scenarios passed [run #40618652654](https://github.com/doofx0071/omnicraft/actions/runs/40618652654/job/122588485044)
-   on commit `b28f5c48fd22820461a76defd3d099def5dd594f`; only these exact module paths are Supported.
+9. Runs hosted Ubuntu `module-runtime-integration` for the Supported `omnicraft add testing` and shadcn
+   frontend-only paths plus eight existing `add testing` paths whose rows remain Selectable — unverified.
+   The eight paths generate through production composition (Next.js uses the production generator), run
+   the real add operation, install, execute generated `npm test`, assert the exact observed failure, and
+   log that the path remains unverified. All eight generated tests failed in
+   [run #40801915094](https://github.com/doofx0071/omnicraft/actions/runs/40801915094) on commit
+   `b1c8a2096d83dbc5b2c39c726442a1c568d1ef54`; the React/Vite TypeScript frontend-only testing path and
+   shadcn install path also passed their existing checks in that run. See the [support matrix](../templates/stack-support-matrix.md)
+   for the recorded failures and exact scope. Only the existing React/Vite TypeScript frontend-only
+   testing path and shadcn frontend-only path are Supported.
 10. Runs `native-platform-integration` for Expo on `macos-26` and Tauri on `ubuntu-24.04`. It generates
    each project through its production command, applies production layers, and installs dependencies.
    Expo runs iOS prebuild and a native Debug build; Tauri builds the Vite frontend and native executable.
