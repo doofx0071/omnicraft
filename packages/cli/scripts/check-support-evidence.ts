@@ -155,6 +155,25 @@ function expectedScenario(
       assertReactTypescriptApi(answers, capability)
       return database
     }
+    case 'php-laravel-livewire-auth': {
+      const authentication = combination.flags.auth
+      assert(
+        authentication === 'none' || authentication === 'laravel-native',
+        `"${capability.id}" must select None or Laravel native auth.`,
+      )
+      assert.equal(answers.frontend, 'livewire', `"${capability.id}" must use Livewire.`)
+      assert.equal(answers.language, null, `"${capability.id}" must not select a separate frontend language.`)
+      assert.equal(answers.fullStack, true, `"${capability.id}" must be integrated full-stack.`)
+      assert.equal(answers.backendRuntime, 'php', `"${capability.id}" must use PHP.`)
+      assert.equal(answers.backendFramework, 'laravel', `"${capability.id}" must use Laravel.`)
+      assert.equal(answers.orm, null, `"${capability.id}" must use Eloquent without a separate ORM choice.`)
+      assert.equal(answers.database, 'sqlite', `"${capability.id}" must use SQLite.`)
+      assert.equal(answers.architecture.kind, 'integrated-laravel', `"${capability.id}" must be integrated Laravel.`)
+      assert.equal(answers.authentication, authentication)
+      assert.equal(combination.module, undefined, `"${capability.id}" must not model auth as an add module.`)
+      assertExtras(answers, { tailwind: false, eslintPrettier: false, shadcn: false }, capability)
+      return authentication
+    }
     case 'docker-module': {
       const database = requiredDatabase(answers, capability)
       assert.equal(combination.module, 'docker', `"${capability.id}" must validate the docker module.`)
@@ -247,6 +266,12 @@ function validateCombination(
       null,
       `The existing auth module rejects Supported creation-time capability "${capability.id}": ${reason}`,
     )
+  }
+
+  if (capability.matrixFormat === 'laravel-livewire-auth') {
+    const manifest = buildManifest(answers, 'support-evidence', 'npm')
+    assert.equal(manifest.authentication, answers.authentication)
+    assert.deepEqual(manifest.modules, [], `"${capability.id}" must keep auth separate from module history.`)
   }
 
   return expectedScenario(capability, combination, answers)

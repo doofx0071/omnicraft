@@ -150,7 +150,7 @@ export type IntegrationTargetId = keyof typeof INTEGRATION_TARGETS
 export interface SupportedCombination {
   flags: {
     platform: 'web'
-    lang: Language
+    lang?: Language
     frontend: Frontend
     fullStack: boolean
     runtime?: BackendRuntime
@@ -171,6 +171,7 @@ export type SupportMatrixFormat =
   | 'node-backend'
   | 'python-backend'
   | 'php-backend'
+  | 'laravel-livewire-auth'
   | 'auth-module'
   | 'creation-auth'
   | 'docker-module'
@@ -236,6 +237,23 @@ function phpStack(database: Database): SupportedCombination {
   return webStack('react', 'typescript', 'php', 'laravel', undefined, database)
 }
 
+function livewireAuthStack(
+  authentication: Extract<AuthenticationSetup, 'none' | 'laravel-native'>,
+): SupportedCombination {
+  return {
+    flags: {
+      platform: 'web',
+      frontend: 'livewire',
+      fullStack: true,
+      runtime: 'php',
+      backend: 'laravel',
+      db: 'sqlite',
+      auth: authentication,
+      extras: [],
+    },
+  }
+}
+
 function nextjsStack(database: Database): SupportedCombination {
   return {
     flags: {
@@ -290,7 +308,7 @@ export function registeredMatrixRowPrefix(capability: SupportedCapability): stri
   if (combinations.length === 0) throw new Error('A Supported matrix row must register a combination.')
   const first = combinations[0] as SupportedCombination
   const frontend = first.flags.frontend as Frontend
-  const language = first.flags.lang as Language
+  const language = first.flags.lang
   const frontendLabel =
     language === 'javascript'
       ? `${FRONTEND_LABELS[frontend]} + Vite JavaScript`
@@ -345,6 +363,15 @@ export function registeredMatrixRowPrefix(capability: SupportedCapability): stri
     case 'php-backend':
       label = `Laravel 12 | Eloquent | ${oneDatabase()}`
       break
+    case 'laravel-livewire-auth': {
+      const authentication = requireOneCombination(capability).flags.auth
+      if (authentication !== 'none' && authentication !== 'laravel-native') {
+        throw new Error(`Livewire auth row "${capability.id}" must select None or Laravel native auth.`)
+      }
+      const mode = authentication === 'none' ? 'None' : 'Laravel native/Fortify'
+      label = `Laravel 13 + Livewire 4 (${mode}) | Eloquent | ${oneDatabase()}`
+      break
+    }
     case 'auth-module':
       label = `\`omnicraft add auth\` — Express + Drizzle + ${databaseList('/')}`
       break
@@ -527,6 +554,20 @@ export const SUPPORTED_CAPABILITIES = [
     target: 'php-laravel',
     scenarios: ['sqlite'],
     combinations: [phpStack('sqlite')],
+  },
+  {
+    id: 'laravel-livewire-none-sqlite',
+    matrixFormat: 'laravel-livewire-auth',
+    target: 'php-laravel-livewire-auth',
+    scenarios: ['none'],
+    combinations: [livewireAuthStack('none')],
+  },
+  {
+    id: 'laravel-livewire-native-auth-sqlite',
+    matrixFormat: 'laravel-livewire-auth',
+    target: 'php-laravel-livewire-auth',
+    scenarios: ['laravel-native'],
+    combinations: [livewireAuthStack('laravel-native')],
   },
   {
     id: 'auth-express-drizzle-sqlite',

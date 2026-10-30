@@ -10,6 +10,7 @@ import {
   NEXTJS_DATABASE_SCENARIOS,
   NATIVE_PLATFORM_SCENARIOS,
   NODE_RUNTIME_SCENARIOS,
+  registeredMatrixRowPrefix,
   SUPPORTED_CAPABILITIES,
   type SupportedCapability,
 } from './support-evidence.js'
@@ -153,5 +154,21 @@ describe('support matrix evidence', () => {
     const target = INTEGRATION_TARGETS['php-laravel-livewire-auth']
     expect(target.workflowJob).toBe('php-laravel-livewire-auth-integration')
     expect(target.workflowCommand).toBe('npm run test:integration:php-livewire --workspace=create-omnicraft')
+
+    const livewireCapabilities = SUPPORTED_CAPABILITIES.filter(
+      ({ target: capabilityTarget }) => capabilityTarget === 'php-laravel-livewire-auth',
+    )
+    expect(livewireCapabilities.map(({ id }) => id)).toEqual([
+      'laravel-livewire-none-sqlite',
+      'laravel-livewire-native-auth-sqlite',
+    ])
+    expect(livewireCapabilities.map(({ combinations }) => combinations[0]?.flags.auth)).toEqual([
+      'none',
+      'laravel-native',
+    ])
+    expect(livewireCapabilities.map(registeredMatrixRowPrefix)).toEqual([
+      '| Laravel 13 + Livewire 4 (None) | Eloquent | SQLite | **Supported** |',
+      '| Laravel 13 + Livewire 4 (Laravel native/Fortify) | Eloquent | SQLite | **Supported** |',
+    ])
   })
 })

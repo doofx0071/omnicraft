@@ -22,12 +22,13 @@ npm run test:integration:php      # Laravel 12: SQLite, PostgreSQL, MySQL, pinne
 npm run test:integration:php-livewire # production CLI: Laravel 13 + Livewire, None/Fortify, SQLite
 ```
 
-The new `php-laravel-livewire-auth-integration` job uses the production CLI to generate the official
-blank and authenticated Livewire starters, checks that incompatible Livewire/PostgreSQL flags fail
-before creating files, runs the generated SQLite migrations and feature tests, and installs/builds the
-starter's assets. It is a required dependency of `supported-stack-release-gate`. The two Livewire rows
-remain Scaffold-verified until an exact hosted run is recorded; the existing Laravel 12 API evidence
-does not cover either integrated mode.
+The `php-laravel-livewire-auth-integration` job uses the production CLI to generate the official blank
+and authenticated Livewire starters, checks that incompatible Livewire/PostgreSQL flags fail before
+creating files, runs the generated SQLite migrations and feature tests, and installs/builds the starter's
+assets. It is a required dependency of `supported-stack-release-gate`. Hosted [run #41094120972 on
+commit `1c9283c`](https://github.com/doofx0071/omnicraft/actions/runs/41094120972/job/124195318304)
+passed for both exact SQLite modes; the support matrix records them separately. The existing Laravel 12
+API evidence does not cover either integrated mode.
 
 The hosted [closeout PR run #40562224821](https://github.com/doofx0071/omnicraft/actions/runs/40562224821)
 passed on commit `2a1e581312af0e1a84f604c9c86541ea8bdf9eed`, including the full OS/Node matrix, package
