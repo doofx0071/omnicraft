@@ -96,3 +96,18 @@ gate must run again.
 Cancellation was requested for the remaining jobs in both unsuccessful runs after the Android
 setup failure; neither run is full hosted platform evidence or a release-gate pass. A new exact-head
 run is required for the current KVM setup change.
+
+Hosted attempt [#41085265586](https://github.com/doofx0071/omnicraft/actions/runs/41085265586)
+on `3b677a918998ffa60ac40232a67752602988dde3` passed the existing Expo iOS simulator and Tauri
+Linux checks, plus the new Tauri macOS and Windows generated-project build/launch checks. Expo Android
+generated the project, created and booted the Android 36 emulator, built and installed the Debug APK,
+and accepted the launch command. Its final assertion failed because the headless emulator did not
+report the package as its focused window. The run therefore failed and is not Android runtime evidence;
+the strict release gate rejected the failed required platform job. The Android assertion now polls
+`adb shell pidof <application-id>` twice consecutively, checking that the launched app process stays
+alive, which matches the plan's process-verification requirement for a headless emulator.
+
+The current hosted evidence confirms Tauri macOS and Windows launch checks, with Expo iOS simulator
+coverage also passing. Android emulator and physical-device evidence remain pending. The corrected
+Android process check and release gate must pass on a fresh exact-head run before results are recorded
+in the support matrix.

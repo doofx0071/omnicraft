@@ -430,28 +430,33 @@ async function waitForAndroidEmulatorBoot(
   )
 }
 
-async function waitForAndroidAppLaunch(projectRoot: string, applicationId: string): Promise<void> {
-  const appPattern = escapeRegularExpression(applicationId)
+async function waitForAndroidAppProcess(projectRoot: string, applicationId: string): Promise<void> {
   const deadline = Date.now() + 60_000
+  let consecutiveAliveChecks = 0
+  let lastProcessOutput = ''
   while (Date.now() < deadline) {
     const result = runCommand(
       'adb',
-      ['-s', 'emulator-5554', 'shell', 'dumpsys', 'window', 'windows'],
+      ['-s', 'emulator-5554', 'shell', 'pidof', applicationId],
       projectRoot,
       {
         env: isolatedEnvironment({ ANDROID_SERIAL: 'emulator-5554' }),
         timeoutMs: 8_000,
-        maxBuffer: 4 * 1024 * 1024,
+        maxBuffer: 1024 * 1024,
       },
     )
-    const focusedWindow = result.output
-      .split(/\r?\n/)
-      .find((line) => /mCurrentFocus|mFocusedApp/.test(line) && new RegExp(appPattern).test(line))
-    if (result.ok && focusedWindow) return
+    lastProcessOutput = result.output.trim()
+    if (result.ok && /^\d+(?:\s+\d+)*$/.test(lastProcessOutput)) {
+      consecutiveAliveChecks += 1
+      if (consecutiveAliveChecks >= 2) return
+    } else {
+      consecutiveAliveChecks = 0
+    }
     await delay(1_000)
   }
   throw new Error(
-    `Expo app ${applicationId} did not become the focused Android emulator window within 60 seconds.`,
+    `Expo app ${applicationId} did not keep a process running in the Android emulator within 60 seconds. ` +
+      `Last pidof output: ${tail(redact(lastProcessOutput), 1_000) || '(empty)'}`,
   )
 }
 
@@ -853,8 +858,8 @@ async function runExpoAndroidEmulator(): Promise<void> {
       30_000,
       { ANDROID_SERIAL: 'emulator-5554' },
     )
-    await waitForAndroidAppLaunch(projectRoot, applicationId)
-    console.log(`[native] Expo Android emulator: Debug APK installed and app window focused (${applicationId}).`)
+    await waitForAndroidAppProcess(projectRoot, applicationId)
+    console.log(`[native] Expo Android emulator: Debug APK installed and app process remained alive (${applicationId}).`)
   } finally {
     if (emulatorProcess) {
       runCommand('adb', ['-s', 'emulator-5554', 'emu', 'kill'], projectRoot, {
