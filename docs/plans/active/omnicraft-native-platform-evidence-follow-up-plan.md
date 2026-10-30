@@ -84,3 +84,15 @@ of this update. This attempt is not Android platform evidence.
 The Android scenario now gives `avdmanager` and the emulator the same per-run `ANDROID_USER_HOME`
 and `ANDROID_AVD_HOME`, passes an explicit AVD path, and checks `emulator -list-avds` before startup.
 A fresh exact-head workflow and strict release gate are still required.
+
+Hosted attempt [#41084528633](https://github.com/doofx0071/omnicraft/actions/runs/41084528633)
+on `0242756ba29b2ad782b8384bd49bd98b55b73ced` confirmed that the explicit AVD path is discoverable;
+Expo generation, dependency installation, and Android prebuild completed. Emulator startup then
+failed because the runner user lacked permission to use `/dev/kvm`. This is not Android runtime
+evidence. The Android-only hosted setup now grants the ephemeral job access to `/dev/kvm` and runs
+`emulator -accel-check` before the generated-project scenario. The exact-head CI and strict release
+gate must run again.
+
+Cancellation was requested for the remaining jobs in both unsuccessful runs after the Android
+setup failure; neither run is full hosted platform evidence or a release-gate pass. A new exact-head
+run is required for the current KVM setup change.

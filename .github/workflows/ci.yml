@@ -305,6 +305,12 @@ jobs:
             "build-tools;36.0.0" \
             "system-images;android-36;google_apis;x86_64"
 
+      - name: Enable KVM for the hosted Android emulator
+        if: matrix.scenario == 'expo-android-emulator'
+        run: |
+          sudo chmod 0666 /dev/kvm
+          emulator -accel-check
+
       - name: Install Tauri Linux and virtual display dependencies
         if: matrix.scenario == 'tauri-linux-desktop'
         run: |
