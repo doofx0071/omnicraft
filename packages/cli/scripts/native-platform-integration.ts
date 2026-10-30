@@ -15,6 +15,7 @@ import type { Answers } from '../src/types.js'
 const PREPARATION_TIMEOUT_MS = 8 * 60 * 1000
 const EXPO_BUILD_TIMEOUT_MS = 35 * 60 * 1000
 const TAURI_BUILD_TIMEOUT_MS = 25 * 60 * 1000
+const TAURI_APP_GENERATOR = 'create-tauri-app@4.7.5'
 const MAX_OUTPUT_BYTES = 64 * 1024 * 1024
 
 function tail(value: string, length = 12_000): string {
@@ -895,7 +896,7 @@ async function runTauriLinuxDesktop(): Promise<void> {
       'npx',
       [
         '--yes',
-        'create-tauri-app@latest',
+        TAURI_APP_GENERATOR,
         projectName,
         '--template',
         'react-ts',
@@ -971,7 +972,7 @@ async function runTauriHostedDesktop(platform: 'macos' | 'windows'): Promise<voi
       'npx',
       [
         '--yes',
-        'create-tauri-app@latest',
+        TAURI_APP_GENERATOR,
         projectName,
         '--template',
         'react-ts',
