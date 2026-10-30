@@ -40,17 +40,17 @@ Android, physical devices, macOS desktop, and Windows desktop untested.
 
 ## Definition of done
 
-- [ ] Each new scenario generates through its existing official generator and production OmniCraft
+- [x] Each new scenario generates through its existing official generator and production OmniCraft
       layers, then installs and performs the target-platform build and launch/process verification.
-- [ ] Android-emulator, Tauri macOS, and Tauri Windows scenarios run as explicit hosted CI matrix
+- [x] Android-emulator, Tauri macOS, and Tauri Windows scenarios run as explicit hosted CI matrix
       entries with bounded timeouts and cleanup; the strict release gate still rejects missing, skipped,
       cancelled, or failed required jobs.
-- [ ] Relevant local unit/type/build/support-evidence checks pass; hosted exact-head CI and the release
-      gate pass on the final PR commit.
-- [ ] The support matrix records only observed platform-specific evidence and keeps Expo and Tauri
+- [x] Relevant local unit/type/build/support-evidence checks pass; hosted exact-head CI and the release
+      gate pass on implementation commit `983c5164bf9989adbe19712b13cc4e8659ef5bda`.
+- [x] The support matrix records only observed platform-specific evidence and keeps Expo and Tauri
       `Scaffold-verified`; physical-device coverage remains explicitly unverified.
-- [ ] The PR is opened against the current PR #51 head and remains unmerged.
-- [ ] This plan remains active until physical-device evidence is available; close it only after that
+- [x] The PR is open against the current PR #51 head and remains unmerged.
+- [x] This plan remains active until physical-device evidence is available; close it only after that
       pending scope has evidence or is explicitly split into a separately owned follow-up.
 
 ## Results
@@ -107,7 +107,14 @@ the strict release gate rejected the failed required platform job. The Android a
 `adb shell pidof <application-id>` twice consecutively, checking that the launched app process stays
 alive, which matches the plan's process-verification requirement for a headless emulator.
 
-The current hosted evidence confirms Tauri macOS and Windows launch checks, with Expo iOS simulator
-coverage also passing. Android emulator and physical-device evidence remain pending. The corrected
-Android process check and release gate must pass on a fresh exact-head run before results are recorded
-in the support matrix.
+Hosted attempt [#41089689628](https://github.com/doofx0071/omnicraft/actions/runs/41089689628) on
+`983c5164bf9989adbe19712b13cc4e8659ef5bda` passed every required check on its final attempt. The exact
+Expo Android emulator job built and installed the Debug APK, launched it, and observed the application
+process remain alive. Expo iOS simulator and Tauri Linux, macOS, and Windows jobs also passed; the support
+matrix and testing strategy now record those scenario-specific results without changing either matrix
+row from `Scaffold-verified`. The first attempt's macOS Node 20 check was cancelled because a hosted
+arm64 runner was unavailable; the targeted rerun passed, followed by the strict release gate.
+
+Physical Android and iOS device evidence remains unavailable, so this plan stays Active and those
+hardware paths remain Selectable — unverified. Native app behavior beyond build and launch is also not
+covered by these scenarios.

@@ -75,12 +75,14 @@ PostgreSQL/SQLite, the Laravel SQLite overlay, React frontend-only, Vue/Svelte c
 Next.js adapters, and shadcn's React/Vite overlay. This is a selected set, not the full runtime ×
 framework × ORM × database product.
 
-Hosted native checks now generate Expo and Tauri projects through the production commands and apply the
-production layers. Expo runs iOS prebuild, a native Debug build, simulator installation, and launch; it
-does not run a browser web build. Tauri builds the Vite web frontend, the native executable, and launches
-a visible Linux desktop window. These checks cover only iPhone simulator and Ubuntu desktop targets; they
-do not establish Android, physical iOS device, macOS, or Windows native support. The support matrix
-records the exact hosted run and keeps the broader native rows provisional. `omnicraft add testing` is
+Hosted native checks generate Expo and Tauri projects through their production commands and apply the
+production layers. Expo runs iOS and Android prebuild/native Debug builds, installs and launches the apps
+on an iPhone simulator and Android emulator, and checks that the Android app process stays alive; it does
+not run a browser web build. Tauri builds the Vite frontend and native executable, then launches a visible
+window on Linux/Xvfb, macOS, and Windows. These checks verify builds and launch behavior, not full app
+functionality or database operations. Simulators and emulators are not physical devices; physical Android
+and iOS device paths remain Selectable — unverified. The support matrix records exact hosted jobs while
+keeping the broader Expo and Tauri rows Scaffold-verified. `omnicraft add testing` is
 Supported for the six exact React/Vite module paths listed in the [support matrix](../templates/stack-support-matrix.md).
 Hosted run [#40880427361](https://github.com/doofx0071/omnicraft/actions/runs/40880427361) passed generated
 installation, sample-test execution, client build, Vite preview, bundle, and missing-asset checks for each.
@@ -167,12 +169,17 @@ The current workflow:
    gate passed in the same run. See the [support matrix](../templates/stack-support-matrix.md) for exact
    path-level evidence. Other React/Vite combinations remain Selectable — unverified. This module test
    does not establish backend/database behavior.
-10. Runs `native-platform-integration` for Expo on `macos-26` and Tauri on `ubuntu-24.04`. It generates
-   each project through its production command, applies production layers, and installs dependencies.
-   Expo runs iOS prebuild and a native Debug build; Tauri builds the Vite frontend and native executable.
-   The job verifies launch in an iPhone simulator or visible Linux desktop window.
-   Both targets passed run [#40699127397](https://github.com/doofx0071/omnicraft/actions/runs/40699127397)
-   on head `5fff8ad638b203affc168fc948169d75b7cfc719`; the support matrix records the exact limits.
+10. Runs `native-platform-integration` for Expo iOS (`macos-26`), Expo Android (`ubuntu-24.04`), Tauri
+   Linux (`ubuntu-24.04`), macOS (`macos-26`), and Windows (`windows-2025`). It generates each project
+   through its production command, applies production layers, and installs dependencies. Expo builds and
+   launches native apps on the simulator/emulator; Tauri builds the frontend/native executable and checks
+   a visible window on each desktop OS. All five scenario checks passed in run
+   [#41089689628](https://github.com/doofx0071/omnicraft/actions/runs/41089689628) on head
+   `983c5164bf9989adbe19712b13cc4e8659ef5bda`. A macOS Node 20 job was first cancelled by hosted-runner
+   capacity, then passed on the targeted rerun; the support-evidence check and strict release gate passed
+   on attempt 2.
+   The support matrix records the exact job links and evidence limits. Physical-device paths remain
+   Selectable — unverified.
 11. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
    generated dependencies, runs Alembic migrations, boots Uvicorn, and checks SQLite and PostgreSQL
    CRUD and failure responses. PostgreSQL runs in an isolated Testcontainers instance.
