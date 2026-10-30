@@ -72,4 +72,15 @@ Hosted attempt [#41083129801](https://github.com/doofx0071/omnicraft/actions/run
 hosted image's Android `sdkmanager` directory was not on `PATH`. The obsolete run was cancelled after
 that required setup failure; it is not platform evidence. The workflow now discovers `sdkmanager`
 under the runner's Android SDK, adds its tools to the current and following steps, and bounds package
-installation. The corrected exact-head hosted run and release gate are pending.
+installation.
+
+Hosted attempt [#41083572039](https://github.com/doofx0071/omnicraft/actions/runs/41083572039)
+on `fcecbc57d590291cc921a4a574e7fb8f7054d582` confirmed that SDK installation and the isolated
+Android system image setup succeed. Android project generation, dependency installation, and
+prebuild also completed, but emulator startup failed because the AVD profile was not discoverable
+under the runner's default Android home. The Tauri macOS/Windows jobs had not completed at the time
+of this update. This attempt is not Android platform evidence.
+
+The Android scenario now gives `avdmanager` and the emulator the same per-run `ANDROID_USER_HOME`
+and `ANDROID_AVD_HOME`, passes an explicit AVD path, and checks `emulator -list-avds` before startup.
+A fresh exact-head workflow and strict release gate are still required.

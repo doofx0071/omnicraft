@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -729,9 +729,17 @@ async function runExpoAndroidEmulator(): Promise<void> {
   const { parent, projectName, projectRoot } = createScratchProject('expo')
   const answers = makeAnswers(projectRoot, projectName, 'mobile')
   const avdName = 'omnicraft-expo-runtime-evidence'
+  const androidUserHome = join(parent, '.android')
+  const androidAvdHome = join(androidUserHome, 'avd')
+  const androidEnvironment = {
+    ANDROID_AVD_HOME: androidAvdHome,
+    ANDROID_USER_HOME: androidUserHome,
+    ANDROID_SDK_HOME: parent,
+  }
   let emulatorProcess: ReturnType<typeof startCommand> | undefined
 
   try {
+    mkdirSync(androidAvdHome, { recursive: true })
     runRequired(
       'Generate Expo SDK 58 project with the production generator command',
       'npx',
@@ -761,11 +769,23 @@ async function runExpoAndroidEmulator(): Promise<void> {
       'bash',
       [
         '-lc',
-        `printf 'no\\n' | avdmanager create avd --force --name '${avdName}' --package 'system-images;android-36;google_apis;x86_64' --device 'pixel_2'`,
+        `printf 'no\\n' | avdmanager create avd --force --name '${avdName}' --package 'system-images;android-36;google_apis;x86_64' --device 'pixel_2' --path '${join(androidAvdHome, `${avdName}.avd`)}'`,
       ],
       projectRoot,
       60_000,
+      androidEnvironment,
     )
+    const availableAvds = runRequired(
+      'Verify the isolated Android emulator profile is discoverable',
+      'emulator',
+      ['-list-avds'],
+      projectRoot,
+      15_000,
+      androidEnvironment,
+    )
+    if (!availableAvds.split(/\r?\n/).includes(avdName)) {
+      throw new Error(`Android emulator did not discover the isolated AVD ${avdName}.`)
+    }
     console.log('[native] Start Android 36 x86_64 emulator (hosted emulator, not a physical device).')
     emulatorProcess = startCommand(
       'emulator',
@@ -785,7 +805,10 @@ async function runExpoAndroidEmulator(): Promise<void> {
         'on',
       ],
       projectRoot,
-      { env: isolatedEnvironment({ ANDROID_SERIAL: 'emulator-5554' }), maxOutputBytes: MAX_OUTPUT_BYTES },
+      {
+        env: isolatedEnvironment({ ...androidEnvironment, ANDROID_SERIAL: 'emulator-5554' }),
+        maxOutputBytes: MAX_OUTPUT_BYTES,
+      },
     )
     console.log('[native] Wait for Android emulator boot completion.')
     await waitForAndroidEmulatorBoot(emulatorProcess, projectRoot)
@@ -842,7 +865,7 @@ async function runExpoAndroidEmulator(): Promise<void> {
       await emulatorProcess.stop(10_000)
     }
     runCommand('avdmanager', ['delete', 'avd', '--name', avdName], projectRoot, {
-      env: isolatedEnvironment(),
+      env: isolatedEnvironment(androidEnvironment),
       timeoutMs: 30_000,
       maxBuffer: 2 * 1024 * 1024,
     })
