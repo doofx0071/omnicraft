@@ -42,6 +42,14 @@ passed the release gate on commit `b4c26273eaab033fee604bd77c04e0a2ab1d7e19`. It
 Express + raw SQL on SQLite/PostgreSQL/MySQL, and FastAPI + PostgreSQL through generated install/setup,
 boot, real database operations, and failure checks. The exact jobs are linked from their matrix rows.
 
+The `add testing` runtime fixes passed hosted [run #40880427361](https://github.com/doofx0071/omnicraft/actions/runs/40880427361)
+on commit `fd4d3888037e330ac160a997e91f2a5b6b4e70c9`, including the support-evidence check and strict
+release gate. Six exact React/Vite paths generated production layers, applied `add testing`, installed,
+and ran the generated sample test; they also built the client, booted Vite preview, and checked its
+bundle and missing-asset response. TypeScript client paths ran typecheck. The same run confirmed that
+Vue, Svelte, and Next.js module requests reject before module files, dependencies, scripts, or manifests
+change. This is module-path evidence only; backend and database claims remain tied to their own rows.
+
 The Fastify/Hono runtime slice passed all 15 Node runtime scenarios and the release gate on
 [run #40612114736](https://github.com/doofx0071/omnicraft/actions/runs/40612114736), commit
 `14adbf9d9805e74f44f66d8101077d0d68878f0d`. The exact Fastify/Hono rows now link to those generated
@@ -77,14 +85,20 @@ PostgreSQL/SQLite, the Laravel SQLite overlay, React frontend-only, Vue/Svelte c
 Next.js adapters, and shadcn's React/Vite overlay. This is a selected set, not the full runtime ×
 framework × ORM × database product.
 
-Hosted native checks now generate Expo and Tauri projects through the production commands and apply the
-production layers. Expo runs iOS prebuild, a native Debug build, simulator installation, and launch; it
-does not run a browser web build. Tauri builds the Vite web frontend, the native executable, and launches
-a visible Linux desktop window. These checks cover only iPhone simulator and Ubuntu desktop targets; they
-do not establish Android, physical iOS device, macOS, or Windows native support. The support matrix
-records the exact hosted run and keeps the broader native rows provisional. `omnicraft add testing` is
-Supported only for React/Vite TypeScript frontend-only: the hosted generated-project scenario installs the
-module, runs its sample assertion, builds and boots the app, and checks bundle and missing-asset responses.
+Hosted native checks generate Expo and Tauri projects through their production commands and apply the
+production layers. Expo runs iOS and Android prebuild/native Debug builds, installs and launches the apps
+on an iPhone simulator and Android emulator, and checks that the Android app process stays alive; it does
+not run a browser web build. Tauri builds the Vite frontend and native executable, then launches a visible
+window on Linux/Xvfb, macOS, and Windows. These checks verify builds and launch behavior, not full app
+functionality or database operations. Simulators and emulators are not physical devices; physical Android
+and iOS device paths remain Selectable — unverified. The support matrix records exact hosted jobs while
+keeping the broader Expo and Tauri rows Scaffold-verified. `omnicraft add testing` is
+Supported for the six exact React/Vite module paths listed in the [support matrix](../templates/stack-support-matrix.md).
+Hosted run [#40880427361](https://github.com/doofx0071/omnicraft/actions/runs/40880427361) passed generated
+installation, sample-test execution, client build, Vite preview, bundle, and missing-asset checks for each.
+Vue, Svelte, and Next.js `add testing` paths reject before module writes; other selectable React/Vite
+paths remain Selectable — unverified. The module tests exercise frontend behavior, so backend/database
+operations are not applicable and remain covered by the separate stack rows.
 
 ### Level 2 — Scaffold smoke (`scripts/smoke-e2e.ts`)
 
@@ -161,18 +175,27 @@ The current workflow:
    validates and starts the Compose database, installs and checks the generated app, migrates, boots the
    API, and verifies CRUD and failure cases. Both scenarios passed hosted run #40615980612 on commit
    `77ef06645421edb3977019f63683af3ea531ccbb`.
-9. Runs hosted Ubuntu `module-runtime-integration` for `omnicraft add testing` and shadcn on the exact
-   React/Vite TypeScript frontend-only path. The testing case installs the module into a generated app,
-   runs its sample assertion, builds and boots the app, and checks bundle and missing-asset responses.
-   The shadcn case runs the production init and component install commands, installs, builds, boots, and
-   checks the generated app. Both scenarios passed [run #40618652654](https://github.com/doofx0071/omnicraft/actions/runs/40618652654/job/122588485044)
-   on commit `b28f5c48fd22820461a76defd3d099def5dd594f`; only these exact module paths are Supported.
-10. Runs `native-platform-integration` for Expo on `macos-26` and Tauri on `ubuntu-24.04`. It generates
-   each project through its production command, applies production layers, and installs dependencies.
-   Expo runs iOS prebuild and a native Debug build; Tauri builds the Vite frontend and native executable.
-   The job verifies launch in an iPhone simulator or visible Linux desktop window.
-   Both targets passed run [#40699127397](https://github.com/doofx0071/omnicraft/actions/runs/40699127397)
-   on head `5fff8ad638b203affc168fc948169d75b7cfc719`; the support matrix records the exact limits.
+9. Runs hosted Ubuntu `module-runtime-integration` for the `add testing` and shadcn frontend-only paths.
+   The six exact React/Vite `add testing` cases generate through production composition, run the real
+   add operation, install, execute the generated `npm test`, build the client, boot Vite preview, and
+   check the bundle and missing-asset response. TypeScript client cases also typecheck. The Vue, Svelte,
+   and Next.js `add testing` cases assert pre-write rejection and unchanged manifests/packages. The six
+   React/Vite module paths passed run [#40880427361](https://github.com/doofx0071/omnicraft/actions/runs/40880427361)
+   on commit `fd4d3888037e330ac160a997e91f2a5b6b4e70c9`; the support-evidence check and strict release
+   gate passed in the same run. See the [support matrix](../templates/stack-support-matrix.md) for exact
+   path-level evidence. Other React/Vite combinations remain Selectable — unverified. This module test
+   does not establish backend/database behavior.
+10. Runs `native-platform-integration` for Expo iOS (`macos-26`), Expo Android (`ubuntu-24.04`), Tauri
+   Linux (`ubuntu-24.04`), macOS (`macos-26`), and Windows (`windows-2025`). It generates each project
+   through its production command, applies production layers, and installs dependencies. Expo builds and
+   launches native apps on the simulator/emulator; Tauri builds the frontend/native executable and checks
+   a visible window on each desktop OS. All five scenario checks passed in run
+   [#41089689628](https://github.com/doofx0071/omnicraft/actions/runs/41089689628) on head
+   `983c5164bf9989adbe19712b13cc4e8659ef5bda`. A macOS Node 20 job was first cancelled by hosted-runner
+   capacity, then passed on the targeted rerun; the support-evidence check and strict release gate passed
+   on attempt 2.
+   The support matrix records the exact job links and evidence limits. Physical-device paths remain
+   Selectable — unverified.
 11. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
    generated dependencies, runs Alembic migrations, boots Uvicorn, and checks SQLite and PostgreSQL
    CRUD and failure responses. PostgreSQL runs in an isolated Testcontainers instance.

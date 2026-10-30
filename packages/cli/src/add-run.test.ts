@@ -252,6 +252,11 @@ describe('omnicraft add', () => {
     expect(readFileSync(join(tempRoot, 'vitest.config.ts'), 'utf8')).toContain(
       'setupFiles: ["./src/setupTests.ts"]',
     )
+    expect(readFileSync(join(tempRoot, 'vitest.config.ts'), 'utf8')).toContain('jsxInject')
+    expect(readFileSync(join(tempRoot, 'vitest.config.ts'), 'utf8')).not.toContain('root: "client"')
+    expect(readFileSync(join(tempRoot, 'src/App.test.tsx'), 'utf8')).toContain(
+      'render(createElement(App))',
+    )
     expect(readFileSync(join(tempRoot, 'src/App.test.tsx'), 'utf8')).toContain(
       'screen.getByRole("heading", { name: "⚡ demo-app" })',
     )
@@ -261,6 +266,106 @@ describe('omnicraft add', () => {
     }
     expect(packageJson.devDependencies.vitest).toBe('^3.0.0')
     expect(packageJson.scripts.test).toBe('vitest run')
+  })
+
+  it('adds the testing config at the package root and points it at a separate client', async () => {
+    saveManifest(tempRoot, manifest())
+    write('package.json', JSON.stringify({ name: 'demo-app' }, null, 2))
+
+    await runAdd('testing', tempRoot, false)
+
+    expect(existsSync(join(tempRoot, 'vitest.config.ts'))).toBe(true)
+    expect(existsSync(join(tempRoot, 'client/vitest.config.ts'))).toBe(false)
+    expect(existsSync(join(tempRoot, 'client/src/App.test.tsx'))).toBe(true)
+    expect(existsSync(join(tempRoot, 'client/src/setupTests.ts'))).toBe(true)
+    expect(readFileSync(join(tempRoot, 'vitest.config.ts'), 'utf8')).toContain('root: "client"')
+    expect(readFileSync(join(tempRoot, 'vitest.config.ts'), 'utf8')).toContain('jsxInject')
+    expect(readFileSync(join(tempRoot, 'vitest.config.ts'), 'utf8')).toContain(
+      'setupFiles: ["./src/setupTests.ts"]',
+    )
+  })
+
+  it.each([
+    [{ kind: 'frontend-only' }, '', './src'],
+    [{ kind: 'separate-frontend-api' }, 'client/', './client/src'],
+  ] as const)(
+    'configures shadcn aliases and the generated app title for %s',
+    async (architecture, prefix, sourcePath) => {
+      const projectManifest = manifest('react', architecture)
+      projectManifest.stack.extras = ['tailwind', 'shadcn']
+      saveManifest(tempRoot, projectManifest)
+      write('package.json', JSON.stringify({ name: 'demo-app' }, null, 2))
+
+      await runAdd('testing', tempRoot, false)
+
+      const config = readFileSync(join(tempRoot, 'vitest.config.ts'), 'utf8')
+      const test = readFileSync(join(tempRoot, `${prefix}src/App.test.tsx`), 'utf8')
+      expect(config).toContain('fileURLToPath(new URL("' + sourcePath + '", import.meta.url))')
+      expect(test).toContain('screen.getByRole("heading", { name: "demo-app" })')
+    },
+  )
+
+  it.each([
+    [{ kind: 'frontend-only' }, 'src/main.jsx'],
+    [{ kind: 'separate-frontend-api' }, 'client/src/main.jsx'],
+  ] as const)(
+    'rejects shadcn JavaScript paths before module writes for %s',
+    async (architecture, entryPath) => {
+      const projectManifest = manifest('react', architecture)
+      projectManifest.stack.extras = ['tailwind', 'shadcn']
+      saveManifest(tempRoot, projectManifest)
+      write('package.json', JSON.stringify({ name: 'demo-app' }, null, 2))
+      write(entryPath, 'createRoot(document.getElementById("root")).render(<App />);\n')
+      const filesBefore = filesUnder('.').map((path) => [path, readFileSync(join(tempRoot, path), 'utf8')])
+      const packageBefore = readFileSync(join(tempRoot, 'package.json'), 'utf8')
+      const manifestBefore = readFileSync(join(tempRoot, '.omnicraft/project.json'), 'utf8')
+
+      await runAdd('testing', tempRoot, false)
+
+      expect(process.exitCode).toBe(1)
+      expect(filesUnder('.').map((path) => [path, readFileSync(join(tempRoot, path), 'utf8')])).toEqual(filesBefore)
+      expect(readFileSync(join(tempRoot, 'package.json'), 'utf8')).toBe(packageBefore)
+      expect(readFileSync(join(tempRoot, '.omnicraft/project.json'), 'utf8')).toBe(manifestBefore)
+      expect(existsSync(join(tempRoot, 'vitest.config.ts'))).toBe(false)
+      expect(existsSync(join(tempRoot, 'src/App.test.tsx'))).toBe(false)
+      expect(existsSync(join(tempRoot, 'client/src/App.test.tsx'))).toBe(false)
+    },
+  )
+
+  it.each([
+    ['vue', { kind: 'separate-frontend-api' }],
+    ['svelte', { kind: 'separate-frontend-api' }],
+    ['nextjs', { kind: 'integrated-fullstack', framework: 'nextjs' }],
+  ] as const)('rejects testing for the %s frontend before writing module changes', async (frontend, architecture) => {
+    saveManifest(tempRoot, manifest(frontend, architecture))
+    write('package.json', JSON.stringify({ name: 'demo-app' }, null, 2))
+    const filesBefore = filesUnder('.').map((path) => [path, readFileSync(join(tempRoot, path), 'utf8')])
+    const packageBefore = readFileSync(join(tempRoot, 'package.json'), 'utf8')
+    const manifestBefore = readFileSync(join(tempRoot, '.omnicraft/project.json'), 'utf8')
+
+    await runAdd('testing', tempRoot, false)
+
+    expect(process.exitCode).toBe(1)
+    expect(filesUnder('.').map((path) => [path, readFileSync(join(tempRoot, path), 'utf8')])).toEqual(filesBefore)
+    expect(readFileSync(join(tempRoot, 'package.json'), 'utf8')).toBe(packageBefore)
+    expect(readFileSync(join(tempRoot, '.omnicraft/project.json'), 'utf8')).toBe(manifestBefore)
+    expect(existsSync(join(tempRoot, 'vitest.config.ts'))).toBe(false)
+    expect(existsSync(join(tempRoot, 'src/App.test.tsx'))).toBe(false)
+  })
+
+  it('rejects a client Vitest config before adding module files to a separate API project', async () => {
+    saveManifest(tempRoot, manifest())
+    write('package.json', JSON.stringify({ name: 'demo-app' }, null, 2))
+    write('client/vitest.config.ts', '// user config\n')
+    const packageBefore = readFileSync(join(tempRoot, 'package.json'), 'utf8')
+    const manifestBefore = readFileSync(join(tempRoot, '.omnicraft/project.json'), 'utf8')
+
+    await runAdd('testing', tempRoot, false)
+
+    expect(process.exitCode).toBe(1)
+    expect(filesUnder('client')).toEqual(['client/vitest.config.ts'])
+    expect(readFileSync(join(tempRoot, 'package.json'), 'utf8')).toBe(packageBefore)
+    expect(readFileSync(join(tempRoot, '.omnicraft/project.json'), 'utf8')).toBe(manifestBefore)
   })
 
   it('rejects the Docker module on SQLite before writing files', async () => {
