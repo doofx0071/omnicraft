@@ -170,7 +170,13 @@ export const REACT_VITE_TESTING_NONREJECTED_COMBINATIONS =
 export const REACT_VITE_TESTING_FOLLOWUP_SCENARIOS = [
   ...new Set(REACT_VITE_TESTING_FOLLOWUP_COMBINATIONS.map(({ flags }) => reactViteTestingGroupId(flags))),
 ]
-export const NATIVE_PLATFORM_SCENARIOS = ['expo-ios-simulator', 'tauri-linux-desktop'] as const
+export const NATIVE_PLATFORM_SCENARIOS = [
+  'expo-ios-simulator',
+  'expo-android-emulator',
+  'tauri-linux-desktop',
+  'tauri-macos-desktop',
+  'tauri-windows-desktop',
+] as const
 
 export const INTEGRATION_TARGETS = {
   'node-runtime': {

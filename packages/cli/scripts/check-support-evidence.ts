@@ -531,6 +531,23 @@ export function validateSupportEvidence(
         'Every registered React/Vite add-testing group must run in the hosted matrix.',
       )
     }
+    if (id === 'native-platform') {
+      const nativeScenarios = [...job.matchAll(/^          - scenario: ([a-z0-9-]+)$/gm)].map(
+        (match) => match[1] as string,
+      )
+      assert.deepEqual(
+        [...nativeScenarios].sort(),
+        [...target.scenarios].sort(),
+        'Every registered native platform scenario must run in the hosted matrix.',
+      )
+      const nativeScript = readFileSync(join(repoRoot, 'packages', 'cli', target.script), 'utf8')
+      for (const scenario of target.scenarios) {
+        assert(
+          nativeScript.includes(`scenario === '${scenario}'`),
+          `Native platform scenario "${scenario}" has no script handler.`,
+        )
+      }
+    }
   }
 
   const releaseGate = workflowJob(workflowLines, 'supported-matrix')

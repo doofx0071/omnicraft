@@ -224,8 +224,14 @@ describe('support matrix evidence', () => {
     expect(() => validateSupportEvidence(capabilities)).toThrow(/generated-project extras/)
   })
 
-  it('registers exact Expo simulator and Tauri desktop scenarios', () => {
+  it('registers the exact Expo simulator and Tauri desktop platform scenarios', () => {
     expect(integrationScenarios('native-platform')).toEqual(NATIVE_PLATFORM_SCENARIOS)
-    expect(NATIVE_PLATFORM_SCENARIOS).toEqual(['expo-ios-simulator', 'tauri-linux-desktop'])
+    expect(NATIVE_PLATFORM_SCENARIOS).toEqual([
+      'expo-ios-simulator',
+      'expo-android-emulator',
+      'tauri-linux-desktop',
+      'tauri-macos-desktop',
+      'tauri-windows-desktop',
+    ])
   })
 })

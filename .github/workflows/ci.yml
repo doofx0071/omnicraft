@@ -266,8 +266,14 @@ jobs:
         include:
           - scenario: expo-ios-simulator
             runner: macos-26
+          - scenario: expo-android-emulator
+            runner: ubuntu-24.04
           - scenario: tauri-linux-desktop
             runner: ubuntu-24.04
+          - scenario: tauri-macos-desktop
+            runner: macos-26
+          - scenario: tauri-windows-desktop
+            runner: windows-2025
     steps:
       - uses: actions/checkout@v4
 
@@ -275,6 +281,17 @@ jobs:
         with:
           node-version: 24
           cache: npm
+
+      - name: Install Android emulator SDK packages
+        if: matrix.scenario == 'expo-android-emulator'
+        run: |
+          timeout 5m bash -c 'yes | sdkmanager --licenses >/dev/null'
+          timeout 15m sdkmanager --install \
+            "emulator" \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "system-images;android-36;google_apis;x86_64"
 
       - name: Install Tauri Linux and virtual display dependencies
         if: matrix.scenario == 'tauri-linux-desktop'
