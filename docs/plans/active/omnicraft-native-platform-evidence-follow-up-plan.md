@@ -67,4 +67,9 @@ Local validation before hosted execution:
 - The local Windows checkout has no Android SDK or Rust/Cargo, so native generated-project execution
   is deferred to the hosted platform runners.
 
-Hosted generated-project and release-gate results are pending.
+Hosted attempt [#41083129801](https://github.com/doofx0071/omnicraft/actions/runs/41083129801) on
+`d3e23a99ea1a3664cf6de7174b4bc4b61b28f46a` failed before generated-project execution because the
+hosted image's Android `sdkmanager` directory was not on `PATH`. The obsolete run was cancelled after
+that required setup failure; it is not platform evidence. The workflow now discovers `sdkmanager`
+under the runner's Android SDK, adds its tools to the current and following steps, and bounds package
+installation. The corrected exact-head hosted run and release gate are pending.
