@@ -23,7 +23,7 @@ From the project root:
 
 ```bash
 cd server
-npm install # only if you generated with --skip-install
+npm install # if frontend dependency setup was skipped
 php artisan migrate
 composer run dev
 ```
