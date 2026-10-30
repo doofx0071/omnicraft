@@ -28,6 +28,21 @@ function makeAnswers(overrides: Partial<Answers> = {}): Answers {
   }
 }
 
+function makeLivewireAnswers(authentication: 'none' | 'laravel-native' = 'none'): Answers {
+  return makeAnswers({
+    frontend: 'livewire',
+    language: null,
+    fullStack: true,
+    backendRuntime: 'php',
+    backendFramework: 'laravel',
+    orm: null,
+    database: 'sqlite',
+    authentication,
+    extras: { tailwind: false, eslintPrettier: false, shadcn: false },
+    architecture: { kind: 'integrated-laravel', framework: 'laravel', mode: 'livewire' },
+  })
+}
+
 function scaffoldInto(dir: string, answers: Answers): void {
   applyLayers(TEMPLATES_ROOT, composeLayers(answers), templateVariables(answers), dir)
   createEnvFiles(dir)
@@ -83,6 +98,19 @@ describe('official-generator layer order', () => {
     expect(plan.beforeComposer.map(({ src }) => src)).toContain('root/fullstack-php/sqlite')
     expect(plan.afterComposer.map(({ src }) => src)).toEqual(['server/php/laravel'])
   })
+
+  it('applies only OmniCraft root setup after the selected Livewire starter kit', () => {
+    for (const authentication of ['none', 'laravel-native'] as const) {
+      const answers = makeLivewireAnswers(authentication)
+      const layers = composeLayers(answers)
+      const plan = planLayerApplication(layers, answers.architecture)
+
+      expect(layers.map(({ src }) => src)).toEqual(['root/fullstack-laravel-livewire'])
+      expect(plan.afterOfficialGenerator).toEqual(layers)
+      expect(plan.beforeComposer).toEqual([])
+      expect(plan.afterComposer).toEqual([])
+    }
+  })
 })
 
 describe('composition compatibility', () => {
@@ -124,6 +152,27 @@ describe('composition compatibility', () => {
     expect(dependencies['@better-auth/drizzle-adapter']).toBeUndefined()
     expect(serverIndex).not.toContain('/api/auth/')
   })
+
+  it.each(['none', 'laravel-native'] as const)(
+    'scaffolds the Livewire root overlay for %s without a second auth/module layer',
+    (authentication) => {
+      const dir = makeTempDir(`livewire-${authentication}`)
+      scaffoldInto(dir, makeLivewireAnswers(authentication))
+
+      const packageJson = readJson(join(dir, 'package.json'))
+      const scripts = packageJson.scripts as Record<string, string>
+      const readme = readFileSync(join(dir, 'README.md'), 'utf8')
+      const gitignore = readFileSync(join(dir, '.gitignore'), 'utf8')
+
+      expect(scripts.dev).toContain('composer run dev')
+      expect(scripts['db:migrate']).toContain('artisan migrate')
+      expect(readme).toContain(authentication === 'none' ? 'Authentication | None' : 'Authentication | Laravel native auth (Fortify)')
+      expect(gitignore).toContain('/server/vendor/')
+      expect(existsSync(join(dir, 'client'))).toBe(false)
+      expect(existsSync(join(dir, 'server'))).toBe(false)
+      expect(readFileSync(join(dir, 'README.md'), 'utf8')).not.toContain('{{')
+    },
+  )
 })
 
 describe('full-stack combos', () => {

@@ -19,7 +19,15 @@ npm run test:integration:node      # Express, Fastify, and Hono ORM/raw-SQL scen
 npm run test:integration:nextjs    # Next.js integrated full-stack: SQLite, PostgreSQL, MySQL
 npm run test:integration:python   # FastAPI + SQLite, Python 3.12
 npm run test:integration:php      # Laravel 12: SQLite, PostgreSQL, MySQL, pinned PHP/Composer image
+npm run test:integration:php-livewire # production CLI: Laravel 13 + Livewire, None/Fortify, SQLite
 ```
+
+The new `php-laravel-livewire-auth-integration` job uses the production CLI to generate the official
+blank and authenticated Livewire starters, checks that incompatible Livewire/PostgreSQL flags fail
+before creating files, runs the generated SQLite migrations and feature tests, and installs/builds the
+starter's assets. It is a required dependency of `supported-stack-release-gate`. The two Livewire rows
+remain Scaffold-verified until an exact hosted run is recorded; the existing Laravel 12 API evidence
+does not cover either integrated mode.
 
 The hosted [closeout PR run #40562224821](https://github.com/doofx0071/omnicraft/actions/runs/40562224821)
 passed on commit `2a1e581312af0e1a84f604c9c86541ea8bdf9eed`, including the full OS/Node matrix, package
@@ -46,16 +54,16 @@ The current suite covers:
 
 | File | Coverage |
 | --- | --- |
-| `src/args.test.ts` | Flag parsing and help text. |
+| `src/args.test.ts` | Flag parsing, Livewire/Laravel-native help text, and help/README option parity. |
 | `src/validators.test.ts` | Project-name normalization and npm-name validation. |
 | `src/renderer.test.ts` | Token substitution, unresolved-token detection, dotfile renaming, and binary detection. |
 | `src/merge.test.ts` | `package.json` deep merge semantics. |
 | `src/prefill.test.ts` | Available flag values, runtime-scoped databases/frameworks, Prisma/PostgreSQL validation, authentication flag preflight, and `--yes` answer resolution. |
 | `src/update-check.test.ts` | Version comparison, mocked registry fetch, offline behavior, and cache. |
 | `src/prompts/run-prompts.test.ts` | Scripted prompt flow, frontend-only branch, unavailable-option retry, cancellation, and invalid names. |
-| `src/next-steps.test.ts` | Integrated Next.js commands/endpoints and container startup for PostgreSQL. |
+| `src/next-steps.test.ts` | Integrated Next.js commands/endpoints, container startup for PostgreSQL, and Laravel Livewire commands. |
 | `src/exec.test.ts` | Fixed-command output, timeout handling, and stopping a child process. |
-| `src/engine.test.ts` | Selected generated files, layer overrides, manifests, env files, token scans, protected-path examples, selected engine combinations, creation-time auth compatibility, and the no-auth `None` scaffold. |
+| `src/engine.test.ts` | Selected generated files, layer overrides, manifests, env files, token scans, protected-path examples, selected engine combinations, creation-time auth compatibility, the no-auth `None` scaffold, and both Livewire starter overlays. |
 | `src/compatibility.test.ts`, `src/manifest.test.ts` | Exact creation-time auth choices and constraints, plus manifest separation between active authentication and `modules`. |
 | `src/capabilities.test.ts` | Available prompt/flag choices derive from the typed capability registry; the auth catalog records setup categories and requirements; the module menu matches its registered module IDs. |
 | `src/add-run.test.ts` | Module dry-run, success, idempotency, creation-time auth application, collisions, unsupported stacks, missing patch anchors, and rollback after a failed write. |

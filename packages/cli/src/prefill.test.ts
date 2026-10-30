@@ -97,6 +97,26 @@ describe('validateStackFlags', () => {
     expect(() => validateStackFlags(parseArgs(['--platform', 'mobile', '--extras', 'none']))).not.toThrow()
   })
 
+  it('accepts the integrated Laravel Livewire SQLite path with either auth choice', () => {
+    expect(() => validateStackFlags(parseArgs(['--frontend', 'livewire']))).not.toThrow()
+    expect(() =>
+      validateStackFlags(parseArgs(['--frontend', 'livewire', '--auth', 'laravel-native'])),
+    ).not.toThrow()
+  })
+
+  it.each([
+    [['--frontend', 'livewire', '--runtime', 'node'], /requires PHP \+ Laravel \+ SQLite/],
+    [['--frontend', 'livewire', '--backend', 'laravel', '--db', 'postgres'], /requires PHP \+ Laravel \+ SQLite/],
+    [['--frontend', 'livewire', '--lang', 'typescript'], /does not use a separate frontend, language/],
+    [['--frontend', 'livewire', '--orm', 'none'], /--orm applies to Node.js backends only/],
+    [['--frontend', 'livewire', '--no-full-stack'], /require a full-stack project/],
+    [['--frontend', 'livewire', '--auth', 'better-auth'], /Better Auth is not available/],
+    [['--frontend', 'react', '--auth', 'laravel-native'], /requires PHP \+ Laravel \+ SQLite/],
+    [['--auth', 'laravel-native', '--runtime', 'node'], /requires PHP \+ Laravel \+ SQLite/],
+  ])('rejects unsupported Livewire flags before scaffold composition: %j', (argv, message) => {
+    expect(() => validateStackFlags(parseArgs(argv))).toThrow(message)
+  })
+
   it('validates the runtime itself', () => {
     expect(() => validateStackFlags(parseArgs(['--runtime', 'ruby']))).toThrow(
       /Available: node, python, php/,
@@ -155,6 +175,8 @@ describe('resolveAnswers', () => {
     expect(answers.backendFramework).toBeNull()
     expect(hasFullStackFlags(parseArgs(['--auth', 'none']))).toBe(false)
     expect(hasFullStackFlags(parseArgs(['--auth', 'better-auth']))).toBe(true)
+    expect(hasFullStackFlags(parseArgs(['--frontend', 'livewire']))).toBe(true)
+    expect(hasFullStackFlags(parseArgs(['--auth', 'laravel-native']))).toBe(true)
   })
 
   it('applies flag overrides', () => {
@@ -206,6 +228,55 @@ describe('resolveAnswers', () => {
     expect(next.backendFramework).toBeNull()
     expect(next.orm).toBe('none')
     expect(next.database).toBe('sqlite')
+  })
+
+  it('resolves Livewire as integrated Laravel with SQLite and no separate language or ORM', () => {
+    const answers = resolveAnswers(
+      parseArgs(['--yes', '--frontend', 'livewire']),
+      base.projectName,
+      base.targetDir,
+    )
+
+    expect(answers).toMatchObject({
+      frontend: 'livewire',
+      language: null,
+      fullStack: true,
+      backendRuntime: 'php',
+      backendFramework: 'laravel',
+      orm: null,
+      database: 'sqlite',
+      authentication: 'none',
+      extras: { tailwind: false, eslintPrettier: false, shadcn: false },
+      architecture: { kind: 'integrated-laravel', framework: 'laravel', mode: 'livewire' },
+    })
+  })
+
+  it('infers the Livewire architecture from the Laravel-native auth flag', () => {
+    const answers = resolveAnswers(
+      parseArgs(['--yes', '--auth', 'laravel-native']),
+      base.projectName,
+      base.targetDir,
+    )
+
+    expect(answers.frontend).toBe('livewire')
+    expect(answers.backendRuntime).toBe('php')
+    expect(answers.backendFramework).toBe('laravel')
+    expect(answers.database).toBe('sqlite')
+    expect(answers.authentication).toBe('laravel-native')
+    expect(answers.architecture.kind).toBe('integrated-laravel')
+  })
+
+  it('keeps the existing PHP Laravel API path separate and unchanged', () => {
+    const answers = resolveAnswers(
+      parseArgs(['--yes', '--runtime', 'php']),
+      base.projectName,
+      base.targetDir,
+    )
+    expect(answers.frontend).toBe('react')
+    expect(answers.language).toBe('typescript')
+    expect(answers.architecture.kind).toBe('separate-frontend-api')
+    expect(answers.backendRuntime).toBe('php')
+    expect(answers.backendFramework).toBe('laravel')
   })
 
   it('frontend-only clears backend fields', () => {

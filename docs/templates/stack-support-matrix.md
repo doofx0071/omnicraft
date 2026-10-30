@@ -96,6 +96,8 @@ The repository has no `templates/server/node/hono/prisma/` layer.
 | Laravel 12 | Eloquent | SQLite | **Supported** | Hosted [`php-laravel-integration`](https://github.com/doofx0071/omnicraft/actions/runs/40562224821/job/122394000585) installed Composer dependencies in the pinned PHP image, migrated SQLite, verified the active driver, and exercised the generated API. <!-- support-id: laravel-eloquent-sqlite --> |
 | Laravel 12 | Eloquent | PostgreSQL | **Supported** | `php-laravel-integration` installs Composer dependencies in the pinned PHP image, migrates PostgreSQL, verifies the active driver, and exercises the generated API. <!-- support-id: laravel-eloquent-postgres --> |
 | Laravel 12 | Eloquent | MySQL | **Supported** | `php-laravel-integration` installs Composer dependencies in the pinned PHP image, migrates MySQL, verifies the active driver, and exercises the generated API. <!-- support-id: laravel-eloquent-mysql --> |
+| Laravel 13 + Livewire 4 (None) | Eloquent | SQLite | **Scaffold-verified** | The CLI pins Laravel's official blank Livewire starter and engine tests verify the exact Livewire `None` answer, root layer, and manifest. The generated-project CI test is configured, but the official starter install, assets, and runtime behavior still need hosted exact-head evidence. |
+| Laravel 13 + Livewire 4 (Laravel native/Fortify) | Eloquent | SQLite | **Scaffold-verified** | The CLI pins Laravel's official authenticated Livewire starter and engine tests verify the exact Laravel-native answer, root layer, and manifest separation. The generated-project CI test is configured, but Fortify routes/session behavior still need hosted exact-head evidence. |
 
 ## Language variants, modules, and extras
 

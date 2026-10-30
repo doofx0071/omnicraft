@@ -3,7 +3,10 @@ import { AVAILABLE } from './capabilities.js'
 import {
   authenticationCompatibilityReason,
   compatibleAuthenticationSetups,
+  isFrontendAllowedByFlags,
+  isRuntimeAllowedByFlags,
 } from './compatibility.js'
+import { parseArgs } from './args.js'
 
 const supportedExpressDrizzle = {
   frontend: 'react',
@@ -16,8 +19,8 @@ const supportedExpressDrizzle = {
 }
 
 describe('creation-time authentication compatibility', () => {
-  it('exposes only None and the existing Better Auth setup', () => {
-    expect(AVAILABLE.authentication).toEqual(['none', 'better-auth'])
+  it('exposes the existing setup choices without treating native auth as an add module', () => {
+    expect(AVAILABLE.authentication).toEqual(['none', 'better-auth', 'laravel-native'])
   })
 
   it.each(['sqlite', 'postgres', 'mysql'])('offers Better Auth for the supported %s database', (database) => {
@@ -51,5 +54,47 @@ describe('creation-time authentication compatibility', () => {
     }
     expect(compatibleAuthenticationSetups(context)).toEqual(['none'])
     expect(authenticationCompatibilityReason('none', context)).toBeNull()
+  })
+
+  it('offers only None and Laravel native auth for integrated Livewire on SQLite', () => {
+    const context = {
+      frontend: 'livewire',
+      language: null,
+      architecture: { kind: 'integrated-laravel' },
+      backendRuntime: 'php',
+      backendFramework: 'laravel',
+      orm: null,
+      database: 'sqlite',
+    }
+    expect(compatibleAuthenticationSetups(context)).toEqual(['none', 'laravel-native'])
+    expect(authenticationCompatibilityReason('laravel-native', context)).toBeNull()
+  })
+
+  it.each([
+    [{ database: 'postgres' }, /SQLite only/],
+    [{ backendRuntime: 'node' }, /PHP \+ Laravel/],
+    [{ frontend: 'react' }, /integrated Livewire/],
+    [{ architecture: { kind: 'separate-frontend-api' } }, /integrated Livewire/],
+  ])('omits Laravel native auth for incompatible context %j', (overrides, reason) => {
+    const context = {
+      frontend: 'livewire',
+      language: null,
+      architecture: { kind: 'integrated-laravel' },
+      backendRuntime: 'php',
+      backendFramework: 'laravel',
+      orm: null,
+      database: 'sqlite',
+      ...overrides,
+    }
+    expect(compatibleAuthenticationSetups(context)).toEqual(['none'])
+    expect(authenticationCompatibilityReason('laravel-native', context)).toMatch(reason)
+  })
+
+  it('filters prompt choices and runtime from Laravel-native flags', () => {
+    const args = parseArgs(['--auth', 'laravel-native'])
+    expect(isFrontendAllowedByFlags('livewire', args)).toBe(true)
+    expect(isFrontendAllowedByFlags('react', args)).toBe(false)
+    expect(isRuntimeAllowedByFlags('php', args)).toBe(true)
+    expect(isRuntimeAllowedByFlags('node', args)).toBe(false)
   })
 })

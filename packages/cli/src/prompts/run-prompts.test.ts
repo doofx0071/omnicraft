@@ -208,6 +208,48 @@ describe('runPrompts flow', () => {
     })
   })
 
+  it('keeps the Livewire None/native-auth prompt aligned with flags and skips React language choices', async () => {
+    script.push(
+      { prompt: 'select', answer: 'web' },
+      { prompt: 'select', answer: 'livewire' },
+      { prompt: 'select', answer: 'laravel-native' },
+      { prompt: 'confirm', answer: true },
+    )
+
+    const interactive = await runPrompts('livewire-app')
+    const nonInteractive = resolveAnswers(
+      parseArgs(['--yes', '--frontend', 'livewire', '--auth', 'laravel-native']),
+      interactive.projectName,
+      interactive.targetDir,
+    )
+
+    expect(calls).toEqual(['select', 'select', 'select', 'confirm'])
+    expect(interactive).toMatchObject({
+      frontend: nonInteractive.frontend,
+      language: null,
+      fullStack: nonInteractive.fullStack,
+      backendRuntime: nonInteractive.backendRuntime,
+      backendFramework: nonInteractive.backendFramework,
+      orm: null,
+      database: nonInteractive.database,
+      authentication: 'laravel-native',
+      extras: nonInteractive.extras,
+      architecture: nonInteractive.architecture,
+    })
+    const authOptions = optionsSeen.find((entry) =>
+      entry.options.some((option) => option.value === 'laravel-native'),
+    )
+    expect(authOptions?.options.map((option) => option.value)).toEqual(['none', 'laravel-native'])
+    expect(optionsSeen.some((entry) => entry.options.some((option) => option.value === 'typescript'))).toBe(false)
+  })
+
+  it('rejects an incompatible Livewire database before presenting prompts', async () => {
+    await expect(
+      runPrompts('livewire-app', parseArgs(['--frontend', 'livewire', '--db', 'postgres'])),
+    ).rejects.toThrow(/requires PHP \+ Laravel \+ SQLite/)
+    expect(calls).toEqual([])
+  })
+
   it('takes the frontend-only shortcut when full-stack is declined', async () => {
     script.push(
       { prompt: 'text', answer: 'front-only' },

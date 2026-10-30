@@ -25,7 +25,7 @@ describe('capability registry', () => {
     expect(AVAILABLE.authentication).toEqual(selectedValues(CAPABILITY_REGISTRY.authentication))
   })
 
-  it('models None as no auth and Better Auth as the existing application library', () => {
+  it('models None, Better Auth, and Laravel-native auth by setup category', () => {
     expect(AUTHENTICATION_CATALOG.none).toMatchObject({
       value: 'none',
       category: 'none',
@@ -44,10 +44,25 @@ describe('capability registry', () => {
         databases: ['postgres', 'sqlite', 'mysql'],
       },
     })
+    expect(AUTHENTICATION_CATALOG['laravel-native']).toMatchObject({
+      value: 'laravel-native',
+      category: 'framework-native',
+      requirements: {
+        frontend: 'livewire',
+        language: null,
+        backendRuntime: 'php',
+        backendFramework: 'laravel',
+        orm: null,
+        architecture: 'integrated-laravel',
+        databases: ['sqlite'],
+      },
+    })
     expect(CAPABILITY_REGISTRY.authentication.map(({ value }) => value)).toEqual([
       'none',
       'better-auth',
+      'laravel-native',
     ])
+    expect(AVAILABLE.frontend).toContain('livewire')
   })
 
   it('builds the module menu from the registry module ids', () => {

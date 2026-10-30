@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { validateSupportEvidence } from '../scripts/check-support-evidence.js'
 import {
+  INTEGRATION_TARGETS,
   FRONTEND_RUNTIME_SCENARIOS,
   DOCKER_MODULE_SCENARIOS,
   integrationScenarios,
+  LARAVEL_LIVEWIRE_AUTH_SCENARIOS,
   MODULE_RUNTIME_SCENARIOS,
   NEXTJS_DATABASE_SCENARIOS,
   NATIVE_PLATFORM_SCENARIOS,
@@ -143,5 +145,13 @@ describe('support matrix evidence', () => {
   it('registers exact Expo simulator and Tauri desktop scenarios', () => {
     expect(integrationScenarios('native-platform')).toEqual(NATIVE_PLATFORM_SCENARIOS)
     expect(NATIVE_PLATFORM_SCENARIOS).toEqual(['expo-ios-simulator', 'tauri-linux-desktop'])
+  })
+
+  it('registers both integrated Laravel Livewire authentication setups in their own CI job', () => {
+    expect(integrationScenarios('php-laravel-livewire-auth')).toEqual(LARAVEL_LIVEWIRE_AUTH_SCENARIOS)
+    expect(LARAVEL_LIVEWIRE_AUTH_SCENARIOS).toEqual(['none', 'laravel-native'])
+    const target = INTEGRATION_TARGETS['php-laravel-livewire-auth']
+    expect(target.workflowJob).toBe('php-laravel-livewire-auth-integration')
+    expect(target.workflowCommand).toBe('npm run test:integration:php-livewire --workspace=create-omnicraft')
   })
 })

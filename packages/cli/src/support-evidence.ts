@@ -71,6 +71,7 @@ export const MODULE_RUNTIME_SCENARIOS = [
   'shadcn-react-vite-ts-frontend-only',
 ] as const
 export const NATIVE_PLATFORM_SCENARIOS = ['expo-ios-simulator', 'tauri-linux-desktop'] as const
+export const LARAVEL_LIVEWIRE_AUTH_SCENARIOS = ['none', 'laravel-native'] as const satisfies readonly AuthenticationSetup[]
 
 export const INTEGRATION_TARGETS = {
   'node-runtime': {
@@ -127,6 +128,12 @@ export const INTEGRATION_TARGETS = {
     workflowJob: 'php-laravel-integration',
     workflowCommand: 'npm run test:integration:php --workspace=create-omnicraft',
     scenarios: ['sqlite', 'postgres', 'mysql'],
+  },
+  'php-laravel-livewire-auth': {
+    script: 'scripts/php-livewire-auth-e2e.ts',
+    workflowJob: 'php-laravel-livewire-auth-integration',
+    workflowCommand: 'npm run test:integration:php-livewire --workspace=create-omnicraft',
+    scenarios: LARAVEL_LIVEWIRE_AUTH_SCENARIOS,
   },
 } as const satisfies Record<
   string,

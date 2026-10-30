@@ -171,11 +171,21 @@ export function startCommand(
  * used for dependency installs so the user watches the real progress
  * (package counts, warnings, the package manager's own progress bar).
  */
-export function runCommandVisible(command: string, args: string[], cwd: string): Promise<boolean> {
+export function runCommandVisible(
+  command: string,
+  args: string[],
+  cwd: string,
+  options: Pick<RunCommandOptions, 'env'> = {},
+): Promise<boolean> {
   return new Promise((resolveResult) => {
     const child = IS_WIN
-      ? spawn([command, ...args].join(' '), { shell: true, cwd, stdio: 'inherit' })
-      : spawn(command, args, { cwd, stdio: 'inherit' })
+      ? spawn([command, ...args].join(' '), {
+          shell: true,
+          cwd,
+          env: options.env,
+          stdio: 'inherit',
+        })
+      : spawn(command, args, { cwd, env: options.env, stdio: 'inherit' })
     child.on('error', () => resolveResult(false))
     child.on('close', (code) => resolveResult(code === 0))
   })

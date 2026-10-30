@@ -8,6 +8,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ### Added
 
+- An integrated Laravel 13 + Livewire 4 + SQLite creation path with `None` or Laravel-native
+  Fortify authentication. The new combinations remain provisional until their hosted generated-project
+  checks pass; they do not add a second auth layer or change the existing Laravel 12 API path.
 - Creation-time authentication selection for `None` or Better Auth on the currently verified
   TypeScript React/Vite + Express + Drizzle database paths. `--auth better-auth` uses the same module
   application path as `omnicraft add auth`; the manifest records active authentication separately

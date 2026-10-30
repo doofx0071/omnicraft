@@ -198,6 +198,33 @@ describe('omnicraft add', () => {
     expect(process.exitCode).toBe(1)
   })
 
+  it('keeps omnicraft add auth unavailable on the Laravel-native Livewire stack', async () => {
+    const projectManifest = manifest('livewire', {
+      kind: 'integrated-laravel',
+      framework: 'laravel',
+      mode: 'livewire',
+    })
+    projectManifest.stack.backendRuntime = 'php'
+    projectManifest.stack.backendFramework = 'laravel'
+    projectManifest.stack.orm = null
+    projectManifest.stack.database = 'sqlite'
+    projectManifest.authentication = 'laravel-native'
+    saveManifest(tempRoot, projectManifest)
+    write('package.json', JSON.stringify({ name: 'demo-app', private: true }, null, 2))
+    write('server/routes/web.php', "<?php\n// User Laravel routes.\n")
+    const pathsBefore = filesUnder('.')
+    const manifestBefore = readFileSync(join(tempRoot, '.omnicraft/project.json'), 'utf8')
+    const routesBefore = readFileSync(join(tempRoot, 'server/routes/web.php'), 'utf8')
+
+    await runAdd('auth', tempRoot, false)
+
+    expect(filesUnder('.')).toEqual(pathsBefore)
+    expect(readFileSync(join(tempRoot, '.omnicraft/project.json'), 'utf8')).toBe(manifestBefore)
+    expect(readFileSync(join(tempRoot, 'server/routes/web.php'), 'utf8')).toBe(routesBefore)
+    expect(existsSync(join(tempRoot, 'server/src/auth.ts'))).toBe(false)
+    expect(process.exitCode).toBe(1)
+  })
+
   it('rolls back files and manifest when a filesystem write fails mid-apply', async () => {
     createAuthProject()
     write('client', 'blocks the auth client directory\n')

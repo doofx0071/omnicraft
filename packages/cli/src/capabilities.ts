@@ -19,16 +19,16 @@ type CapabilityOption<T extends string> = {
 
 type AuthenticationRequirements = {
   frontend: Frontend
-  language: Language
+  language: Language | null
   backendRuntime: BackendRuntime
   backendFramework: BackendFramework
-  orm: Orm
+  orm: Orm | null
   architecture: ProjectArchitecture['kind']
   databases: readonly Database[]
 }
 
 type AuthenticationCatalogEntry = CapabilityOption<AuthenticationSetup> & {
-  category: 'none' | 'application-library'
+  category: 'none' | 'application-library' | 'framework-native'
   requirements: AuthenticationRequirements | null
 }
 
@@ -58,6 +58,22 @@ export const AUTHENTICATION_CATALOG = {
       databases: ['postgres', 'sqlite', 'mysql'],
     },
   },
+  'laravel-native': {
+    value: 'laravel-native',
+    label: 'Laravel native auth (Fortify)',
+    available: true,
+    hint: 'Official Laravel + Livewire starter with Laravel session auth; SQLite only',
+    category: 'framework-native',
+    requirements: {
+      frontend: 'livewire',
+      language: null,
+      backendRuntime: 'php',
+      backendFramework: 'laravel',
+      orm: null,
+      architecture: 'integrated-laravel',
+      databases: ['sqlite'],
+    },
+  },
 } as const satisfies Record<AuthenticationSetup, AuthenticationCatalogEntry>
 
 /**
@@ -85,6 +101,12 @@ export const CAPABILITY_REGISTRY = {
     },
     { value: 'vue', label: 'Vue', available: true, hint: 'Vite + TypeScript' },
     { value: 'svelte', label: 'Svelte', available: true, hint: 'Vite + TypeScript' },
+    {
+      value: 'livewire',
+      label: 'Laravel + Livewire',
+      available: true,
+      hint: 'Integrated Laravel app — no separate frontend; SQLite only in this first path',
+    },
   ] as const satisfies readonly CapabilityOption<Frontend>[],
   language: [
     { value: 'typescript', label: 'TypeScript', available: true, hint: 'Recommended' },

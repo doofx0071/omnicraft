@@ -13,6 +13,20 @@ export interface NextSteps {
 export function buildNextSteps(answers: Answers, pm: PackageManager): NextSteps {
   const steps: string[] = [`cd ${answers.projectName}`]
 
+  if (answers.architecture.kind === 'integrated-laravel') {
+    steps.push('cd server')
+    steps.push('npm install                # if you skipped frontend dependency setup')
+    steps.push('php artisan migrate')
+    steps.push('composer run dev')
+    return {
+      steps,
+      details:
+        `  app      → open the URL printed by Laravel's development server\n` +
+        `  UI       → Laravel + Livewire (integrated PHP-driven app)\n` +
+        `  database → SQLite at server/database/database.sqlite`,
+    }
+  }
+
   if (answers.architecture.kind === 'integrated-fullstack') {
     if (answers.database !== 'sqlite') {
       steps.push(`docker compose up -d        # start ${DATABASE_LABELS[answers.database!]}`)
