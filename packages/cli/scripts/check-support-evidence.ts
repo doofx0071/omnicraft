@@ -197,6 +197,26 @@ function expectedScenario(
       assertExtras(answers, { tailwind: false, eslintPrettier: false, shadcn: false }, capability)
       return authentication
     }
+    case 'php-laravel-inertia-react-auth': {
+      const authentication = combination.flags.auth
+      assert(
+        authentication === 'none' || authentication === 'laravel-native',
+        `"${capability.id}" must select None or Laravel native auth.`,
+      )
+      assert.equal(answers.frontend, 'inertia-react', `"${capability.id}" must use Inertia React.`)
+      assert.equal(answers.language, 'typescript', `"${capability.id}" must use TypeScript.`)
+      assert.equal(answers.fullStack, true, `"${capability.id}" must be integrated full-stack.`)
+      assert.equal(answers.backendRuntime, 'php', `"${capability.id}" must use PHP.`)
+      assert.equal(answers.backendFramework, 'laravel', `"${capability.id}" must use Laravel.`)
+      assert.equal(answers.orm, null, `"${capability.id}" must use Eloquent without a separate ORM choice.`)
+      assert.equal(answers.database, 'sqlite', `"${capability.id}" must use SQLite.`)
+      assert.equal(answers.architecture.kind, 'integrated-laravel', `"${capability.id}" must be integrated Laravel.`)
+      assert.equal(answers.architecture.mode, 'inertia-react', `"${capability.id}" must use the Inertia React mode.`)
+      assert.equal(answers.authentication, authentication)
+      assert.equal(combination.module, undefined, `"${capability.id}" must not model auth as an add module.`)
+      assertExtras(answers, { tailwind: false, eslintPrettier: false, shadcn: false }, capability)
+      return authentication
+    }
     case 'docker-module': {
       const database = requiredDatabase(answers, capability)
       assert.equal(combination.module, 'docker', `"${capability.id}" must validate the docker module.`)
@@ -387,7 +407,10 @@ function validateCombination(
     )
   }
 
-  if (capability.matrixFormat === 'laravel-livewire-auth') {
+  if (
+    capability.matrixFormat === 'laravel-livewire-auth' ||
+    capability.matrixFormat === 'laravel-inertia-react-auth'
+  ) {
     const manifest = buildManifest(answers, 'support-evidence', 'npm')
     assert.equal(manifest.authentication, answers.authentication)
     assert.deepEqual(manifest.modules, [], `"${capability.id}" must keep auth separate from module history.`)

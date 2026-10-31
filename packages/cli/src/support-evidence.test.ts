@@ -282,4 +282,32 @@ describe('support matrix evidence', () => {
       '| Laravel 13 + Livewire 4 (Laravel native/Fortify) | Eloquent | SQLite | **Supported** |',
     ])
   })
+
+  it('registers both integrated Laravel Inertia React auth setups in their own CI job', () => {
+    expect(integrationScenarios('php-laravel-inertia-react-auth')).toEqual(
+      LARAVEL_INERTIA_REACT_AUTH_SCENARIOS,
+    )
+    expect(LARAVEL_INERTIA_REACT_AUTH_SCENARIOS).toEqual(['none', 'laravel-native'])
+    const target = INTEGRATION_TARGETS['php-laravel-inertia-react-auth']
+    expect(target.workflowJob).toBe('php-laravel-inertia-react-auth-integration')
+    expect(target.workflowCommand).toBe(
+      'npm run test:integration:php-inertia --workspace=create-omnicraft',
+    )
+
+    const inertiaReactCapabilities = SUPPORTED_CAPABILITIES.filter(
+      ({ target: capabilityTarget }) => capabilityTarget === 'php-laravel-inertia-react-auth',
+    )
+    expect(inertiaReactCapabilities.map(({ id }) => id)).toEqual([
+      'laravel-inertia-react-none-sqlite',
+      'laravel-inertia-react-native-auth-sqlite',
+    ])
+    expect(inertiaReactCapabilities.map(({ combinations }) => combinations[0]?.flags.auth)).toEqual([
+      'none',
+      'laravel-native',
+    ])
+    expect(inertiaReactCapabilities.map(registeredMatrixRowPrefix)).toEqual([
+      '| Laravel 13 + Inertia React (None) | Eloquent | SQLite | **Supported** |',
+      '| Laravel 13 + Inertia React (Laravel native/Fortify) | Eloquent | SQLite | **Supported** |',
+    ])
+  })
 })

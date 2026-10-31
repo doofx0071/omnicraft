@@ -293,6 +293,7 @@ export type SupportMatrixFormat =
   | 'python-backend'
   | 'php-backend'
   | 'laravel-livewire-auth'
+  | 'laravel-inertia-react-auth'
   | 'auth-module'
   | 'creation-auth'
   | 'docker-module'
@@ -372,6 +373,24 @@ function livewireAuthStack(
     flags: {
       platform: 'web',
       frontend: 'livewire',
+      fullStack: true,
+      runtime: 'php',
+      backend: 'laravel',
+      db: 'sqlite',
+      auth: authentication,
+      extras: [],
+    },
+  }
+}
+
+function inertiaReactAuthStack(
+  authentication: Extract<AuthenticationSetup, 'none' | 'laravel-native'>,
+): SupportedCombination {
+  return {
+    flags: {
+      platform: 'web',
+      lang: 'typescript',
+      frontend: 'inertia-react',
       fullStack: true,
       runtime: 'php',
       backend: 'laravel',
@@ -502,6 +521,15 @@ export function registeredMatrixRowPrefix(capability: SupportedCapability): stri
       }
       const mode = authentication === 'none' ? 'None' : 'Laravel native/Fortify'
       label = `Laravel 13 + Livewire 4 (${mode}) | Eloquent | ${oneDatabase()}`
+      break
+    }
+    case 'laravel-inertia-react-auth': {
+      const authentication = requireOneCombination(capability).flags.auth
+      if (authentication !== 'none' && authentication !== 'laravel-native') {
+        throw new Error(`Inertia React auth row "${capability.id}" must select None or Laravel native auth.`)
+      }
+      const mode = authentication === 'none' ? 'None' : 'Laravel native/Fortify'
+      label = `Laravel 13 + Inertia React (${mode}) | Eloquent | ${oneDatabase()}`
       break
     }
     case 'auth-module':
@@ -722,6 +750,20 @@ export const SUPPORTED_CAPABILITIES = [
     target: 'php-laravel-livewire-auth',
     scenarios: ['laravel-native'],
     combinations: [livewireAuthStack('laravel-native')],
+  },
+  {
+    id: 'laravel-inertia-react-none-sqlite',
+    matrixFormat: 'laravel-inertia-react-auth',
+    target: 'php-laravel-inertia-react-auth',
+    scenarios: ['none'],
+    combinations: [inertiaReactAuthStack('none')],
+  },
+  {
+    id: 'laravel-inertia-react-native-auth-sqlite',
+    matrixFormat: 'laravel-inertia-react-auth',
+    target: 'php-laravel-inertia-react-auth',
+    scenarios: ['laravel-native'],
+    combinations: [inertiaReactAuthStack('laravel-native')],
   },
   {
     id: 'auth-express-drizzle-sqlite',

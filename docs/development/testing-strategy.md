@@ -12,9 +12,9 @@ The 2026-10-28 runtime-evidence branch passed `npx vitest run` (**142 tests in 1
 `npx tsc --noEmit`, `npx tsup`, and `npm run check:support-matrix` (34 Supported rows). The smoke
 command generated all 17 listed paths.
 
-The v1.0.3 release candidate passes locally with 209 unit tests in 17 files, typecheck, build, the
-support-evidence checker (43 Supported rows), and all 17 smoke paths. These local checks supplement,
-but do not replace, the required exact-head hosted release gate.
+The initial v1.0.3 release candidate passed locally with 209 unit tests in 17 files, typecheck, build,
+the support-evidence checker (43 Supported rows), and all 17 smoke paths. These baseline checks
+supplement, but do not replace, the required exact-head hosted release gate.
 
 Generated-project integration commands also passed locally:
 
@@ -48,6 +48,12 @@ public/no-auth and registration/login/dashboard/logout behavior, and verifies `/
 if that sample route exists. PostgreSQL, MySQL, Better Auth, JavaScript, extras, ORM flags, and Node
 runtime flags must reject before creating a target directory. This job is a required dependency of
 `supported-stack-release-gate`.
+
+On Windows, `npm run test:integration:php-inertia --workspace=create-omnicraft` passed for both
+SQLite modes, including migrations, Inertia typecheck and asset build, auth lifecycle tests, and
+pre-write rejection. Hosted workflow-dispatch [run #41205558676](https://github.com/doofx0071/omnicraft/actions/runs/41205558676)
+passed all 80 jobs on commit `9df8a043`, including the generated-project job and aggregate release gate;
+the npm publish job was skipped.
 
 The hosted [closeout PR run #40562224821](https://github.com/doofx0071/omnicraft/actions/runs/40562224821)
 passed on commit `2a1e581312af0e1a84f604c9c86541ea8bdf9eed`, including the full OS/Node matrix, package
