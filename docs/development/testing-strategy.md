@@ -200,11 +200,11 @@ The current workflow:
    Linux (`ubuntu-24.04`), macOS (`macos-26`), and Windows (`windows-2025`). It generates each project
    through its production command, applies production layers, and installs dependencies. Expo builds and
    launches native apps on the simulator/emulator; Tauri builds the frontend/native executable and checks
-   a visible window on each desktop OS. All five scenario checks passed in run
-   [#41089689628](https://github.com/doofx0071/omnicraft/actions/runs/41089689628) on head
-   `983c5164bf9989adbe19712b13cc4e8659ef5bda`. A macOS Node 20 job was first cancelled by hosted-runner
-   capacity, then passed on the targeted rerun; the support-evidence check and strict release gate passed
-   on attempt 2.
+   a visible window on each desktop OS. All five scenario checks passed on exact head
+   `689fbaa24f6e3a30ff142551ccfbe84b0d514d50` in run
+   [#41146678113](https://github.com/doofx0071/omnicraft/actions/runs/41146678113), including the pinned
+   Tauri app generator. The support-evidence check and strict release gate passed in the same run; the
+   tag-only publish job was skipped for the pull-request event.
    The support matrix records the exact job links and evidence limits. Physical-device paths remain
    Selectable — unverified.
 11. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
