@@ -62,6 +62,8 @@ For the current CI coverage and repository-recorded manual results, see the per-
 - [Completed: testing infrastructure](plans/completed/omnicraft-testing-infrastructure-plan.md) — database/auth integration coverage and the ten-row CI release gate.
 - [Completed: existing-stack runtime evidence](plans/completed/omnicraft-stack-runtime-evidence-plan.md) — generated-project runtime checks, scoped native evidence, and capability-to-matrix consistency closeout.
 - Current release status is summarized in [ROADMAP.md](../ROADMAP.md); active implementation plans live under `docs/plans/active/`.
+- [Active auth provider and PHP expansion follow-up](plans/active/omnicraft-auth-provider-php-stack-expansion-follow-up-plan.md) — approved Supabase Auth and Laravel API auth scope with exact evidence requirements.
+- [Auth provider and Laravel mode decision audit](research/auth-provider-laravel-decision-audit.md) — owner choices, deferred auth models, and mode boundaries.
 
 ## Related non-doc directories
 

@@ -10,7 +10,7 @@ slow checks; `npm test`, the scaffold smoke script, typechecking, and the CLI bu
   [Testcontainers v12](https://github.com/testcontainers/testcontainers-node/releases/tag/v12.0.0).
 - Python 3.12 and `uv` for FastAPI; Docker Engine is also required for its PostgreSQL case.
 - Docker Engine or Docker Desktop for PostgreSQL/MySQL Testcontainers cases; Docker Compose v2 is also
-  required for the containerized PHP/Laravel runner.
+  required for the containerized PHP/Laravel runner and the local Supabase Auth integration.
 - Docker image pulls, PHP image package downloads, and Composer package downloads must be reachable
   from the machine running Docker. The generated Node project also installs dependencies from npm.
 - No host PHP or Composer installation is required. Laravel runs in the PHP test image.
@@ -40,6 +40,7 @@ npm run test:integration:nextjs --workspace=create-omnicraft
 npm run test:integration:php --workspace=create-omnicraft
 npm run test:integration:php-livewire --workspace=create-omnicraft
 npm run test:integration:php-inertia --workspace=create-omnicraft
+npm run test:integration:supabase-auth --workspace=create-omnicraft
 ```
 
 The Node/Drizzle suite defaults to SQLite, PostgreSQL, and MySQL. Run one database at a time with:
@@ -102,6 +103,18 @@ password, login/session state, guest redirects, dashboard access, and logout. Th
 that `/api/users` remains public in `None` and auth-protected when present in the native mode, and that
 incompatible choices reject before the CLI creates target files. This is distinct from the Laravel 12
 API/data integration target and the Laravel 13 Livewire/Fortify target.
+
+The `supabase-auth-integration` target generates the exact React/Vite TypeScript frontend-only mode
+with the production CLI. It installs dependencies, starts pinned Supabase CLI `2.122.0` services in
+Docker, resets the local database through the generated migration, verifies explicit authenticated
+role grants and all four owner policies, builds and previews the app, then tests email signup,
+password sign-in, restored local session, local sign-out, and User A/User B row isolation through the
+installed Supabase JS `2.118.0` client and Data API. It checks that the generated example uses
+placeholders and that the built bundle contains no privileged local key. All local resources are
+isolated and removed. The hosted job uses only its disposable local stack; it does not call Supabase
+cloud APIs or require provider credentials. Docker is required locally. If Docker Engine is
+unavailable, the run can still verify production generation and dependency installation before
+reporting the runtime blocker.
 
 Each case gets a unique generated-project directory, database name, and random credentials. Laravel
 cases also use a unique Compose project name and no fixed host port mappings. Testcontainers publishes

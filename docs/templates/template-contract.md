@@ -17,8 +17,9 @@ the authoring contract. The tree layout is in the [repository structure](../arch
 | **Node ORM wiring**   | `server/node/<framework>/<orm>/`     | `src/routes/index.ts` + users routes + `src/env.ts` (adds DATABASE_URL)                                                                            | server base                                                                                                 |
 | **Python db adapter** | `db/sqlalchemy/<database>/`          | pyproject.toml deps, `app/database.py`, `.env.example`                                                                                             | —                                                                                                           |
 | **PHP overlay**       | `server/php/laravel/`                | Controller, api routes, bootstrap/app.php, migration, seeder, `.env.example` — applied **after `composer create-project`**                         | composer skeleton files                                                                                     |
+| **Managed-auth overlay** | `auth/<provider>-<client>/`         | Provider-specific client, safe `.env.example`, and setup README; composition selects it only for the exact capability tuple | Earlier frontend/root README files; never server secrets or privileged browser keys |
 | **Extra**             | `extras/<name>/`                     | Tailwind → Vite client config + CSS; ESLint/Prettier → root; shadcn → React/Vite client only                                                        | earlier layers                                                                                                |
-| **Root variant**      | `root/fullstack` runtime/database variants, integrated Laravel roots, or `root/frontend-only/` | workspace or single-app `package.json`, `.gitignore`, README, database compose file where used, `_github/` CI | merged last |
+| **Root variant**      | `root/fullstack` runtime/database variants, integrated Laravel roots, or `root/frontend-only/` | workspace or single-app `package.json`, `.gitignore`, README, database compose file where used, `_github/` CI | later auth-specific overlay may replace its README |
 
 ## Rules every template must follow
 
@@ -49,6 +50,11 @@ the authoring contract. The tree layout is in the [repository structure](../arch
 9. **Ports fixed:** server 3000, client 5173 (Vite proxies `/api` → 3000).
 10. **No new dependencies without peer checks.** TS `^5.9.3`, Prisma `^7.10.1` pins exist for a reason —
     see [coding standards](../development/coding-standards.md).
+11. **Managed provider credentials.** Generated frontend configuration may use provider-approved
+    publishable values and placeholders only. Secret/service-role keys, database passwords, and JWT
+    signing secrets must not enter `VITE_` variables, browser bundles, prompts, logs, or committed
+    files. Supabase Data API tables need explicit grants as well as RLS policies; the current
+    Supabase Auth overlay grants only the authenticated role and scopes every operation to `auth.uid()`.
 
 ## Required files per layer kind
 
@@ -64,6 +70,9 @@ the authoring contract. The tree layout is in the [repository structure](../arch
 - **PHP overlay:** `routes/api.php`, `bootstrap/app.php`, `app/Http/Controllers/UserController.php`,
   `app/Models/User.php`, `database/migrations/…_create_users_table.php`,
   `database/seeders/DatabaseSeeder.php`, `.env.example`.
+- **Managed-auth overlay:** provider client/configuration, placeholder-only `.env.example`, and
+  generated setup README. Any browser integration uses publishable values only; server secrets stay
+  outside the client layer. Provider-specific setup and lifecycle tests define the exact tuple.
 - **Root variant:** `package.json` (workspaces, root scripts incl. `dev:server` for non-node runtimes,
   db passthrough scripts for node), `_gitignore`, `README.md`, `docker-compose.yml` (if containerized DB),
   `_github/workflows/ci.yml`.

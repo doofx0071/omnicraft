@@ -26,6 +26,7 @@ npm run test:integration:python   # FastAPI + SQLite, Python 3.12
 npm run test:integration:php      # Laravel 12: SQLite, PostgreSQL, MySQL, pinned PHP/Composer image
 npm run test:integration:php-livewire # production CLI: Laravel 13 + Livewire, None/Fortify, SQLite
 npm run test:integration:php-inertia  # production CLI: Laravel 13 + Inertia React, None/Fortify, SQLite
+npm run test:integration:supabase-auth # production CLI + disposable local Supabase Auth/Data API/RLS
 ```
 
 The local Livewire integration check also sets caller `DB_CONNECTION` and `DB_DATABASE` values to a
@@ -107,7 +108,7 @@ The current suite covers:
 | `src/compatibility.test.ts`, `src/manifest.test.ts` | Exact creation-time auth choices and constraints, plus manifest separation between active authentication and `modules`. |
 | `src/capabilities.test.ts` | Available prompt/flag choices derive from the typed capability registry; the auth catalog records setup categories and requirements; the module menu matches its registered module IDs. |
 | `src/add-run.test.ts` | Module dry-run, success, idempotency, creation-time auth application, collisions, unsupported stacks, missing patch anchors, and rollback after a failed write. |
-| `src/support-evidence.test.ts` | Every Supported row resolves through selectable values, prompt/flag/composition, module and creation-time auth guards, renders from its exact combination, and maps to the matching scenario, script, job, and aggregate release check. |
+| `src/support-evidence.test.ts` | Every Supported row resolves through selectable values, prompt/flag/composition, module and creation-time auth guards, renders from its exact combination, and maps to the matching scenario, script, job, and aggregate release check; managed-provider integration target metadata is registered separately until its evidence passes. |
 | `src/modules/auth.test.ts` | Better Auth compatibility and secret setup guidance. |
 
 The engine fixtures cover Express + Drizzle with PostgreSQL/SQLite/MySQL, Express + Prisma + PostgreSQL,
@@ -140,9 +141,9 @@ Run with:
 npx tsx scripts/smoke-e2e.ts <out-dir>
 ```
 
-The script currently produces 19 project paths when `create-next-app` succeeds: 13 backend/database
-entries, two Inertia React auth-mode root overlays, React frontend-only, Vue and Svelte paired with
-Express + Drizzle + SQLite, and Next.js integrated full-stack + SQLite. It does not include Expo or
+The script currently produces 20 project paths when `create-next-app` succeeds: 13 backend/database
+entries, two Inertia React auth-mode root overlays, React frontend-only with None and Supabase Auth,
+Vue and Svelte paired with Express + Drizzle + SQLite, and Next.js integrated full-stack + SQLite. It does not include Expo or
 Tauri. The Next.js script step runs the
 external `create-next-app` command and logs/skips the overlay if that command fails, so an overall
 successful script exit does not guarantee Next.js was generated.
@@ -242,13 +243,19 @@ The current workflow:
    checks Composer/npm dependencies, runs migrations and Laravel feature tests, and enforces pre-write
    rejection of incompatible flags. The job is required by the aggregate gate; the support matrix
    contains only exact modes with passing generated-project and hosted evidence.
-14. Runs `support-evidence` to resolve every exact Supported flag combination through available values,
+14. Runs hosted Ubuntu `supabase-auth-integration` on a disposable local Supabase CLI stack. It
+    generates the React/Vite TypeScript frontend-only project through the production CLI, installs
+    and builds it, applies the local migration, verifies explicit Data API grants and owner RLS,
+    exercises signup/sign-in/session restoration/local sign-out and two-user row isolation, and scans
+    the browser bundle for privileged credentials. It provisions no hosted Supabase project and
+    consumes no real provider credentials. The job is required by the aggregate gate.
+15. Runs `support-evidence` to resolve every exact Supported flag combination through available values,
    prompt/flag and answer compatibility, production composition, and module guards; it also checks the
    rendered matrix label, matching scenario, job command, and release aggregate dependency.
    `supported-matrix` fails unless the OS/Node matrix, runtime jobs, support evidence, and package
    artifact all pass. It runs for PRs, main pushes, nightly, and version-tag pushes;
    `workflow_dispatch` supports an explicit pre-release run. The scheduled run uses GitHub-hosted jobs.
-15. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
+16. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
    the release job publishes to npm using OIDC, creates the GitHub Release from the version's changelog
    section, and updates the release snapshots in `ROADMAP.md` and `docs/architecture/system-overview.md`.
    The self-hosted Windows job runs only for main-branch pushes and same-repository pull requests.
@@ -283,6 +290,7 @@ baseline above.
 | Prompt/flag/capability change | Update prompt/flag tests; derive selectable values from `src/capabilities.ts`, exercise `--yes` and invalid combinations, and run the support-evidence check. |
 | Template change | Run engine tests and smoke; install/build/boot every exact combination whose behavior changed before promoting it. |
 | New combination | Add an exact engine or smoke entry and Level 3 evidence before calling it Supported. |
+| Managed provider with local stack | Add secret-free generated setup, lifecycle and isolation tests against a disposable local service; gate the hosted job; promote support only after the exact PR-head release gate passes. |
 | Engine/renderer/merge change | Full suite, all smoke entries, token/collision checks, and Level 3 checks for affected runtime families. |
 | Documentation only | Check local links and confirm claims match the matrix and source. |
 

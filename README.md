@@ -31,12 +31,12 @@ Open <a href="docs/demo.html">docs/demo.html</a> in a browser — the same flow 
 ◆  Select a backend framework:            ● Express · Fastify · Hono / FastAPI / Laravel
 ◆  Select a database:                     ● PostgreSQL · SQLite (zero setup) · MySQL
 ◆  Select an ORM:                         ● Drizzle · Prisma  (node only)
-◆  Select an authentication setup:        ● None · Better Auth (compatible React + Express + Drizzle) · Laravel native (Livewire or Inertia React)
+◆  Select an authentication setup:        ● None · Supabase Auth (React/Vite frontend-only) · Better Auth (React + Express + Drizzle) · Laravel native (Livewire or Inertia React)
 ◆  Pick extras:                           ◉ Tailwind CSS  ◉ ESLint + Prettier
 └  Scaffolds → git init → installs deps → prints next steps
 ```
 
-Next.js skips the separate backend, ORM, authentication, and extras prompts. Its `create-next-app` base always includes Tailwind and ESLint. The auth prompt is filtered by stack: Better Auth appears only for TypeScript React/Vite + Node/Express + Drizzle with SQLite, PostgreSQL, or MySQL; Laravel native auth appears only for integrated Laravel + Livewire or Inertia React with SQLite. Choose `None` to leave the app without an optional auth layer. Better Auth uses the same integration as `omnicraft add auth`; set a private `BETTER_AUTH_SECRET` in `server/.env` and run `npm run db:push` before using its endpoints. OmniCraft never creates or stores a real provider secret.
+Next.js skips the separate backend, ORM, authentication, and extras prompts. Its `create-next-app` base always includes Tailwind and ESLint. The auth prompt is filtered by stack: Supabase Auth appears only for React/Vite + TypeScript frontend-only projects and uses manual project setup, a browser-safe publishable key, the Supabase Data API, and user-scoped RLS; Better Auth appears only for TypeScript React/Vite + Node/Express + Drizzle with SQLite, PostgreSQL, or MySQL; Laravel native auth appears only for integrated Laravel + Livewire or Inertia React with SQLite. Choose `None` to leave the app without an optional auth layer. Better Auth uses the same integration as `omnicraft add auth`; set a private `BETTER_AUTH_SECRET` in `server/.env` and run `npm run db:push` before using its endpoints. OmniCraft never creates or stores a real provider secret.
 
 ### Laravel + Livewire
 
@@ -86,7 +86,7 @@ The prompt and flags expose these choices. A choice in one row does not imply ev
 | Data access | Separate Node API: Drizzle, Prisma, or raw SQL · Next.js route handlers: raw SQL · Python: SQLAlchemy + Alembic · Laravel: Eloquent | Prisma is PostgreSQL-only and unavailable for Hono. Raw SQL is not an ORM. |
 | Database | PostgreSQL, SQLite, MySQL (availability varies by runtime and mode) | Laravel + Livewire and Laravel + Inertia React currently allow SQLite only. The matrix lists which combinations have scaffold or runtime evidence. |
 | Extras | Tailwind CSS, ESLint + Prettier, shadcn/ui | Next.js always includes Tailwind + ESLint from create-next-app; shadcn/ui is web React/Vite-only and implies Tailwind. |
-| Authentication setup | `None`, Better Auth email/password, Laravel native auth (Fortify) | Better Auth is limited to TypeScript React/Vite + Node/Express + Drizzle + SQLite/PostgreSQL/MySQL. Laravel native auth is limited to integrated Laravel + Livewire or Inertia React + SQLite; it owns Laravel sessions and does not add a second provider layer. Check the matrix for each status. |
+| Authentication setup | `None`, Supabase Auth, Better Auth email/password, Laravel native auth (Fortify) | Supabase Auth is limited to React/Vite + TypeScript frontend-only and uses the Supabase Data API with user-scoped RLS. Better Auth is limited to TypeScript React/Vite + Node/Express + Drizzle + SQLite/PostgreSQL/MySQL. Laravel native auth is limited to integrated Laravel + Livewire or Inertia React + SQLite; it owns Laravel sessions and does not add a second provider layer. Check the matrix for each status. |
 | `omnicraft add` modules | `docker`, `testing`, Better Auth email/password (`auth`) | `testing` has exact generated-runtime checks for 260 React/Vite paths (six original plus 254 additional); 52 JavaScript + shadcn paths reject before writes because required aliases are absent. Vue, Svelte, and Next.js testing requests also reject before writes. These module checks do not establish backend/database behavior. Auth requires a React frontend with a separate Node + Express + Drizzle API; hosted database flows cover SQLite, PostgreSQL, and MySQL. |
 
 ## Options
@@ -106,8 +106,9 @@ npm create omnicraft@latest [project-name] [options]
                        python: fastapi · php: laravel)
   --db <name>          Skip the database prompt (node: postgres, sqlite, mysql ·
                        python: postgres, sqlite · php: postgres, sqlite, mysql)
-  --auth <name>        Authentication setup (none, better-auth, laravel-native; Better Auth requires
-                       TypeScript React + Node/Express/Drizzle; Laravel native requires integrated
+  --auth <name>        Authentication setup (none, better-auth, supabase-auth, laravel-native;
+                       Supabase Auth requires TypeScript React/Vite frontend-only; Better Auth
+                       requires React + Node/Express/Drizzle; Laravel native requires integrated
                        Livewire or Inertia React + SQLite)
   --orm <name>         Skip ORM selection (drizzle, prisma, none; Prisma is PostgreSQL-only and
                        unavailable for Hono). Separate Node APIs only; Next.js uses raw SQL and
@@ -130,6 +131,7 @@ Scripted use in CI:
 npm create omnicraft@latest my-app -- --yes --skip-install
 npm create omnicraft@latest api -- --no-full-stack --extras none
 npm create omnicraft@latest web -- --yes --auth better-auth --skip-install
+npm create omnicraft@latest notes -- --yes --auth supabase-auth --skip-install
 npm create omnicraft@latest livewire-app -- --yes --frontend livewire --auth laravel-native
 npm create omnicraft@latest inertia-app -- --yes --frontend inertia-react --auth laravel-native
 ```

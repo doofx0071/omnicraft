@@ -28,7 +28,8 @@ omnicraft/
         ├── tsup.config.ts        # bundles src/index.ts → dist/index.js with a node shebang
         ├── vitest.config.ts
         ├── scripts/
-        │   └── smoke-e2e.ts      # scaffolds the combinations currently listed in the script
+        │   ├── smoke-e2e.ts      # scaffolds the combinations currently listed in the script
+        │   └── supabase-auth-integration.ts # local Supabase Auth/Data API/RLS generated-project runtime
         ├── src/
         │   ├── index.ts          # entry: orchestration + single catch site
         │   ├── args.ts           # flag parsing + help text
@@ -65,6 +66,7 @@ omnicraft/
             ├── db/prisma/postgres/          # prisma 7 adapter (postgres only)
             ├── db/none/{postgres,sqlite,mysql}/ # Node raw-SQL adapters
             ├── db/sqlalchemy/{postgres,sqlite}/         # python db adapters (pyproject + database.py)
+            ├── auth/supabase-react-vite/ # managed auth overlay for the exact React/Vite TS frontend-only tuple
             ├── extras/{tailwind,eslint,shadcn}/ # opt-in overlays; shadcn is React/Vite-only
             └── root/
                 ├── frontend-only/           # root files when fullStack = false

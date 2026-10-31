@@ -51,6 +51,18 @@ export function buildNextSteps(answers: Answers, pm: PackageManager): NextSteps 
     }
   }
 
+  if (answers.authentication === 'supabase-auth') {
+    steps.push(pm + ' run dev')
+    return {
+      steps,
+      details:
+        '  app      → http://localhost:' + CLIENT_PORT + '\n' +
+        '  auth     → Supabase Auth (email/password)\n' +
+        '  data     → Supabase Data API with user-scoped row-level security\n' +
+        '  setup    → add your project URL and publishable key to .env',
+    }
+  }
+
   if (answers.fullStack) {
     // SQLite is file-based — nothing to start.
     if (answers.database !== 'sqlite') {

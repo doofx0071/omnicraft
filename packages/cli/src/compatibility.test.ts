@@ -20,7 +20,7 @@ const supportedExpressDrizzle = {
 
 describe('creation-time authentication compatibility', () => {
   it('exposes the existing setup choices without treating native auth as an add module', () => {
-    expect(AVAILABLE.authentication).toEqual(['none', 'better-auth', 'laravel-native'])
+    expect(AVAILABLE.authentication).toEqual(['none', 'better-auth', 'supabase-auth', 'laravel-native'])
   })
 
   it.each(['sqlite', 'postgres', 'mysql'])('offers Better Auth for the supported %s database', (database) => {
@@ -52,8 +52,26 @@ describe('creation-time authentication compatibility', () => {
       orm: null,
       database: null,
     }
-    expect(compatibleAuthenticationSetups(context)).toEqual(['none'])
+    expect(compatibleAuthenticationSetups(context)).toEqual(['none', 'supabase-auth'])
     expect(authenticationCompatibilityReason('none', context)).toBeNull()
+  })
+
+  it('offers Supabase Auth only for React/Vite TypeScript frontend-only projects', () => {
+    const context = {
+      frontend: 'react',
+      language: 'typescript',
+      architecture: { kind: 'frontend-only' },
+      backendRuntime: null,
+      backendFramework: null,
+      orm: null,
+      database: null,
+    }
+    expect(compatibleAuthenticationSetups(context)).toEqual(['none', 'supabase-auth'])
+    expect(authenticationCompatibilityReason('supabase-auth', context)).toBeNull()
+    expect(authenticationCompatibilityReason('supabase-auth', { ...context, language: 'javascript' })).toMatch(/requires the TypeScript/)
+    expect(authenticationCompatibilityReason('supabase-auth', { ...context, language: null })).toMatch(/requires the TypeScript/)
+    expect(authenticationCompatibilityReason('supabase-auth', { ...context, architecture: { kind: 'separate-frontend-api' } })).toMatch(/frontend-only/)
+    expect(authenticationCompatibilityReason('supabase-auth', { ...context, backendRuntime: 'node' })).toMatch(/no backend/)
   })
 
   it('offers only None and Laravel native auth for integrated Livewire on SQLite', () => {

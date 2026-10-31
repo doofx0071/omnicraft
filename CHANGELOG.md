@@ -6,6 +6,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added
+
+- Added a manual-setup Supabase Auth option for React/Vite TypeScript frontend-only apps. Generated
+  notes use the Supabase Data API with explicit authenticated-role grants and per-user RLS policies;
+  generated browser configuration contains placeholders and a publishable key only.
+
 ## [1.0.4] — 2026-10-31
 
 ### Added
