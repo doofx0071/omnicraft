@@ -39,7 +39,13 @@ export function composeLayers(answers: Answers): Layer[] {
   }
 
   if (integratedLaravel) {
-    layers.push({ src: 'root/fullstack-laravel-livewire', dest: '.' })
+    layers.push({
+      src:
+        answers.architecture.kind === 'integrated-laravel' && answers.architecture.mode === 'inertia-react'
+          ? 'root/fullstack-laravel-inertia-react'
+          : 'root/fullstack-laravel-livewire',
+      dest: '.',
+    })
     return layers
   }
 

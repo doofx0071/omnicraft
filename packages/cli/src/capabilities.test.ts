@@ -48,8 +48,8 @@ describe('capability registry', () => {
       value: 'laravel-native',
       category: 'framework-native',
       requirements: {
-        frontend: 'livewire',
-        language: null,
+        frontend: ['livewire', 'inertia-react'],
+        language: ['typescript', null],
         backendRuntime: 'php',
         backendFramework: 'laravel',
         orm: null,
@@ -63,6 +63,7 @@ describe('capability registry', () => {
       'laravel-native',
     ])
     expect(AVAILABLE.frontend).toContain('livewire')
+    expect(AVAILABLE.frontend).toContain('inertia-react')
   })
 
   it('builds the module menu from the registry module ids', () => {

@@ -28,6 +28,7 @@ function resolveRuntime(args: ParsedArgs): Runtime {
   if (args.runtime) return parseEnumChoice('--runtime', args.runtime, AVAILABLE.runtime)
   if (
     args.frontend?.trim().toLowerCase() === 'livewire' ||
+    args.frontend?.trim().toLowerCase() === 'inertia-react' ||
     args.auth?.trim().toLowerCase() === 'laravel-native'
   ) return 'php'
   return 'node'
@@ -98,7 +99,8 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
   // Next.js is the integrated-full-stack architecture: it IS the server, so
   // the separate backend prompts collapse into the framework choice.
   const integrated = frontend === 'nextjs'
-  const integratedLaravel = frontend === 'livewire'
+  const integratedLaravel = frontend === 'livewire' || frontend === 'inertia-react'
+  const integratedLaravelLivewire = frontend === 'livewire'
   const fullStack = integratedLaravel || integrated ? true : (args.fullStack ?? true)
   const db = args.db
     ? parseEnumChoice('--db', args.db, AVAILABLE.db[runtime])
@@ -134,7 +136,7 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
     targetDir,
     projectType: 'web',
     frontend,
-    language: integratedLaravel
+    language: integratedLaravelLivewire
       ? null
       : args.lang
         ? parseEnumChoice('--lang', args.lang, AVAILABLE.lang)
@@ -155,7 +157,11 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
           shadcn: extrasList.includes('shadcn'),
         },
     architecture: integratedLaravel
-      ? { kind: 'integrated-laravel', framework: 'laravel', mode: 'livewire' }
+      ? {
+          kind: 'integrated-laravel',
+          framework: 'laravel',
+          mode: integratedLaravelLivewire ? 'livewire' : 'inertia-react',
+        }
       : integrated
       ? { kind: 'integrated-fullstack', framework: 'nextjs' }
       : fullStack

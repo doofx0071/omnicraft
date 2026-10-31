@@ -37,6 +37,24 @@ function answers(authentication: Answers['authentication']): Answers {
   }
 }
 
+function inertiaAnswers(authentication: 'none' | 'laravel-native'): Answers {
+  return {
+    projectName: 'demo-app',
+    targetDir: '/tmp/demo-app',
+    projectType: 'web',
+    frontend: 'inertia-react',
+    language: 'typescript',
+    fullStack: true,
+    backendRuntime: 'php',
+    backendFramework: 'laravel',
+    orm: null,
+    database: 'sqlite',
+    authentication,
+    extras: { tailwind: false, eslintPrettier: false, shadcn: false },
+    architecture: { kind: 'integrated-laravel', framework: 'laravel', mode: 'inertia-react' },
+  }
+}
+
 describe('project authentication manifest data', () => {
   it.each(['none', 'better-auth', 'laravel-native'] as const)(
     'stores %s separately from add-module history',
@@ -53,6 +71,22 @@ describe('project authentication manifest data', () => {
           mode: 'livewire',
         })
       }
+    },
+  )
+
+  it.each(['none', 'laravel-native'] as const)(
+    'keeps Inertia React %s authentication separate from manifest.modules',
+    (authentication) => {
+      const manifest = buildManifest(inertiaAnswers(authentication), '1.0.3', 'npm')
+
+      expect(manifest.authentication).toBe(authentication)
+      expect(manifest.modules).toEqual([])
+      expect(manifest.stack.frontend).toBe('inertia-react')
+      expect(manifest.stack.architecture).toEqual({
+        kind: 'integrated-laravel',
+        framework: 'laravel',
+        mode: 'inertia-react',
+      })
     },
   )
 })

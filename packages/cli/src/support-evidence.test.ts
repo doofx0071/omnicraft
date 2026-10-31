@@ -6,6 +6,7 @@ import {
   DOCKER_MODULE_SCENARIOS,
   integrationScenarios,
   LARAVEL_LIVEWIRE_AUTH_SCENARIOS,
+  LARAVEL_INERTIA_REACT_AUTH_SCENARIOS,
   MODULE_RUNTIME_SCENARIOS,
   NEXTJS_DATABASE_SCENARIOS,
   NATIVE_PLATFORM_SCENARIOS,
@@ -67,6 +68,13 @@ describe('support matrix evidence', () => {
   it('registers the generated JavaScript frontend-only runtime scenario', () => {
     expect(integrationScenarios('frontend-runtime')).toEqual(FRONTEND_RUNTIME_SCENARIOS)
     expect(FRONTEND_RUNTIME_SCENARIOS).toEqual(['react-js-frontend-only'])
+  })
+
+  it('registers only the approved Inertia React authentication setups', () => {
+    expect(integrationScenarios('php-laravel-inertia-react-auth')).toEqual(
+      LARAVEL_INERTIA_REACT_AUTH_SCENARIOS,
+    )
+    expect(LARAVEL_INERTIA_REACT_AUTH_SCENARIOS).toEqual(['none', 'laravel-native'])
   })
 
   it('registers PostgreSQL and MySQL for the generated Docker-module integration runner', () => {

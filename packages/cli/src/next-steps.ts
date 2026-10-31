@@ -18,11 +18,15 @@ export function buildNextSteps(answers: Answers, pm: PackageManager): NextSteps 
     steps.push('npm install                # if you skipped frontend dependency setup')
     steps.push('php artisan migrate')
     steps.push('composer run dev')
+    const ui = answers.architecture.mode === 'livewire' ? 'Laravel + Livewire' : 'Laravel + Inertia React'
+    const integratedLabel =
+      answers.architecture.mode === 'livewire' ? 'integrated PHP-driven app' : 'integrated Laravel app'
     return {
       steps,
       details:
         `  app      → open the URL printed by Laravel's development server\n` +
-        `  UI       → Laravel + Livewire (integrated PHP-driven app)\n` +
+        `  UI       → ${ui} (${integratedLabel})\n` +
+        `  auth     → ${answers.authentication === 'laravel-native' ? 'Laravel native session auth (Fortify)' : 'None'}\n` +
         `  database → SQLite at server/database/database.sqlite`,
     }
   }

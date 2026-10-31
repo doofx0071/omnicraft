@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 
 describe('parseArgs', () => {
   it('documents the current selectable values and release-tag behavior', () => {
-    expect(HELP_TEXT).toContain('--frontend <name>    Skip the frontend prompt (react, nextjs, vue, svelte, livewire; Next.js and Livewire are integrated)')
+    expect(HELP_TEXT).toContain('--frontend <name>    Skip the frontend prompt (react, nextjs, vue, svelte, livewire, inertia-react; integrated modes include Next.js, Livewire, and Laravel Inertia React)')
     expect(HELP_TEXT).toContain('non-None auth, or integrated frontend flags imply it')
     expect(HELP_TEXT).toContain('Laravel Composer setup still runs')
     expect(HELP_TEXT).toContain('shadcn is web React/Vite-only')
@@ -28,6 +28,7 @@ describe('parseArgs', () => {
 
   it('parses value flags with a space and with =', () => {
     expect(parseArgs(['--frontend', 'react']).frontend).toBe('react')
+    expect(parseArgs(['--frontend', 'inertia-react']).frontend).toBe('inertia-react')
     expect(parseArgs(['--backend=fastify']).backend).toBe('fastify')
     expect(parseArgs(['--orm', 'prisma']).orm).toBe('prisma')
     expect(parseArgs(['--auth', 'none']).auth).toBe('none')

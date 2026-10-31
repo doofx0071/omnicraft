@@ -96,6 +96,27 @@ for (const fe of ['vue', 'svelte'] as const) {
   })
 }
 
+// Integrated Laravel 13 + Inertia React layers are applied after the pinned
+// official starter kit is retrieved by the production CLI. The generated-app
+// auth/database lifecycle is covered by php-inertia-react-auth-e2e.ts.
+for (const authentication of ['none', 'laravel-native'] as const) {
+  scaffold({
+    projectName: `smoke-laravel-inertia-react-${authentication}`,
+    targetDir: '.',
+    projectType: 'web',
+    frontend: 'inertia-react',
+    language: 'typescript',
+    fullStack: true,
+    backendRuntime: 'php',
+    backendFramework: 'laravel',
+    orm: null,
+    database: 'sqlite',
+    authentication,
+    extras: { tailwind: false, eslintPrettier: false, shadcn: false },
+    architecture: { kind: 'integrated-laravel', framework: 'laravel', mode: 'inertia-react' },
+  })
+}
+
 // Next.js integrated full-stack: NOTE this only scaffolds the overlay + db
 // adapter onto a target dir. A complete project needs `create-next-app` run
 // first (the CLI does this; see src/index.ts). For smoke purposes we run CNA

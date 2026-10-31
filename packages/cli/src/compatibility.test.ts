@@ -70,11 +70,25 @@ describe('creation-time authentication compatibility', () => {
     expect(authenticationCompatibilityReason('laravel-native', context)).toBeNull()
   })
 
+  it('offers only None and Laravel native auth for integrated Inertia React on SQLite', () => {
+    const context = {
+      frontend: 'inertia-react',
+      language: 'typescript',
+      architecture: { kind: 'integrated-laravel' },
+      backendRuntime: 'php',
+      backendFramework: 'laravel',
+      orm: null,
+      database: 'sqlite',
+    }
+    expect(compatibleAuthenticationSetups(context)).toEqual(['none', 'laravel-native'])
+    expect(authenticationCompatibilityReason('laravel-native', context)).toBeNull()
+  })
+
   it.each([
     [{ database: 'postgres' }, /SQLite only/],
     [{ backendRuntime: 'node' }, /PHP \+ Laravel/],
-    [{ frontend: 'react' }, /integrated Livewire/],
-    [{ architecture: { kind: 'separate-frontend-api' } }, /integrated Livewire/],
+    [{ frontend: 'react' }, /integrated Livewire or Inertia React/],
+    [{ architecture: { kind: 'separate-frontend-api' } }, /integrated Livewire or Inertia React/],
   ])('omits Laravel native auth for incompatible context %j', (overrides, reason) => {
     const context = {
       frontend: 'livewire',
@@ -93,7 +107,15 @@ describe('creation-time authentication compatibility', () => {
   it('filters prompt choices and runtime from Laravel-native flags', () => {
     const args = parseArgs(['--auth', 'laravel-native'])
     expect(isFrontendAllowedByFlags('livewire', args)).toBe(true)
+    expect(isFrontendAllowedByFlags('inertia-react', args)).toBe(false)
     expect(isFrontendAllowedByFlags('react', args)).toBe(false)
+    expect(isRuntimeAllowedByFlags('php', args)).toBe(true)
+    expect(isRuntimeAllowedByFlags('node', args)).toBe(false)
+  })
+
+  it('allows explicit Inertia React with Laravel-native auth while preserving auth-only Livewire inference', () => {
+    const args = parseArgs(['--frontend', 'inertia-react', '--auth', 'laravel-native'])
+    expect(isFrontendAllowedByFlags('inertia-react', args)).toBe(true)
     expect(isRuntimeAllowedByFlags('php', args)).toBe(true)
     expect(isRuntimeAllowedByFlags('node', args)).toBe(false)
   })

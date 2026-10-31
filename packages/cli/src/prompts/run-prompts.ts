@@ -215,11 +215,15 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
 
   // Integrated frameworks are the server; neither has a separate client/API picker.
   const integrated = frontend === 'nextjs'
-  const integratedLaravel = frontend === 'livewire'
+  const integratedLaravel = frontend === 'livewire' || frontend === 'inertia-react'
+  const integratedLaravelLivewire = frontend === 'livewire'
+  const integratedLaravelInertiaReact = frontend === 'inertia-react'
 
-  const language: Language | null = integratedLaravel
+  const language: Language | null = integratedLaravelLivewire
     ? null
-    : flags.lang
+    : integratedLaravelInertiaReact
+      ? 'typescript'
+      : flags.lang
       ? parseEnumChoice('--lang', flags.lang, AVAILABLE.lang)
       : forced
         ? 'typescript'
@@ -248,7 +252,11 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
   }
 
   const architecture: Answers['architecture'] = integratedLaravel
-    ? { kind: 'integrated-laravel', framework: 'laravel', mode: 'livewire' }
+    ? {
+        kind: 'integrated-laravel',
+        framework: 'laravel',
+        mode: integratedLaravelLivewire ? 'livewire' : 'inertia-react',
+      }
     : integrated
       ? { kind: 'integrated-fullstack', framework: 'nextjs' }
     : fullStack && !native
@@ -327,7 +335,11 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
       p.log.info('ORM: none — Next.js uses raw SQL')
     } else if (integratedLaravel) {
       orm = null
-      p.log.info('ORM: Eloquent — integrated Laravel + Livewire')
+      p.log.info(
+        integratedLaravelLivewire
+          ? 'ORM: Eloquent — integrated Laravel + Livewire'
+          : 'ORM: Eloquent — integrated Laravel + Inertia React',
+      )
     } else if (backendRuntime === 'node') {
       const ormChoices = registryChoices(CAPABILITY_REGISTRY.orm)
         .filter(
@@ -455,7 +467,9 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
   } else {
     summary.push(`Stack:      ${FRONTEND_LABELS[frontend]}${integratedLaravel ? ' (integrated)' : ' (web)'}`)
     if (integratedLaravel) {
-      summary.push(`Server:     Laravel + ${DATABASE_LABELS[database]} (Eloquent, Livewire UI)`)
+      summary.push(
+        `Server:     Laravel + ${DATABASE_LABELS[database]} (Eloquent, ${integratedLaravelLivewire ? 'Livewire' : 'Inertia React'} UI)`,
+      )
     } else if (integrated) {
       summary.push(`Server:     Next.js route handlers + ${DATABASE_LABELS[database]} (${orm === 'drizzle' ? 'Drizzle' : orm === 'prisma' ? 'Prisma' : 'raw SQL'})`)
     } else if (fullStack) {

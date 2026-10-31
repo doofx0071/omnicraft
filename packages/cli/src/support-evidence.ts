@@ -179,6 +179,7 @@ export const NATIVE_PLATFORM_SCENARIOS = [
   'tauri-windows-desktop',
 ] as const
 export const LARAVEL_LIVEWIRE_AUTH_SCENARIOS = ['none', 'laravel-native'] as const satisfies readonly AuthenticationSetup[]
+export const LARAVEL_INERTIA_REACT_AUTH_SCENARIOS = ['none', 'laravel-native'] as const satisfies readonly AuthenticationSetup[]
 
 export const INTEGRATION_TARGETS = {
   'node-runtime': {
@@ -248,6 +249,12 @@ export const INTEGRATION_TARGETS = {
     workflowJob: 'php-laravel-livewire-auth-integration',
     workflowCommand: 'npm run test:integration:php-livewire --workspace=create-omnicraft',
     scenarios: LARAVEL_LIVEWIRE_AUTH_SCENARIOS,
+  },
+  'php-laravel-inertia-react-auth': {
+    script: 'scripts/php-inertia-react-auth-e2e.ts',
+    workflowJob: 'php-laravel-inertia-react-auth-integration',
+    workflowCommand: 'npm run test:integration:php-inertia --workspace=create-omnicraft',
+    scenarios: LARAVEL_INERTIA_REACT_AUTH_SCENARIOS,
   },
 } as const satisfies Record<
   string,

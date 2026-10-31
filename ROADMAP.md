@@ -79,10 +79,15 @@ Published on 2026-10-27. Issue #27 was delivered early with the template contrac
 ## v1.0.3 — Release candidate
 
 This candidate integrates the auth and runtime work summarized in [CHANGELOG.md](CHANGELOG.md). Its
-support claims remain combination-specific: Laravel native auth is limited to Livewire + SQLite;
+support claims remain combination-specific: Laravel native auth is currently Supported for Laravel 13
+Livewire + SQLite;
 Expo/Tauri remain Scaffold-verified; physical-device Android/iOS paths remain unverified. The active
 native-platform follow-up tracks physical-device evidence separately. Provider-backed auth and other
-Laravel frontend modes remain follow-up work.
+Laravel frontend modes remain follow-up work. The Inertia React None/Fortify slice is undergoing the
+required hosted release-gate verification; the broader auth expansion plan remains active.
+
+- [ ] Verify Laravel 13 + Inertia React + SQLite with `None` or Laravel-native Fortify through exact-head
+  generated-project CI; account linking remains out of scope.
 
 ## v1.1.x and beyond — post-v1 priorities
 

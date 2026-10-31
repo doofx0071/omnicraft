@@ -25,6 +25,7 @@ npm run test:integration:nextjs    # Next.js integrated full-stack: SQLite, Post
 npm run test:integration:python   # FastAPI + SQLite, Python 3.12
 npm run test:integration:php      # Laravel 12: SQLite, PostgreSQL, MySQL, pinned PHP/Composer image
 npm run test:integration:php-livewire # production CLI: Laravel 13 + Livewire, None/Fortify, SQLite
+npm run test:integration:php-inertia  # production CLI: Laravel 13 + Inertia React, None/Fortify, SQLite
 ```
 
 The local Livewire integration check also sets caller `DB_CONNECTION` and `DB_DATABASE` values to a
@@ -39,6 +40,14 @@ starter's assets. It is a required dependency of `supported-stack-release-gate`.
 [run #41094120972 on commit `1c9283c`](https://github.com/doofx0071/omnicraft/actions/runs/41094120972/job/124195318304)
 passed for both exact SQLite modes; the support matrix records them separately. The existing Laravel
 12 API evidence does not cover either integrated mode.
+
+The `php-laravel-inertia-react-auth-integration` job uses the production CLI to generate the official
+blank React and Fortify-enabled React kits pinned to reviewed upstream commits. It exercises `None` and
+Laravel-native auth on SQLite, checks migrations and Inertia TypeScript/build commands, tests
+public/no-auth and registration/login/dashboard/logout behavior, and verifies `/api/users` middleware
+if that sample route exists. PostgreSQL, MySQL, Better Auth, JavaScript, extras, ORM flags, and Node
+runtime flags must reject before creating a target directory. This job is a required dependency of
+`supported-stack-release-gate`.
 
 The hosted [closeout PR run #40562224821](https://github.com/doofx0071/omnicraft/actions/runs/40562224821)
 passed on commit `2a1e581312af0e1a84f604c9c86541ea8bdf9eed`, including the full OS/Node matrix, package
@@ -78,17 +87,17 @@ The current suite covers:
 
 | File | Coverage |
 | --- | --- |
-| `src/args.test.ts` | Flag parsing, Livewire/Laravel-native help text, and help/README option parity. |
+| `src/args.test.ts` | Flag parsing, Livewire/Inertia React auth help text, and help/README option parity. |
 | `src/validators.test.ts` | Project-name normalization and npm-name validation. |
 | `src/renderer.test.ts` | Token substitution, unresolved-token detection, dotfile renaming, and binary detection. |
 | `src/merge.test.ts` | `package.json` deep merge semantics. |
 | `src/prefill.test.ts` | Available flag values, runtime-scoped databases/frameworks, Prisma/PostgreSQL validation, authentication flag preflight, and `--yes` answer resolution. |
 | `src/update-check.test.ts` | Version comparison, mocked registry fetch, offline behavior, and cache. |
 | `src/prompts/run-prompts.test.ts` | Scripted prompt flow, frontend-only branch, unavailable-option retry, cancellation, and invalid names. |
-| `src/next-steps.test.ts` | Integrated Next.js commands/endpoints, container startup for PostgreSQL, and Laravel Livewire commands. |
+| `src/next-steps.test.ts` | Integrated Next.js commands/endpoints, container startup for PostgreSQL, and Laravel Livewire/Inertia React commands. |
 | `src/exec.test.ts` | Fixed-command output, timeout handling, and stopping a child process. |
 | `src/scaffold/laravel-env.test.ts` | Keeps inherited `DB_*` settings from redirecting Laravel's initial SQLite migration. |
-| `src/engine.test.ts` | Selected generated files, layer overrides, manifests, env files, token scans, protected-path examples, selected engine combinations, creation-time auth compatibility, the no-auth `None` scaffold, and both Livewire starter overlays. |
+| `src/engine.test.ts` | Selected generated files, layer overrides, manifests, env files, token scans, protected-path examples, selected engine combinations, creation-time auth compatibility, the no-auth `None` scaffold, and both Livewire and Inertia React starter overlays. |
 | `src/compatibility.test.ts`, `src/manifest.test.ts` | Exact creation-time auth choices and constraints, plus manifest separation between active authentication and `modules`. |
 | `src/capabilities.test.ts` | Available prompt/flag choices derive from the typed capability registry; the auth catalog records setup categories and requirements; the module menu matches its registered module IDs. |
 | `src/add-run.test.ts` | Module dry-run, success, idempotency, creation-time auth application, collisions, unsupported stacks, missing patch anchors, and rollback after a failed write. |
@@ -125,14 +134,16 @@ Run with:
 npx tsx scripts/smoke-e2e.ts <out-dir>
 ```
 
-The script currently produces 17 project paths when `create-next-app` succeeds: 13 backend/database
-entries, React frontend-only, Vue and Svelte paired with Express + Drizzle + SQLite, and Next.js
-integrated full-stack + SQLite. It does not include Expo or Tauri. The Next.js script step runs the
+The script currently produces 19 project paths when `create-next-app` succeeds: 13 backend/database
+entries, two Inertia React auth-mode root overlays, React frontend-only, Vue and Svelte paired with
+Express + Drizzle + SQLite, and Next.js integrated full-stack + SQLite. It does not include Expo or
+Tauri. The Next.js script step runs the
 external `create-next-app` command and logs/skips the overlay if that command fails, so an overall
 successful script exit does not guarantee Next.js was generated.
 
 This level copies and renders template files; it does not install or boot each generated application.
-The smoke command succeeded for all 17 paths on the Windows checkout during this reconciliation.
+The smoke command succeeded for all 19 paths on the Windows checkout. The dedicated Inertia React
+integration separately generates both complete projects through the production CLI.
 
 ### Level 3 — Generated-project verification
 
@@ -220,13 +231,18 @@ The current workflow:
    pinned PHP/Composer test image without a database service; networked databases use isolated Compose
    services. Each case installs Composer dependencies, checks platform requirements, migrates, and
    runs database/API feature tests.
-13. Runs `support-evidence` to resolve every exact Supported flag combination through available values,
+13. Runs hosted Ubuntu `php-laravel-inertia-react-auth-integration` for Laravel 13 + Inertia React on
+   SQLite. It generates the None and Laravel-native projects through the production CLI, installs and
+   checks Composer/npm dependencies, runs migrations and Laravel feature tests, and enforces pre-write
+   rejection of incompatible flags. The job is required by the aggregate gate; the support matrix
+   contains only exact modes with passing generated-project and hosted evidence.
+14. Runs `support-evidence` to resolve every exact Supported flag combination through available values,
    prompt/flag and answer compatibility, production composition, and module guards; it also checks the
    rendered matrix label, matching scenario, job command, and release aggregate dependency.
    `supported-matrix` fails unless the OS/Node matrix, runtime jobs, support evidence, and package
    artifact all pass. It runs for PRs, main pushes, nightly, and version-tag pushes;
    `workflow_dispatch` supports an explicit pre-release run. The scheduled run uses GitHub-hosted jobs.
-14. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
+15. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
    the release job publishes to npm using OIDC, creates the GitHub Release from the version's changelog
    section, and updates the release snapshots in `ROADMAP.md` and `docs/architecture/system-overview.md`.
    The self-hosted Windows job runs only for main-branch pushes and same-repository pull requests.

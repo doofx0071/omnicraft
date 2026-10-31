@@ -43,6 +43,12 @@ export const LARAVEL_LIVEWIRE_STARTER_KITS = {
   'laravel-native': 'laravel/livewire-starter-kit#143e0c1e574e122ebe7e294e5342b7bf251df799',
 } as const
 
+/** Official Laravel 13 Inertia React starter kits pinned to reviewed upstream commits. */
+export const LARAVEL_INERTIA_REACT_STARTER_KITS = {
+  none: 'laravel/blank-react-starter-kit:dev-main#804562bb06cbfa68f459e4916ab81ad4fbf0a835',
+  'laravel-native': 'laravel/react-starter-kit:dev-main#98d9b821baba4f4cc4120c96d35971366cec53e6',
+} as const
+
 /** Ports the generated projects standardize on. */
 export const SERVER_PORT = 3000
 export const CLIENT_PORT = 5173

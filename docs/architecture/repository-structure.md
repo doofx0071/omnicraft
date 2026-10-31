@@ -71,7 +71,9 @@ omnicraft/
                 ├── fullstack/{postgres,sqlite,mysql}/   # node+laravel root variants
                 ├── fullstack-python/{postgres,sqlite}/   # python root variants
                 ├── fullstack-php/{postgres,sqlite,mysql}/ # php root variants
-                └── fullstack-next/{postgres,sqlite,mysql}/ # integrated Next.js root variants
+                ├── fullstack-next/{postgres,sqlite,mysql}/ # integrated Next.js root variants
+                ├── fullstack-laravel-livewire/            # integrated Laravel 13 + Livewire root files
+                └── fullstack-laravel-inertia-react/       # integrated Laravel 13 + Inertia React root files
 ```
 
 ## Placement rules

@@ -18,8 +18,8 @@ type CapabilityOption<T extends string> = {
 }
 
 type AuthenticationRequirements = {
-  frontend: Frontend
-  language: Language | null
+  frontend: Frontend | readonly Frontend[]
+  language: Language | null | readonly (Language | null)[]
   backendRuntime: BackendRuntime
   backendFramework: BackendFramework
   orm: Orm | null
@@ -62,11 +62,11 @@ export const AUTHENTICATION_CATALOG = {
     value: 'laravel-native',
     label: 'Laravel native auth (Fortify)',
     available: true,
-    hint: 'Official Laravel + Livewire starter with Laravel session auth; SQLite only',
+    hint: 'Official Laravel Livewire or Inertia React starter with Laravel session auth; SQLite only',
     category: 'framework-native',
     requirements: {
-      frontend: 'livewire',
-      language: null,
+      frontend: ['livewire', 'inertia-react'],
+      language: ['typescript', null],
       backendRuntime: 'php',
       backendFramework: 'laravel',
       orm: null,
@@ -107,6 +107,12 @@ export const CAPABILITY_REGISTRY = {
       available: true,
       hint: 'Integrated Laravel app — no separate frontend; SQLite only in this first path',
     },
+    {
+      value: 'inertia-react',
+      label: 'Laravel + Inertia React',
+      available: true,
+      hint: 'Integrated Laravel 13 app with React + TypeScript; SQLite only',
+    },
   ] as const satisfies readonly CapabilityOption<Frontend>[],
   language: [
     { value: 'typescript', label: 'TypeScript', available: true, hint: 'Recommended' },
@@ -134,7 +140,7 @@ export const CAPABILITY_REGISTRY = {
       { value: 'django', label: 'Django', available: false },
     ] as const satisfies readonly CapabilityOption<BackendFramework>[],
     php: [
-      { value: 'laravel', label: 'Laravel', available: true, hint: 'Laravel 12 + Eloquent' },
+      { value: 'laravel', label: 'Laravel', available: true, hint: 'Laravel 12 API or Laravel 13 integrated app + Eloquent' },
       { value: 'symfony', label: 'Symfony', available: false },
     ] as const satisfies readonly CapabilityOption<BackendFramework>[],
   } satisfies Record<BackendRuntime, readonly CapabilityOption<BackendFramework>[]>,
