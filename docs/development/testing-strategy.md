@@ -11,6 +11,11 @@ source checks and smoke scaffolding do not prove that every generated project in
 The 2026-10-28 runtime-evidence branch passed `npx vitest run` (**142 tests in 14 files**),
 `npx tsc --noEmit`, `npx tsup`, and `npm run check:support-matrix` (34 Supported rows). The smoke
 command generated all 17 listed paths.
+
+The v1.0.3 release candidate passes locally with 208 unit tests in 16 files, typecheck, build, the
+support-evidence checker (43 Supported rows), and all 17 smoke paths. These local checks supplement,
+but do not replace, the required exact-head hosted release gate.
+
 Generated-project integration commands also passed locally:
 
 ```text
@@ -49,6 +54,11 @@ and ran the generated sample test; they also built the client, booted Vite previ
 bundle and missing-asset response. TypeScript client paths ran typecheck. The same run confirmed that
 Vue, Svelte, and Next.js module requests reject before module files, dependencies, scripts, or manifests
 change. This is module-path evidence only; backend and database claims remain tied to their own rows.
+
+The later exhaustive [runtime-evidence run #40918121708](https://github.com/doofx0071/omnicraft/actions/runs/40918121708)
+checked the remaining 306 compatible React/Vite tuples: 254 passed for the testing module and 52
+JavaScript + shadcn tuples reject before writes because their template paths lack shadcn's required
+aliases. The additional module evidence does not establish backend or database support.
 
 The Fastify/Hono runtime slice passed all 15 Node runtime scenarios and the release gate on
 [run #40612114736](https://github.com/doofx0071/omnicraft/actions/runs/40612114736), commit
@@ -92,13 +102,14 @@ not run a browser web build. Tauri builds the Vite frontend and native executabl
 window on Linux/Xvfb, macOS, and Windows. These checks verify builds and launch behavior, not full app
 functionality or database operations. Simulators and emulators are not physical devices; physical Android
 and iOS device paths remain Selectable — unverified. The support matrix records exact hosted jobs while
-keeping the broader Expo and Tauri rows Scaffold-verified. `omnicraft add testing` is
-Supported for the six exact React/Vite module paths listed in the [support matrix](../templates/stack-support-matrix.md).
-Hosted run [#40880427361](https://github.com/doofx0071/omnicraft/actions/runs/40880427361) passed generated
-installation, sample-test execution, client build, Vite preview, bundle, and missing-asset checks for each.
-Vue, Svelte, and Next.js `add testing` paths reject before module writes; other selectable React/Vite
-paths remain Selectable — unverified. The module tests exercise frontend behavior, so backend/database
-operations are not applicable and remain covered by the separate stack rows.
+keeping the broader Expo and Tauri rows Scaffold-verified. `omnicraft add testing` is Supported for the
+six original and 254 additional exact React/Vite module paths listed in the
+[support matrix](../templates/stack-support-matrix.md). Runs [#40880427361](https://github.com/doofx0071/omnicraft/actions/runs/40880427361)
+and [#40918121708](https://github.com/doofx0071/omnicraft/actions/runs/40918121708) passed generated
+installation, sample-test execution, client build, Vite preview, bundle, and missing-asset checks. The
+52 JavaScript + shadcn tuples reject before writes because their template paths lack required aliases;
+Vue, Svelte, and Next.js `add testing` paths also reject before module writes. The module tests exercise
+frontend behavior only and do not establish backend/database support.
 
 ### Level 2 — Scaffold smoke (`scripts/smoke-e2e.ts`)
 
@@ -176,15 +187,15 @@ The current workflow:
    API, and verifies CRUD and failure cases. Both scenarios passed hosted run #40615980612 on commit
    `77ef06645421edb3977019f63683af3ea531ccbb`.
 9. Runs hosted Ubuntu `module-runtime-integration` for the `add testing` and shadcn frontend-only paths.
-   The six exact React/Vite `add testing` cases generate through production composition, run the real
+   The six original and 254 additional exact React/Vite `add testing` cases generate through production composition, run the real
    add operation, install, execute the generated `npm test`, build the client, boot Vite preview, and
    check the bundle and missing-asset response. TypeScript client cases also typecheck. The Vue, Svelte,
-   and Next.js `add testing` cases assert pre-write rejection and unchanged manifests/packages. The six
-   React/Vite module paths passed run [#40880427361](https://github.com/doofx0071/omnicraft/actions/runs/40880427361)
-   on commit `fd4d3888037e330ac160a997e91f2a5b6b4e70c9`; the support-evidence check and strict release
-   gate passed in the same run. See the [support matrix](../templates/stack-support-matrix.md) for exact
-   path-level evidence. Other React/Vite combinations remain Selectable — unverified. This module test
-   does not establish backend/database behavior.
+   and Next.js `add testing` cases assert pre-write rejection and unchanged manifests/packages; the 52
+   JavaScript + shadcn tuples reject because the template lacks required aliases. The original six
+   paths passed run [#40880427361](https://github.com/doofx0071/omnicraft/actions/runs/40880427361)
+   and the 254 additional paths passed run [#40918121708](https://github.com/doofx0071/omnicraft/actions/runs/40918121708).
+   The support-evidence check and strict release gate passed in the latter run. See the [support matrix](../templates/stack-support-matrix.md)
+   for exact path-level evidence. This module test does not establish backend/database behavior.
 10. Runs `native-platform-integration` for Expo iOS (`macos-26`), Expo Android (`ubuntu-24.04`), Tauri
    Linux (`ubuntu-24.04`), macOS (`macos-26`), and Windows (`windows-2025`). It generates each project
    through its production command, applies production layers, and installs dependencies. Expo builds and

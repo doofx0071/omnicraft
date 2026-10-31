@@ -1,7 +1,7 @@
 {
   "name": "create-omnicraft",
-  "version": "1.0.2",
-  "description": "Craft any stack — interactive project scaffolding for full-stack apps. React + Node (Express/Fastify) + PostgreSQL (Drizzle/Prisma) in v1.",
+  "version": "1.0.3",
+  "description": "Interactive CLI for full-stack project scaffolding across Node.js, FastAPI, and Laravel Livewire, with React/Vite, Next.js, Vue, Svelte, Expo, and Tauri templates.",
   "license": "MIT",
   "repository": {
     "type": "git",

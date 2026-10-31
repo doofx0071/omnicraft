@@ -6,15 +6,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [1.0.3] — 2026-10-31
+
 ### Added
 
-- An integrated Laravel 13 + Livewire 4 + SQLite creation path with `None` or Laravel-native
-  Fortify authentication, backed by hosted generated-project checks. These modes do not add a second
-  auth layer or change the existing Laravel 12 API path.
-- Creation-time authentication selection for `None` or Better Auth on the currently verified
-  TypeScript React/Vite + Express + Drizzle database paths. `--auth better-auth` uses the same module
-  application path as `omnicraft add auth`; the manifest records active authentication separately
-  from `modules`, and the creation-time support row remains provisional pending hosted evidence.
+- Integrated Laravel 13 + Livewire 4 + SQLite scaffolding, with `None` or Laravel-native Fortify auth.
+  The Laravel 12 API path remains separate and unchanged.
+- Creation-time `None` or Better Auth selection for React/Vite + Express + Drizzle with SQLite,
+  PostgreSQL, or MySQL. The manifest records active authentication separately from `modules`.
+- Runtime checks for 254 compatible React/Vite `omnicraft add testing` paths and pre-write rejection
+  for 52 JavaScript + shadcn paths that lack the template aliases required by shadcn.
+
+### Changed
+
+- Create-time auth and `omnicraft add auth` share one auth setup catalog and compatibility rules.
+
+### Testing
+
+- Hosted generated-project checks cover Expo on Android emulator and iOS simulator, and Tauri desktop
+  build/launch on Linux, macOS, and Windows. Expo and Tauri remain Scaffold-verified; physical-device
+  Android and iOS paths remain Selectable — unverified.
 
 ## [1.0.2] — 2026-10-28
 
