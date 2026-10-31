@@ -7,6 +7,7 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
@@ -83,7 +84,12 @@ function routeNames(serverDir: string): Set<string> {
   return new Set(routes.flatMap((route) => (route.name ? [route.name] : [])))
 }
 
-function generateProject(cliPath: string, tempRoot: string, setup: AuthenticationSetup): string {
+function generateProject(
+  cliPath: string,
+  tempRoot: string,
+  setup: AuthenticationSetup,
+  env: NodeJS.ProcessEnv,
+): string {
   const projectName = `livewire-${setup}`
   const skipFrontendInstall = setup === 'none'
   const output = runRequired(
@@ -100,6 +106,7 @@ function generateProject(cliPath: string, tempRoot: string, setup: Authenticatio
       projectName,
     ],
     tempRoot,
+    env,
   )
   if (skipFrontendInstall) {
     assert(!output.includes('Installing Livewire frontend dependencies'), '--skip-install must skip npm setup.')
@@ -219,7 +226,19 @@ function main(): void {
     assertIncompatibleChoiceRejectsBeforeWrites(cliPath, tempRoot)
     for (const setup of AUTHENTICATION_SETUPS) {
       console.log(`[laravel-livewire:${setup}] generating through the production CLI`)
-      const projectRoot = generateProject(cliPath, tempRoot, setup)
+      const callerDatabase = join(tempRoot, `caller-${setup}.sqlite`)
+      writeFileSync(callerDatabase, '')
+      const callerEnv = {
+        ...process.env,
+        DB_CONNECTION: 'sqlite',
+        DB_DATABASE: callerDatabase,
+      }
+      const projectRoot = generateProject(cliPath, tempRoot, setup, callerEnv)
+      assert.equal(
+        statSync(callerDatabase).size,
+        0,
+        'Initial Laravel migrations must not modify the caller-selected database.',
+      )
       runProjectChecks(projectRoot, setup)
       console.log(`[laravel-livewire:${setup}] generation, SQLite, assets, and auth checks passed`)
     }

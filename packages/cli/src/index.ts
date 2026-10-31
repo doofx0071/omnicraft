@@ -18,6 +18,7 @@ import { runPrompts } from './prompts/run-prompts.js'
 import { composeLayers, planLayerApplication, templateVariables } from './scaffold/compose.js'
 import { createEnvFiles } from './scaffold/env.js'
 import { applyLayers } from './scaffold/engine.js'
+import { createLaravelSqliteMigrationEnv } from './scaffold/laravel-env.js'
 import { gitInit } from './scaffold/git.js'
 import { runCommand, runCommandVisible } from './exec.js'
 import { detectPackageManager, installDependencies } from './scaffold/pkg-manager.js'
@@ -289,11 +290,17 @@ async function main(): Promise<void> {
         }
       }
       spinner.start('Preparing Laravel application key and SQLite migrations...')
+      const migrationEnv = createLaravelSqliteMigrationEnv(process.env, sqliteFile)
       for (const [label, commandArgs] of [
         ['Generate Laravel application key', ['artisan', 'key:generate', '--force']],
         ['Apply the initial SQLite migrations', ['artisan', 'migrate', '--force']],
       ] as const) {
-        const result = runCommand('php', [...commandArgs], serverDir)
+        const result = runCommand(
+          'php',
+          [...commandArgs],
+          serverDir,
+          label === 'Apply the initial SQLite migrations' ? { env: migrationEnv } : undefined,
+        )
         if (!result.ok) {
           spinner.stop(`${label} failed`)
           throw new Error(`${label} failed.\n${result.output.split('\n').slice(-10).join('\n')}`)

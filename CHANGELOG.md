@@ -21,6 +21,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 ### Changed
 
 - Create-time auth and `omnicraft add auth` share one auth setup catalog and compatibility rules.
+- The initial Laravel Livewire migration is isolated to the generated SQLite file, even when the
+  invoking shell exports database settings.
 
 ### Testing
 
