@@ -3,6 +3,23 @@ import { buildManifest } from './manifest.js'
 import type { Answers } from './types.js'
 
 function answers(authentication: Answers['authentication']): Answers {
+  if (authentication === 'supabase-auth') {
+    return {
+      projectName: 'demo-app',
+      targetDir: '/tmp/demo-app',
+      projectType: 'web',
+      frontend: 'react',
+      language: 'typescript',
+      fullStack: false,
+      backendRuntime: null,
+      backendFramework: null,
+      orm: null,
+      database: null,
+      authentication,
+      extras: { tailwind: false, eslintPrettier: false, shadcn: false },
+      architecture: { kind: 'frontend-only' },
+    }
+  }
   if (authentication === 'laravel-native') {
     return {
       projectName: 'demo-app',
@@ -56,7 +73,7 @@ function inertiaAnswers(authentication: 'none' | 'laravel-native'): Answers {
 }
 
 describe('project authentication manifest data', () => {
-  it.each(['none', 'better-auth', 'laravel-native'] as const)(
+  it.each(['none', 'better-auth', 'supabase-auth', 'laravel-native'] as const)(
     'stores %s separately from add-module history',
     (authentication) => {
       const manifest = buildManifest(answers(authentication), '1.0.2', 'npm')

@@ -77,6 +77,14 @@ describe('support matrix evidence', () => {
     expect(LARAVEL_INERTIA_REACT_AUTH_SCENARIOS).toEqual(['none', 'laravel-native'])
   })
 
+  it('registers Supabase Auth as a single generated-project runtime scenario', () => {
+    const target = INTEGRATION_TARGETS['supabase-auth']
+    expect(target.script).toBe('scripts/supabase-auth-integration.ts')
+    expect(target.workflowJob).toBe('supabase-auth-integration')
+    expect(target.workflowCommand).toBe('npm run test:integration:supabase-auth --workspace=create-omnicraft')
+    expect(integrationScenarios('supabase-auth')).toEqual(['react-ts-supabase-auth-frontend-only'])
+  })
+
   it('registers PostgreSQL and MySQL for the generated Docker-module integration runner', () => {
     expect(integrationScenarios('docker-module')).toEqual(DOCKER_MODULE_SCENARIOS)
     expect(DOCKER_MODULE_SCENARIOS).toEqual(['postgres', 'mysql'])

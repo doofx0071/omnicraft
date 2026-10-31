@@ -31,6 +31,7 @@
     "test:integration:php": "tsx scripts/php-laravel-e2e.ts",
     "test:integration:php-livewire": "tsx scripts/php-livewire-auth-e2e.ts",
     "test:integration:php-inertia": "tsx scripts/php-inertia-react-auth-e2e.ts",
+    "test:integration:supabase-auth": "tsx scripts/supabase-auth-integration.ts",
     "check:support-matrix": "tsx scripts/check-support-evidence.ts",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build && npm run test"

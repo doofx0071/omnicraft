@@ -112,6 +112,10 @@ export function composeLayers(answers: Answers): Layer[] {
     dest: '.',
   })
 
+  if (answers.authentication === 'supabase-auth') {
+    layers.push({ src: 'auth/supabase-react-vite', dest: clientDest })
+  }
+
   return layers
 }
 

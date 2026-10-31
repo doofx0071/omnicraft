@@ -3,6 +3,7 @@ import type {
   Answers,
   AuthenticationSetup,
   BackendFramework,
+  Database,
   Frontend,
   Language,
   Orm,
@@ -43,18 +44,23 @@ export function authenticationCompatibilityReason(
     ? (supported.frontend as readonly Frontend[])
     : [supported.frontend as Frontend]
   if (!supportedFrontends.includes(context.frontend as Frontend)) {
-    return setup === 'better-auth'
+    return setup === 'supabase-auth'
+      ? 'Supabase Auth currently requires the React/Vite frontend.'
+      : setup === 'better-auth'
       ? `Better Auth currently requires the React frontend; ${context.frontend} is not covered yet.`
       : 'Laravel native authentication currently requires integrated Livewire or Inertia React.'
   }
   const languageAccepted =
     supported.language === null ||
     context.language === undefined ||
-    context.language === null ||
+    (context.language === null && setup !== 'supabase-auth') ||
     (Array.isArray(supported.language)
       ? supported.language.includes(context.language as Language | null)
       : context.language === supported.language)
   if (!languageAccepted) {
+    if (setup === 'supabase-auth') {
+      return 'Supabase Auth currently requires the TypeScript React/Vite frontend.'
+    }
     return setup === 'better-auth'
       ? `Better Auth creation currently requires TypeScript; ${context.language} is not covered yet.`
       : `Laravel native authentication does not support language "${context.language}".`
@@ -64,16 +70,24 @@ export function authenticationCompatibilityReason(
     context.backendFramework !== supported.backendFramework ||
     context.orm !== supported.orm
   ) {
-    return setup === 'better-auth'
+    return setup === 'supabase-auth'
+      ? 'Supabase Auth currently requires a frontend-only project with no backend, ORM, or database layer.'
+      : setup === 'better-auth'
       ? 'Better Auth currently requires Node.js + Express + Drizzle; its route patches target Express.'
       : 'Laravel native authentication currently requires PHP + Laravel with Eloquent and no separate ORM.'
   }
   if (context.architecture.kind !== supported.architecture) {
+    if (setup === 'supabase-auth') {
+      return 'Supabase Auth currently requires the frontend-only architecture.'
+    }
     return setup === 'better-auth'
       ? `architecture "${context.architecture.kind}" is not covered yet`
       : 'Laravel native authentication currently requires integrated Livewire or Inertia React.'
   }
-  if (!(supported.databases as readonly string[]).includes(context.database ?? '')) {
+  if (!(supported.databases as readonly (Database | null)[]).includes(context.database as Database | null)) {
+    if (setup === 'supabase-auth') {
+      return 'Supabase Auth uses the Supabase Data API and does not select a local database.'
+    }
     return setup === 'better-auth'
       ? `Better Auth currently supports SQLite, PostgreSQL, and MySQL; ${context.database ?? 'no database'} is not covered yet.`
       : `Laravel native authentication currently covers SQLite only; ${context.database ?? 'no database'} is not covered yet.`
@@ -142,6 +156,22 @@ export function validateFlagCompatibility(args: ParsedArgs): void {
   const backend = args.backend?.trim().toLowerCase()
   const orm = args.orm?.trim().toLowerCase()
   const extras = args.extras ?? []
+  if (auth === 'supabase-auth') {
+    const conflicts =
+      (platform !== undefined && platform !== 'web') ||
+      args.fullStack === true ||
+      (args.lang !== undefined && args.lang.trim().toLowerCase() !== 'typescript') ||
+      (frontend !== undefined && frontend !== 'react') ||
+      args.runtime !== undefined ||
+      args.backend !== undefined ||
+      args.db !== undefined ||
+      args.orm !== undefined
+    if (conflicts) {
+      throw new Error(
+        '--auth supabase-auth requires a TypeScript React/Vite frontend-only project with no backend, ORM, or database flags.',
+      )
+    }
+  }
   const isNative = platform === 'mobile' || platform === 'desktop'
   if (args.lang?.trim().toLowerCase() === 'javascript' && isNative) {
     throw new Error('Native Expo and Tauri scaffolds use TypeScript; omit --lang javascript.')
@@ -269,12 +299,14 @@ export function isProjectTypeAllowedByFlags(projectType: ProjectType, args: Pars
     args.orm !== undefined ||
     (args.extras?.length ?? 0) > 0 ||
     args.auth?.trim().toLowerCase() === 'better-auth' ||
-    args.auth?.trim().toLowerCase() === 'laravel-native'
+    args.auth?.trim().toLowerCase() === 'laravel-native' ||
+    args.auth?.trim().toLowerCase() === 'supabase-auth'
   return !webOnlyFlags
 }
 
 export function isFrontendAllowedByFlags(frontend: Frontend, args: ParsedArgs): boolean {
   if (args.auth?.trim().toLowerCase() === 'better-auth' && frontend !== MODULE_COMPATIBILITY.auth.frontend) return false
+  if (args.auth?.trim().toLowerCase() === 'supabase-auth' && frontend !== 'react') return false
   if (args.auth?.trim().toLowerCase() === 'laravel-native') {
     const explicitlySelectedInertiaReact =
       args.frontend?.trim().toLowerCase() === 'inertia-react' && frontend === 'inertia-react'

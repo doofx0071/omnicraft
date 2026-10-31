@@ -23,6 +23,24 @@ function makeAnswers(overrides: Partial<Answers> = {}): Answers {
 }
 
 describe('buildNextSteps', () => {
+  it('shows the manual Supabase Auth setup for the frontend-only app', () => {
+    const result = buildNextSteps(
+      makeAnswers({
+        fullStack: false,
+        backendRuntime: null,
+        backendFramework: null,
+        orm: null,
+        database: null,
+        authentication: 'supabase-auth',
+        architecture: { kind: 'frontend-only' },
+      }),
+      'npm',
+    )
+    expect(result.steps).toEqual(['cd demo-app', 'npm run dev'])
+    expect(result.details).toContain('Supabase Data API with user-scoped row-level security')
+    expect(result.details).toContain('publishable key to .env')
+  })
+
   it('prints integrated Next.js steps without a separate-server claim', () => {
     const answers = makeAnswers({
       frontend: 'nextjs',

@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "@supabase/supabase-js": "2.118.0"
+  },
+  "scripts": {
+    "supabase:start": "npx --yes supabase@2.122.0 start --yes",
+    "supabase:stop": "npx --yes supabase@2.122.0 stop --no-backup",
+    "supabase:reset": "npx --yes supabase@2.122.0 db reset --local --yes"
+  }
+}

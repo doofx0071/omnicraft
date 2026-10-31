@@ -256,6 +256,12 @@ export const INTEGRATION_TARGETS = {
     workflowCommand: 'npm run test:integration:php-inertia --workspace=create-omnicraft',
     scenarios: LARAVEL_INERTIA_REACT_AUTH_SCENARIOS,
   },
+  'supabase-auth': {
+    script: 'scripts/supabase-auth-integration.ts',
+    workflowJob: 'supabase-auth-integration',
+    workflowCommand: 'npm run test:integration:supabase-auth --workspace=create-omnicraft',
+    scenarios: ['react-ts-supabase-auth-frontend-only'],
+  },
 } as const satisfies Record<
   string,
   {

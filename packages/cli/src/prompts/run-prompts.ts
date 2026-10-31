@@ -232,7 +232,7 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
               'Select a language:',
               registryChoices(CAPABILITY_REGISTRY.language).filter((choice) =>
                 supportsLanguage(projectType, frontend, choice.value) &&
-                (flags.auth?.trim().toLowerCase() !== 'better-auth' ||
+                (!['better-auth', 'supabase-auth'].includes(flags.auth?.trim().toLowerCase() ?? '') ||
                   choice.value === MODULE_COMPATIBILITY.auth.language),
               ),
             )
@@ -241,8 +241,9 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
 
   // ── Full stack? ─────────────────────────────────────────────────────────
   const fullStackFlagRequested = hasFullStackFlags(flags)
-  let fullStack = integrated || integratedLaravel ? true : (flags.fullStack ?? (forced || fullStackFlagRequested))
-  if (!native && !integrated && !integratedLaravel && flags.fullStack === undefined && !forced && !fullStackFlagRequested) {
+  const supabaseAuth = flags.auth?.trim().toLowerCase() === 'supabase-auth'
+  let fullStack = supabaseAuth ? false : integrated || integratedLaravel ? true : (flags.fullStack ?? (forced || fullStackFlagRequested))
+  if (!supabaseAuth && !native && !integrated && !integratedLaravel && flags.fullStack === undefined && !forced && !fullStackFlagRequested) {
     fullStack = unwrap<boolean>(
       await p.confirm({
         message: 'Full-stack? Adds a backend API, database and ready-made boilerplate.',
@@ -503,6 +504,8 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
     `Authentication: ${
       authentication === 'better-auth'
         ? 'Better Auth (email/password)'
+        : authentication === 'supabase-auth'
+          ? 'Supabase Auth (user-scoped Data API + RLS)'
         : authentication === 'laravel-native'
           ? 'Laravel native auth (Fortify)'
           : 'none'

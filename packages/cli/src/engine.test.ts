@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { TEMPLATES_ROOT } from './config.js'
+import { buildManifest } from './manifest.js'
 import { createEnvFiles } from './scaffold/env.js'
 import { applyLayers } from './scaffold/engine.js'
 import { composeLayers, planLayerApplication, templateVariables } from './scaffold/compose.js'
@@ -405,6 +406,48 @@ describe('python + php runtimes', () => {
   })
 })
 describe('frontend-only', () => {
+  it('composes the Supabase Auth frontend overlay with safe placeholders and no backend', () => {
+    const answers = makeAnswers({
+      fullStack: false,
+      backendRuntime: null,
+      backendFramework: null,
+      orm: null,
+      database: null,
+      authentication: 'supabase-auth',
+      extras: { tailwind: false, eslintPrettier: false, shadcn: false },
+      architecture: { kind: 'frontend-only' },
+    })
+    const layers = composeLayers(answers)
+    expect(layers.map(({ src }) => src)).toEqual([
+      'web/react/client',
+      'root/frontend-only',
+      'auth/supabase-react-vite',
+    ])
+
+    const dir = makeTempDir('supabase-auth')
+    scaffoldInto(dir, answers)
+    const packageJson = readJson(join(dir, 'package.json'))
+    const dependencies = packageJson.dependencies as Record<string, string>
+    const manifest = buildManifest(answers, '1.0.4', 'npm')
+    const envExample = readFileSync(join(dir, '.env.example'), 'utf8')
+    const readme = readFileSync(join(dir, 'README.md'), 'utf8')
+
+    expect(dependencies['@supabase/supabase-js']).toBe('2.118.0')
+    expect(existsSync(join(dir, '.env'))).toBe(true)
+    expect(envExample).toContain('VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your-project-key')
+    expect(envExample).not.toMatch(/SECRET_KEY|SERVICE_ROLE|service_role/i)
+    expect(readme).toContain('project manually in the Supabase dashboard')
+    expect(readFileSync(join(dir, 'supabase/.gitignore'), 'utf8')).toContain('/.temp/')
+    expect(readFileSync(join(dir, 'supabase/config.toml'), 'utf8')).toContain(
+      'auto_expose_new_tables = false',
+    )
+    expect(readFileSync(join(dir, 'supabase/migrations/20261101000000_create_private_notes.sql'), 'utf8'))
+      .toContain('grant select, insert, update, delete on table public.notes to authenticated')
+    expect(manifest.authentication).toBe('supabase-auth')
+    expect(manifest.modules).toEqual([])
+    expect(existsSync(join(dir, 'server'))).toBe(false)
+  })
+
   it('scaffolds the client at the project root without server artifacts', () => {
     const dir = makeTempDir('frontend-only')
     scaffoldInto(dir, makeAnswers({ fullStack: false }))
