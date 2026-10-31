@@ -23,6 +23,11 @@ For separate frontend + API projects, layers are applied in this order:
    overlay when selected.
 6. **Root variant** — database/runtime-specific workspace or frontend-only root files.
 
+For the React/Vite TypeScript frontend-only Supabase Auth path, composition instead applies the
+client, the `root/frontend-only` variant, and then `auth/supabase-react-vite`. The provider overlay
+is last so its setup README replaces the generic frontend-only README. It contributes browser-safe
+publishable configuration only; it has no API server or local database layer.
+
 Integrated Next.js runs `create-next-app` first, then applies its UI/API overlay, selected database
 adapter, optional root tooling, and the Next.js root variant. Laravel 13 integrated modes retrieve a
 pinned official starter kit (Livewire through tiged; Inertia React through Composer), apply their

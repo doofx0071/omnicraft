@@ -38,8 +38,9 @@ Options:
                        python: fastapi · php: laravel)
   --db <name>          Skip the database prompt (node: postgres, sqlite, mysql ·
                        python: postgres, sqlite · php: postgres, sqlite, mysql)
-  --auth <name>        Authentication setup (none, better-auth, laravel-native; Better Auth requires
-                       TypeScript React + Node/Express/Drizzle; Laravel native requires integrated
+  --auth <name>        Authentication setup (none, better-auth, supabase-auth, laravel-native;
+                       Supabase Auth requires TypeScript React/Vite frontend-only; Better Auth
+                       requires React + Node/Express/Drizzle; Laravel native requires integrated
                        Livewire or Inertia React + SQLite)
   --orm <name>         Skip ORM selection (drizzle, prisma, none; Prisma is PostgreSQL-only and
                        unavailable for Hono). Separate Node APIs only; Next.js uses raw SQL and

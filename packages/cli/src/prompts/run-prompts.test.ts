@@ -45,6 +45,75 @@ beforeEach(() => {
 })
 
 describe('runPrompts flow', () => {
+  it('offers Supabase Auth only after selecting a React/Vite TypeScript frontend-only project', async () => {
+    script.push(
+      { prompt: 'text', answer: 'supabase-app' },
+      { prompt: 'select', answer: 'web' },
+      { prompt: 'select', answer: 'react' },
+      { prompt: 'select', answer: 'typescript' },
+      { prompt: 'confirm', answer: false },
+      { prompt: 'select', answer: 'supabase-auth' },
+      { prompt: 'multiselect', answer: [] },
+      { prompt: 'confirm', answer: true },
+    )
+
+    const interactive = await runPrompts()
+    const nonInteractive = resolveAnswers(
+      parseArgs(['--yes', '--auth', 'supabase-auth', '--extras', 'none']),
+      interactive.projectName,
+      interactive.targetDir,
+    )
+
+    expect(interactive.authentication).toBe('supabase-auth')
+    expect(interactive).toMatchObject({
+      frontend: nonInteractive.frontend,
+      language: nonInteractive.language,
+      fullStack: false,
+      backendRuntime: null,
+      backendFramework: null,
+      orm: null,
+      database: null,
+      authentication: nonInteractive.authentication,
+      architecture: nonInteractive.architecture,
+    })
+    const authOptions = optionsSeen.find((entry) =>
+      entry.options.some((option) => option.value === 'supabase-auth'),
+    )
+    expect(authOptions?.options.map((option) => option.value)).toEqual(['none', 'supabase-auth'])
+  })
+
+  it('keeps explicit Supabase Auth prompt choices aligned with non-interactive flags', async () => {
+    script.push(
+      { prompt: 'select', answer: 'web' },
+      { prompt: 'select', answer: 'react' },
+      { prompt: 'select', answer: 'typescript' },
+      { prompt: 'multiselect', answer: ['tailwind', 'eslint'] },
+      { prompt: 'confirm', answer: true },
+    )
+
+    const args = parseArgs(['--auth', 'supabase-auth'])
+    const interactive = await runPrompts('supabase-app', args)
+    const nonInteractive = resolveAnswers(
+      parseArgs(['--yes', '--auth', 'supabase-auth']),
+      'supabase-app',
+      interactive.targetDir,
+    )
+
+    expect(calls).toEqual(['select', 'select', 'select', 'multiselect', 'confirm'])
+    expect(interactive).toMatchObject({
+      frontend: nonInteractive.frontend,
+      language: nonInteractive.language,
+      fullStack: nonInteractive.fullStack,
+      backendRuntime: nonInteractive.backendRuntime,
+      backendFramework: nonInteractive.backendFramework,
+      orm: nonInteractive.orm,
+      database: nonInteractive.database,
+      authentication: nonInteractive.authentication,
+      architecture: nonInteractive.architecture,
+      extras: nonInteractive.extras,
+    })
+  })
+
   it('walks the full-stack path and collects every answer', async () => {
     script.push(
       { prompt: 'text', answer: 'My Cool App!' },
@@ -342,6 +411,7 @@ describe('runPrompts flow', () => {
       { prompt: 'select', answer: 'react' },
       { prompt: 'select', answer: 'typescript' },
       { prompt: 'confirm', answer: false },
+      { prompt: 'select', answer: 'none' },
       { prompt: 'multiselect', answer: [] },
       { prompt: 'confirm', answer: true },
     )
@@ -350,7 +420,7 @@ describe('runPrompts flow', () => {
     expect(answers.fullStack).toBe(false)
     expect(answers.backendFramework).toBeNull() // no backend on frontend-only
     expect(answers.database).toBeNull()
-    expect(calls.filter((c) => c === 'select')).toHaveLength(3) // no runtime/framework/orm prompts
+    expect(calls.filter((c) => c === 'select')).toHaveLength(4) // includes the frontend-only auth choice
   })
 
   it('omits Prisma from the ORM choices for Hono', async () => {
@@ -398,6 +468,7 @@ describe('runPrompts flow', () => {
       { prompt: 'select', answer: 'react' },
       { prompt: 'select', answer: 'typescript' },
       { prompt: 'confirm', answer: false },
+      { prompt: 'select', answer: 'none' },
       { prompt: 'confirm', answer: true },
     )
 
@@ -459,6 +530,7 @@ describe('runPrompts flow', () => {
       { prompt: 'select', answer: 'react' },
       { prompt: 'select', answer: 'typescript' },
       { prompt: 'confirm', answer: false },
+      { prompt: 'select', answer: 'none' },
       { prompt: 'confirm', answer: true },
     )
 
@@ -517,6 +589,7 @@ describe('runPrompts flow', () => {
       { prompt: 'select', answer: 'react' },
       { prompt: 'select', answer: 'typescript' },
       { prompt: 'confirm', answer: false },
+      { prompt: 'select', answer: 'none' },
       { prompt: 'multiselect', answer: [] },
       { prompt: 'confirm', answer: true },
     )

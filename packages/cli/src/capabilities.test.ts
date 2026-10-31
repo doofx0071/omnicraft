@@ -25,7 +25,7 @@ describe('capability registry', () => {
     expect(AVAILABLE.authentication).toEqual(selectedValues(CAPABILITY_REGISTRY.authentication))
   })
 
-  it('models None, Better Auth, and Laravel-native auth by setup category', () => {
+  it('models None, Better Auth, Supabase Auth, and Laravel-native auth by setup category', () => {
     expect(AUTHENTICATION_CATALOG.none).toMatchObject({
       value: 'none',
       category: 'none',
@@ -44,6 +44,19 @@ describe('capability registry', () => {
         databases: ['postgres', 'sqlite', 'mysql'],
       },
     })
+    expect(AUTHENTICATION_CATALOG['supabase-auth']).toMatchObject({
+      value: 'supabase-auth',
+      category: 'managed-provider',
+      requirements: {
+        frontend: 'react',
+        language: 'typescript',
+        backendRuntime: null,
+        backendFramework: null,
+        orm: null,
+        architecture: 'frontend-only',
+        databases: [null],
+      },
+    })
     expect(AUTHENTICATION_CATALOG['laravel-native']).toMatchObject({
       value: 'laravel-native',
       category: 'framework-native',
@@ -60,6 +73,7 @@ describe('capability registry', () => {
     expect(CAPABILITY_REGISTRY.authentication.map(({ value }) => value)).toEqual([
       'none',
       'better-auth',
+      'supabase-auth',
       'laravel-native',
     ])
     expect(AVAILABLE.frontend).toContain('livewire')

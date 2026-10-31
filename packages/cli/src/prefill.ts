@@ -89,6 +89,7 @@ export function hasStackFlags(args: ParsedArgs): boolean {
 export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir: string): Answers {
   validateStackFlags(args)
   const runtime = resolveRuntime(args)
+  const supabaseAuth = args.auth?.trim().toLowerCase() === 'supabase-auth'
   const laravelNative = args.auth?.trim().toLowerCase() === 'laravel-native'
   const inferredFrontend = laravelNative && args.frontend === undefined ? 'livewire' : undefined
   const frontend: Frontend = inferredFrontend
@@ -101,7 +102,7 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
   const integrated = frontend === 'nextjs'
   const integratedLaravel = frontend === 'livewire' || frontend === 'inertia-react'
   const integratedLaravelLivewire = frontend === 'livewire'
-  const fullStack = integratedLaravel || integrated ? true : (args.fullStack ?? true)
+  const fullStack = supabaseAuth ? false : integratedLaravel || integrated ? true : (args.fullStack ?? true)
   const db = args.db
     ? parseEnumChoice('--db', args.db, AVAILABLE.db[runtime])
     : integratedLaravel

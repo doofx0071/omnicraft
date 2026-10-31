@@ -157,8 +157,43 @@ describe('validateStackFlags', () => {
   })
 })
 
+it('rejects Supabase Auth outside its React/Vite TypeScript frontend-only path', () => {
+  expect(() => validateStackFlags(parseArgs(['--auth', 'supabase-auth']))).not.toThrow()
+  for (const argv of [
+    ['--auth', 'supabase-auth', '--full-stack'],
+    ['--auth', 'supabase-auth', '--backend', 'express'],
+    ['--auth', 'supabase-auth', '--db', 'sqlite'],
+    ['--auth', 'supabase-auth', '--runtime', 'php'],
+    ['--auth', 'supabase-auth', '--frontend', 'vue'],
+    ['--auth', 'supabase-auth', '--lang', 'javascript'],
+    ['--auth', 'supabase-auth', '--platform', 'mobile'],
+  ]) {
+    expect(() => validateStackFlags(parseArgs(argv))).toThrow(/--auth supabase-auth requires/)
+  }
+})
+
 describe('resolveAnswers', () => {
   const base = { projectName: 'demo', targetDir: '/tmp/demo' }
+
+  it('resolves Supabase Auth to the exact frontend-only default', () => {
+    const answers = resolveAnswers(
+      parseArgs(['--yes', '--auth', 'supabase-auth', '--extras', 'none']),
+      base.projectName,
+      base.targetDir,
+    )
+    expect(answers).toMatchObject({
+      frontend: 'react',
+      language: 'typescript',
+      fullStack: false,
+      backendRuntime: null,
+      backendFramework: null,
+      orm: null,
+      database: null,
+      authentication: 'supabase-auth',
+      architecture: { kind: 'frontend-only' },
+      extras: { tailwind: false, eslintPrettier: false, shadcn: false },
+    })
+  })
 
   it('uses interactive-flow defaults under --yes', () => {
     const answers = resolveAnswers(parseArgs(['--yes']), base.projectName, base.targetDir)
@@ -196,6 +231,7 @@ describe('resolveAnswers', () => {
     expect(answers.backendFramework).toBeNull()
     expect(hasFullStackFlags(parseArgs(['--auth', 'none']))).toBe(false)
     expect(hasFullStackFlags(parseArgs(['--auth', 'better-auth']))).toBe(true)
+    expect(hasFullStackFlags(parseArgs(['--auth', 'supabase-auth']))).toBe(false)
     expect(hasFullStackFlags(parseArgs(['--frontend', 'livewire']))).toBe(true)
     expect(hasFullStackFlags(parseArgs(['--frontend', 'inertia-react']))).toBe(true)
     expect(hasFullStackFlags(parseArgs(['--auth', 'laravel-native']))).toBe(true)

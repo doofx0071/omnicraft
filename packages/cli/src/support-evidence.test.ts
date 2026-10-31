@@ -77,6 +77,25 @@ describe('support matrix evidence', () => {
     expect(LARAVEL_INERTIA_REACT_AUTH_SCENARIOS).toEqual(['none', 'laravel-native'])
   })
 
+  it('registers Supabase Auth as a single generated-project runtime scenario', () => {
+    const target = INTEGRATION_TARGETS['supabase-auth']
+    expect(target.script).toBe('scripts/supabase-auth-integration.ts')
+    expect(target.workflowJob).toBe('supabase-auth-integration')
+    expect(target.workflowCommand).toBe('npm run test:integration:supabase-auth --workspace=create-omnicraft')
+    expect(integrationScenarios('supabase-auth')).toEqual(['react-ts-supabase-auth-frontend-only'])
+
+    const capability = SUPPORTED_CAPABILITIES.find(
+      ({ id }) => id === 'supabase-auth-react-vite-typescript',
+    )
+    expect(capability?.target).toBe('supabase-auth')
+    expect(capability?.scenarios).toEqual(['react-ts-supabase-auth-frontend-only'])
+    expect(capability?.combinations[0]?.flags.auth).toBe('supabase-auth')
+    expect(capability?.combinations[0]?.flags.db).toBeUndefined()
+    expect(capability && registeredMatrixRowPrefix(capability)).toBe(
+      '| React + Vite + TypeScript + Supabase Auth + Data API/RLS, frontend-only | **Supported** |',
+    )
+  })
+
   it('registers PostgreSQL and MySQL for the generated Docker-module integration runner', () => {
     expect(integrationScenarios('docker-module')).toEqual(DOCKER_MODULE_SCENARIOS)
     expect(DOCKER_MODULE_SCENARIOS).toEqual(['postgres', 'mysql'])

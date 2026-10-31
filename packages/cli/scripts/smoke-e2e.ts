@@ -77,6 +77,24 @@ scaffold({
   architecture: { kind: 'frontend-only' },
 })
 
+// Managed Supabase Auth is a distinct frontend-only overlay. The exact
+// lifecycle and RLS behavior is covered by supabase-auth-integration.ts.
+scaffold({
+  projectName: 'smoke-supabase-auth-react-vite',
+  targetDir: '.',
+  projectType: 'web',
+  frontend: 'react',
+  language: 'typescript',
+  fullStack: false,
+  backendRuntime: null,
+  backendFramework: null,
+  orm: null,
+  database: null,
+  authentication: 'supabase-auth',
+  extras: { tailwind: false, eslintPrettier: false, shadcn: false },
+  architecture: { kind: 'frontend-only' },
+})
+
 // Frontend variants (full-stack separate-API, sqlite = zero-docker verification)
 for (const fe of ['vue', 'svelte'] as const) {
   scaffold({

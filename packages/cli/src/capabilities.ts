@@ -20,15 +20,15 @@ type CapabilityOption<T extends string> = {
 type AuthenticationRequirements = {
   frontend: Frontend | readonly Frontend[]
   language: Language | null | readonly (Language | null)[]
-  backendRuntime: BackendRuntime
-  backendFramework: BackendFramework
+  backendRuntime: BackendRuntime | null
+  backendFramework: BackendFramework | null
   orm: Orm | null
   architecture: ProjectArchitecture['kind']
-  databases: readonly Database[]
+  databases: readonly (Database | null)[]
 }
 
 type AuthenticationCatalogEntry = CapabilityOption<AuthenticationSetup> & {
-  category: 'none' | 'application-library' | 'framework-native'
+  category: 'none' | 'application-library' | 'framework-native' | 'managed-provider'
   requirements: AuthenticationRequirements | null
 }
 
@@ -56,6 +56,22 @@ export const AUTHENTICATION_CATALOG = {
       orm: 'drizzle',
       architecture: 'separate-frontend-api',
       databases: ['postgres', 'sqlite', 'mysql'],
+    },
+  },
+  'supabase-auth': {
+    value: 'supabase-auth',
+    label: 'Supabase Auth',
+    available: true,
+    hint: 'React/Vite + TypeScript frontend-only; Supabase Data API with user-scoped RLS',
+    category: 'managed-provider',
+    requirements: {
+      frontend: 'react',
+      language: 'typescript',
+      backendRuntime: null,
+      backendFramework: null,
+      orm: null,
+      architecture: 'frontend-only',
+      databases: [null],
     },
   },
   'laravel-native': {
