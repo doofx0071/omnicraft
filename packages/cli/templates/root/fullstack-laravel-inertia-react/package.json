@@ -1,0 +1,11 @@
+{
+  "name": "{{projectName}}",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "cd server && composer run dev",
+    "build": "npm --prefix server run build",
+    "db:migrate": "cd server && php artisan migrate",
+    "test": "cd server && php artisan test"
+  }
+}

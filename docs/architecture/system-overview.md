@@ -1,8 +1,8 @@
 # System overview
 
-OmniCraft is the `create-omnicraft` npm package. The source package and npm `latest` were both checked
-at `1.0.2` on 2026-10-28. The CLI is interactive by default and can compose web, backend, database,
-extra, and native-platform layers. Exact support and verification vary by combination; see the
+OmniCraft is the `create-omnicraft` npm package. The current repository baseline is v1.0.3; npm
+publication is tracked separately. The CLI is interactive by default and can compose web, backend,
+database, extra, and native-platform layers. Exact support and verification vary by combination; see the
 [support matrix](../templates/stack-support-matrix.md).
 
 ## One-run flow
@@ -22,7 +22,9 @@ composeLayers + templateVariables               maps Answers → ordered Layer[]
         │
         ├─ Native app: run create-expo-app or create-tauri-app, then apply platform layer
         ├─ Next.js: run create-next-app, then apply the integrated app/database overlay
-        ├─ Laravel: run Composer, then apply the Laravel API overlay
+        ├─ Laravel 13 Livewire: retrieve a pinned official kit, then install/configure Composer and SQLite
+        ├─ Laravel 13 Inertia React: create-project from a pinned official kit, then install/configure Composer and SQLite
+        ├─ Laravel 12 API: create a Laravel skeleton with Composer, then apply the API/data overlay
         └─ Other web projects: apply composed client/server/database/extra/root layers
         │
         ▼
@@ -33,8 +35,11 @@ post-scaffold                                    create env files + project mani
 ```
 
 JavaScript changes the React/Vite client layer only; the server remains TypeScript. Next.js is an
-integrated full-stack app. Expo and Tauri create a native client that talks to a separately run backend;
-OmniCraft does not scaffold that backend in the same native project.
+integrated full-stack app. Laravel Livewire and Laravel Inertia React are integrated PHP applications;
+Inertia's React UI and Laravel routes/sessions live in one `server/` app. They remain distinct from the
+Laravel 12 API/data scaffold and the separate React/Vite client plus API paths. Expo and Tauri create a
+native client that talks to a separately run backend; OmniCraft does not scaffold that backend in the
+same native project.
 
 ## Components and responsibilities
 
@@ -52,8 +57,8 @@ OmniCraft does not scaffold that backend in the same native project.
 | Module injector | `src/add.ts`, `src/modules/` | `omnicraft add` loads project metadata, checks module compatibility/conflicts, applies patches, and updates the manifest. Current module coverage is summarized in the support matrix. |
 | Process helpers | `src/exec.ts` | Captured and visible subprocess execution; Windows command-shell rules are in [coding standards](../development/coding-standards.md). |
 | Templates | `packages/cli/templates/` | Embedded generated-project files published with the CLI. See the [template contract](../templates/template-contract.md). |
-| Tests | `src/**/*.test.ts` | 80 tests across 9 files in the local 2026-10-27 run. See the [testing strategy](../development/testing-strategy.md). |
-| Smoke generation | `scripts/smoke-e2e.ts` | Currently lists 17 project paths, including a network-backed `create-next-app` step; it does not cover native projects or install/boot every generated app. |
+| Tests | `src/**/*.test.ts` | 234 tests across 17 files in the current local suite. See the [testing strategy](../development/testing-strategy.md). |
+| Smoke generation | `scripts/smoke-e2e.ts` | Lists 19 layer-composition paths, including two Inertia React root overlays and a network-backed `create-next-app` step; it does not cover native projects or install/boot every generated app. |
 
 ## Cross-cutting behavior and limits
 
@@ -74,5 +79,8 @@ OmniCraft does not scaffold that backend in the same native project.
    commands.
 6. **Terminal restoration.** `restoreTerminal()` is registered on exit, SIGINT, and uncaught exceptions
    because Clack uses raw terminal mode.
-7. **CI evidence.** CI scaffolds the smoke list and installs/typechecks Express + Drizzle + PostgreSQL.
-   It does not boot generated apps or prove database operations for the rest of the matrix.
+7. **CI evidence.** CI scaffolds the smoke list and runs dedicated generated-project integrations for
+   the exact supported rows. The Inertia React integration generates both official starter modes,
+   runs Composer and npm setup, checks SQLite migrations, typechecks/builds React assets, and runs
+   Laravel feature tests. See the [testing strategy](../development/testing-strategy.md) and
+   [support matrix](../templates/stack-support-matrix.md) for exact evidence and boundaries.

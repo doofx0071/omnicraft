@@ -243,6 +243,91 @@ describe('runPrompts flow', () => {
     expect(optionsSeen.some((entry) => entry.options.some((option) => option.value === 'typescript'))).toBe(false)
   })
 
+  it.each(['none', 'laravel-native'] as const)(
+    'keeps interactive Inertia React with %s aligned with non-interactive flags',
+    async (authentication) => {
+      script.push(
+        { prompt: 'select', answer: 'web' },
+        { prompt: 'select', answer: authentication },
+        { prompt: 'confirm', answer: true },
+      )
+
+      const interactive = await runPrompts(
+        'inertia-app',
+        parseArgs(['--frontend', 'inertia-react']),
+      )
+      const nonInteractive = resolveAnswers(
+        parseArgs(['--yes', '--frontend', 'inertia-react', '--auth', authentication]),
+        interactive.projectName,
+        interactive.targetDir,
+      )
+
+      expect(calls).toEqual(['select', 'select', 'confirm'])
+      expect(interactive).toMatchObject({
+        frontend: nonInteractive.frontend,
+        language: 'typescript',
+        fullStack: nonInteractive.fullStack,
+        backendRuntime: nonInteractive.backendRuntime,
+        backendFramework: nonInteractive.backendFramework,
+        orm: null,
+        database: 'sqlite',
+        authentication,
+        extras: nonInteractive.extras,
+        architecture: nonInteractive.architecture,
+      })
+      const authOptions = optionsSeen.find((entry) =>
+        entry.options.some((option) => option.value === 'laravel-native'),
+      )
+      expect(authOptions?.options.map((option) => option.value)).toEqual(['none', 'laravel-native'])
+      expect(optionsSeen.some((entry) => entry.options.some((option) => option.value === 'typescript'))).toBe(false)
+    },
+  )
+
+  it.each(['none', 'laravel-native'] as const)(
+    'offers the integrated Inertia React frontend interactively with %s auth',
+    async (authentication) => {
+      script.push(
+        { prompt: 'select', answer: 'web' },
+        { prompt: 'select', answer: 'inertia-react' },
+        { prompt: 'select', answer: authentication },
+        { prompt: 'confirm', answer: true },
+      )
+
+      const interactive = await runPrompts('inertia-app')
+      const nonInteractive = resolveAnswers(
+        parseArgs(['--yes', '--frontend', 'inertia-react', '--auth', authentication]),
+        interactive.projectName,
+        interactive.targetDir,
+      )
+
+      expect(calls).toEqual(['select', 'select', 'select', 'confirm'])
+      expect(interactive).toMatchObject({
+        frontend: nonInteractive.frontend,
+        language: 'typescript',
+        fullStack: nonInteractive.fullStack,
+        backendRuntime: nonInteractive.backendRuntime,
+        backendFramework: nonInteractive.backendFramework,
+        orm: null,
+        database: 'sqlite',
+        authentication,
+        extras: nonInteractive.extras,
+        architecture: nonInteractive.architecture,
+      })
+      expect(optionsSeen[1]?.options.map((option) => option.value)).toContain('inertia-react')
+      expect(optionsSeen[2]?.options.map((option) => option.value)).toEqual([
+        'none',
+        'laravel-native',
+      ])
+    },
+  )
+
+  it('rejects an incompatible Inertia React database before presenting prompts', async () => {
+    await expect(
+      runPrompts('inertia-app', parseArgs(['--frontend', 'inertia-react', '--db', 'postgres'])),
+    ).rejects.toThrow(/Inertia React currently requires PHP \+ Laravel \+ SQLite/)
+    expect(calls).toEqual([])
+  })
+
   it('rejects an incompatible Livewire database before presenting prompts', async () => {
     await expect(
       runPrompts('livewire-app', parseArgs(['--frontend', 'livewire', '--db', 'postgres'])),

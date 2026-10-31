@@ -91,4 +91,34 @@ describe('buildNextSteps', () => {
       expect(result.details).not.toContain('localhost:5173')
     },
   )
+
+  it.each(['none', 'laravel-native'] as const)(
+    'prints integrated Laravel + Inertia React next steps for %s authentication',
+    (authentication) => {
+      const answers = makeAnswers({
+        frontend: 'inertia-react',
+        language: 'typescript',
+        backendRuntime: 'php',
+        backendFramework: 'laravel',
+        orm: null,
+        database: 'sqlite',
+        authentication,
+        architecture: { kind: 'integrated-laravel', framework: 'laravel', mode: 'inertia-react' },
+      })
+
+      const result = buildNextSteps(answers, 'npm')
+
+      expect(result.steps).toEqual([
+        'cd demo-app',
+        'cd server',
+        'npm install                # if you skipped frontend dependency setup',
+        'php artisan migrate',
+        'composer run dev',
+      ])
+      expect(result.details).toContain('Laravel + Inertia React (integrated Laravel app)')
+      expect(result.details).toContain('SQLite at server/database/database.sqlite')
+      expect(result.details).toContain(authentication === 'none' ? 'auth     → None' : 'Laravel native session auth (Fortify)')
+      expect(result.details).not.toContain('localhost:5173')
+    },
+  )
 })

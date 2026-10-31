@@ -38,6 +38,8 @@ npm run test:integration:db --workspace=create-omnicraft
 npm run test:integration:node --workspace=create-omnicraft
 npm run test:integration:nextjs --workspace=create-omnicraft
 npm run test:integration:php --workspace=create-omnicraft
+npm run test:integration:php-livewire --workspace=create-omnicraft
+npm run test:integration:php-inertia --workspace=create-omnicraft
 ```
 
 The Node/Drizzle suite defaults to SQLite, PostgreSQL, and MySQL. Run one database at a time with:
@@ -91,6 +93,16 @@ feature tests for the selected PostgreSQL or MySQL connection and generated user
 the active driver so a fallback to SQLite cannot pass. The current Laravel overlay has no OmniCraft
 authentication implementation, so the Laravel lane verifies database and API behavior only.
 
+The separate `php-laravel-inertia-react-auth-integration` target generates Laravel 13 + Inertia React
+through the production CLI using pinned official blank/authenticated React kits. Its `None` and
+Laravel-native/Fortify cases run on SQLite only. It installs Composer dependencies, prepares the
+generated SQLite database, runs the Inertia TypeScript check and asset build, and executes generated
+Laravel feature tests. The tests verify absent auth routes in `None`, registration with a hashed
+password, login/session state, guest redirects, dashboard access, and logout. The harness also checks
+that `/api/users` remains public in `None` and auth-protected when present in the native mode, and that
+incompatible choices reject before the CLI creates target files. This is distinct from the Laravel 12
+API/data integration target and the Laravel 13 Livewire/Fortify target.
+
 Each case gets a unique generated-project directory, database name, and random credentials. Laravel
 cases also use a unique Compose project name and no fixed host port mappings. Testcontainers publishes
 ephemeral host ports so the generated Node API can connect without port collisions. The suites inject
@@ -98,9 +110,10 @@ credentials only through child process environment, redact them from failure out
 child processes, remove only their own containers/volumes, and delete generated project directories.
 Testcontainers uses Ryuk as a fallback if the Node process exits unexpectedly.
 
-These tests cover the implemented Express + Drizzle email/password auth path. They do not add providers
-or implement authentication for another framework. The support matrix remains the source of truth for
-supported combinations.
+The Node database/auth tests cover Express + Drizzle Better Auth. The separate Laravel 13 integration
+targets cover their exact Livewire/Fortify and Inertia React/Fortify modes. No managed provider or
+account-linking path is implied. The support matrix remains the source of truth for supported
+combinations.
 
 ## Verification record
 
@@ -118,6 +131,10 @@ This section records the commands and outcomes actually run for this change.
 - `npm run test:integration:php --workspace=create-omnicraft` — passed for Laravel 12 with PostgreSQL
   and MySQL. Both ran Composer platform checks, migrations, database-driver assertions, API feature
   tests, and cleanup.
+- `npm run test:integration:php-inertia --workspace=create-omnicraft` — passed locally for Laravel 13
+  + Inertia React with `None` and Laravel-native/Fortify on SQLite. Both modes were generated through
+  the production CLI, migrated, typechecked/built, and exercised with generated Laravel feature tests;
+  incompatible choices rejected before target creation.
 - `npm run test:integration:node --workspace=create-omnicraft -- --scenario ...` — all 15 registered
   Express, Fastify, and Hono scenarios passed locally through install, client build/API typecheck,
   database initialization, API boot, CRUD/failure checks, and cleanup. Generated-project checks fixed

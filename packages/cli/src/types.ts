@@ -1,5 +1,5 @@
 export type ProjectType = 'web' | 'mobile' | 'desktop'
-export type Frontend = 'react' | 'vue' | 'svelte' | 'nextjs' | 'livewire'
+export type Frontend = 'react' | 'vue' | 'svelte' | 'nextjs' | 'livewire' | 'inertia-react'
 export type Language = 'typescript' | 'javascript'
 export type BackendRuntime = 'node' | 'python' | 'php'
 export type BackendFramework =
@@ -21,8 +21,8 @@ export type AuthenticationSetup = 'none' | 'better-auth' | 'laravel-native'
  * - `integrated-fullstack`: the frontend framework IS the server (Next.js
  *   app router + route handlers); a separate API is optional and not
  *   scaffolded.
- * - `integrated-laravel`: Laravel + Livewire is one PHP application, without
- *   a separate Vite client.
+ * - `integrated-laravel`: Laravel + Livewire or Laravel + Inertia React is one
+ *   PHP application, without a separate API workspace.
  * - `separate-frontend-api`: client/ + server/ workspaces (the original shape).
  * - `native-app`: Expo (mobile) or Tauri (desktop) — a device app that talks
  *   to a separately-running backend; no db prompts.
@@ -30,7 +30,7 @@ export type AuthenticationSetup = 'none' | 'better-auth' | 'laravel-native'
 export type ProjectArchitecture =
   | { kind: 'frontend-only' }
   | { kind: 'integrated-fullstack'; framework: 'nextjs' }
-  | { kind: 'integrated-laravel'; framework: 'laravel'; mode: 'livewire' }
+  | { kind: 'integrated-laravel'; framework: 'laravel'; mode: 'livewire' | 'inertia-react' }
   | { kind: 'separate-frontend-api' }
   | { kind: 'native-app'; platform: 'mobile' | 'desktop' }
 
@@ -70,6 +70,7 @@ export const FRONTEND_LABELS: Record<Frontend, string> = {
   vue: 'Vue',
   svelte: 'Svelte',
   livewire: 'Laravel + Livewire',
+  'inertia-react': 'Laravel + Inertia React',
 }
 
 export const BACKEND_RUNTIME_LABELS: Record<BackendRuntime, string> = {
@@ -112,6 +113,9 @@ export function describeStack(answers: Answers): string[] {
   if (answers.architecture.kind === 'integrated-laravel') {
     lines.push('Backend:    PHP — Laravel')
     lines.push(`Database:   ${DATABASE_LABELS[answers.database!]} (Eloquent)`)
+    lines.push(
+      `UI:         ${answers.architecture.mode === 'livewire' ? 'Livewire' : 'Inertia React'}`,
+    )
   } else if (answers.fullStack) {
     lines.push(
       `Backend:    ${BACKEND_RUNTIME_LABELS[answers.backendRuntime!]} + ${BACKEND_FRAMEWORK_LABELS[answers.backendFramework!]}`,

@@ -6,6 +6,7 @@ import {
   DOCKER_MODULE_SCENARIOS,
   integrationScenarios,
   LARAVEL_LIVEWIRE_AUTH_SCENARIOS,
+  LARAVEL_INERTIA_REACT_AUTH_SCENARIOS,
   MODULE_RUNTIME_SCENARIOS,
   NEXTJS_DATABASE_SCENARIOS,
   NATIVE_PLATFORM_SCENARIOS,
@@ -67,6 +68,13 @@ describe('support matrix evidence', () => {
   it('registers the generated JavaScript frontend-only runtime scenario', () => {
     expect(integrationScenarios('frontend-runtime')).toEqual(FRONTEND_RUNTIME_SCENARIOS)
     expect(FRONTEND_RUNTIME_SCENARIOS).toEqual(['react-js-frontend-only'])
+  })
+
+  it('registers only the approved Inertia React authentication setups', () => {
+    expect(integrationScenarios('php-laravel-inertia-react-auth')).toEqual(
+      LARAVEL_INERTIA_REACT_AUTH_SCENARIOS,
+    )
+    expect(LARAVEL_INERTIA_REACT_AUTH_SCENARIOS).toEqual(['none', 'laravel-native'])
   })
 
   it('registers PostgreSQL and MySQL for the generated Docker-module integration runner', () => {
@@ -272,6 +280,34 @@ describe('support matrix evidence', () => {
     expect(livewireCapabilities.map(registeredMatrixRowPrefix)).toEqual([
       '| Laravel 13 + Livewire 4 (None) | Eloquent | SQLite | **Supported** |',
       '| Laravel 13 + Livewire 4 (Laravel native/Fortify) | Eloquent | SQLite | **Supported** |',
+    ])
+  })
+
+  it('registers both integrated Laravel Inertia React auth setups in their own CI job', () => {
+    expect(integrationScenarios('php-laravel-inertia-react-auth')).toEqual(
+      LARAVEL_INERTIA_REACT_AUTH_SCENARIOS,
+    )
+    expect(LARAVEL_INERTIA_REACT_AUTH_SCENARIOS).toEqual(['none', 'laravel-native'])
+    const target = INTEGRATION_TARGETS['php-laravel-inertia-react-auth']
+    expect(target.workflowJob).toBe('php-laravel-inertia-react-auth-integration')
+    expect(target.workflowCommand).toBe(
+      'npm run test:integration:php-inertia --workspace=create-omnicraft',
+    )
+
+    const inertiaReactCapabilities = SUPPORTED_CAPABILITIES.filter(
+      ({ target: capabilityTarget }) => capabilityTarget === 'php-laravel-inertia-react-auth',
+    )
+    expect(inertiaReactCapabilities.map(({ id }) => id)).toEqual([
+      'laravel-inertia-react-none-sqlite',
+      'laravel-inertia-react-native-auth-sqlite',
+    ])
+    expect(inertiaReactCapabilities.map(({ combinations }) => combinations[0]?.flags.auth)).toEqual([
+      'none',
+      'laravel-native',
+    ])
+    expect(inertiaReactCapabilities.map(registeredMatrixRowPrefix)).toEqual([
+      '| Laravel 13 + Inertia React (None) | Eloquent | SQLite | **Supported** |',
+      '| Laravel 13 + Inertia React (Laravel native/Fortify) | Eloquent | SQLite | **Supported** |',
     ])
   })
 })

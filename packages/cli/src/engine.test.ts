@@ -43,6 +43,21 @@ function makeLivewireAnswers(authentication: 'none' | 'laravel-native' = 'none')
   })
 }
 
+function makeInertiaReactAnswers(authentication: 'none' | 'laravel-native' = 'none'): Answers {
+  return makeAnswers({
+    frontend: 'inertia-react',
+    language: 'typescript',
+    fullStack: true,
+    backendRuntime: 'php',
+    backendFramework: 'laravel',
+    orm: null,
+    database: 'sqlite',
+    authentication,
+    extras: { tailwind: false, eslintPrettier: false, shadcn: false },
+    architecture: { kind: 'integrated-laravel', framework: 'laravel', mode: 'inertia-react' },
+  })
+}
+
 function scaffoldInto(dir: string, answers: Answers): void {
   applyLayers(TEMPLATES_ROOT, composeLayers(answers), templateVariables(answers), dir)
   createEnvFiles(dir)
@@ -111,6 +126,19 @@ describe('official-generator layer order', () => {
       expect(plan.afterComposer).toEqual([])
     }
   })
+
+  it('applies only the integrated Inertia React root setup after the selected Laravel starter kit', () => {
+    for (const authentication of ['none', 'laravel-native'] as const) {
+      const answers = makeInertiaReactAnswers(authentication)
+      const layers = composeLayers(answers)
+      const plan = planLayerApplication(layers, answers.architecture)
+
+      expect(layers.map(({ src }) => src)).toEqual(['root/fullstack-laravel-inertia-react'])
+      expect(plan.afterOfficialGenerator).toEqual(layers)
+      expect(plan.beforeComposer).toEqual([])
+      expect(plan.afterComposer).toEqual([])
+    }
+  })
 })
 
 describe('composition compatibility', () => {
@@ -123,6 +151,26 @@ describe('composition compatibility', () => {
     [{ frontend: 'nextjs', backendRuntime: null, backendFramework: null, orm: 'none', extras: { tailwind: false, eslintPrettier: true, shadcn: false }, architecture: { kind: 'integrated-fullstack', framework: 'nextjs' } }, /Next\.js must use the integrated full-stack architecture/],
   ] as const)('rejects incompatible answers before returning layers', (overrides, message) => {
     expect(() => composeLayers(makeAnswers(overrides))).toThrow(message)
+  })
+
+  it('rejects Inertia React answers that do not match its integrated Laravel mode', () => {
+    expect(() => composeLayers(makeInertiaReactAnswers('none'))).not.toThrow()
+    expect(() =>
+      composeLayers(
+        makeAnswers({
+          ...makeInertiaReactAnswers(),
+          language: 'javascript',
+        }),
+      ),
+    ).toThrow(/Integrated Laravel Inertia React currently requires PHP \+ Laravel \+ SQLite \+ TypeScript/)
+    expect(() =>
+      composeLayers(
+        makeAnswers({
+          ...makeInertiaReactAnswers(),
+          architecture: { kind: 'separate-frontend-api' },
+        }),
+      ),
+    ).toThrow(/must use the integrated Laravel architecture/)
   })
 
   it('accepts Better Auth only on the existing Express + Drizzle composition', () => {
@@ -171,6 +219,31 @@ describe('composition compatibility', () => {
       expect(existsSync(join(dir, 'client'))).toBe(false)
       expect(existsSync(join(dir, 'server'))).toBe(false)
       expect(readFileSync(join(dir, 'README.md'), 'utf8')).not.toContain('{{')
+    },
+  )
+
+  it.each(['none', 'laravel-native'] as const)(
+    'scaffolds the integrated Inertia React root overlay for %s without a separate client or API layer',
+    (authentication) => {
+      const dir = makeTempDir(`inertia-react-${authentication}`)
+      scaffoldInto(dir, makeInertiaReactAnswers(authentication))
+
+      const packageJson = readJson(join(dir, 'package.json'))
+      const scripts = packageJson.scripts as Record<string, string>
+      const readme = readFileSync(join(dir, 'README.md'), 'utf8')
+      const gitignore = readFileSync(join(dir, '.gitignore'), 'utf8')
+
+      expect(packageJson.name).toBe('demo-app')
+      expect(scripts.dev).toContain('composer run dev')
+      expect(scripts['db:migrate']).toContain('artisan migrate')
+      expect(readme).toContain('Laravel 13 + Inertia + React + TypeScript')
+      expect(readme).toContain(authentication === 'none' ? 'Authentication | None' : 'Authentication | Laravel native auth (Fortify)')
+      expect(readme).toContain('This scaffold configures no account')
+      expect(readme).toContain('linking or managed providers.')
+      expect(gitignore).toContain('/server/vendor/')
+      expect(existsSync(join(dir, 'client'))).toBe(false)
+      expect(existsSync(join(dir, 'server'))).toBe(false)
+      expect(readme).not.toContain('{{')
     },
   )
 })

@@ -39,17 +39,22 @@ export function authenticationCompatibilityReason(
   if (!supported) {
     throw new Error(`Authentication setup "${setup}" is missing its stack requirements.`)
   }
-  if (context.frontend !== supported.frontend) {
+  const supportedFrontends: readonly Frontend[] = Array.isArray(supported.frontend)
+    ? (supported.frontend as readonly Frontend[])
+    : [supported.frontend as Frontend]
+  if (!supportedFrontends.includes(context.frontend as Frontend)) {
     return setup === 'better-auth'
       ? `Better Auth currently requires the React frontend; ${context.frontend} is not covered yet.`
-      : 'Laravel native authentication currently requires the integrated Livewire mode.'
+      : 'Laravel native authentication currently requires integrated Livewire or Inertia React.'
   }
-  if (
-    supported.language !== null &&
-    context.language !== undefined &&
-    context.language !== null &&
-    context.language !== supported.language
-  ) {
+  const languageAccepted =
+    supported.language === null ||
+    context.language === undefined ||
+    context.language === null ||
+    (Array.isArray(supported.language)
+      ? supported.language.includes(context.language as Language | null)
+      : context.language === supported.language)
+  if (!languageAccepted) {
     return setup === 'better-auth'
       ? `Better Auth creation currently requires TypeScript; ${context.language} is not covered yet.`
       : `Laravel native authentication does not support language "${context.language}".`
@@ -66,7 +71,7 @@ export function authenticationCompatibilityReason(
   if (context.architecture.kind !== supported.architecture) {
     return setup === 'better-auth'
       ? `architecture "${context.architecture.kind}" is not covered yet`
-      : 'Laravel native authentication currently requires the integrated Livewire mode.'
+      : 'Laravel native authentication currently requires integrated Livewire or Inertia React.'
   }
   if (!(supported.databases as readonly string[]).includes(context.database ?? '')) {
     return setup === 'better-auth'
@@ -108,7 +113,9 @@ export function supportsLanguage(
   language: Language,
 ): boolean {
   return frontend !== 'livewire' &&
-    (language === 'typescript' || (projectType === 'web' && frontend === 'react'))
+    (frontend === 'inertia-react'
+      ? language === 'typescript'
+      : language === 'typescript' || (projectType === 'web' && frontend === 'react'))
 }
 
 export function supportsShadcn(
@@ -131,7 +138,7 @@ export function validateFlagCompatibility(args: ParsedArgs): void {
   const frontend = args.frontend?.trim().toLowerCase()
   const auth = args.auth?.trim().toLowerCase()
   const runtime = args.runtime?.trim().toLowerCase() ??
-    (frontend === 'livewire' || auth === 'laravel-native' ? 'php' : 'node')
+    (frontend === 'livewire' || frontend === 'inertia-react' || auth === 'laravel-native' ? 'php' : 'node')
   const backend = args.backend?.trim().toLowerCase()
   const orm = args.orm?.trim().toLowerCase()
   const extras = args.extras ?? []
@@ -157,7 +164,7 @@ export function validateFlagCompatibility(args: ParsedArgs): void {
 
   if (
     args.fullStack === false &&
-    (args.runtime || args.backend || args.db || args.orm || frontend === 'livewire' || auth === 'laravel-native')
+    (args.runtime || args.backend || args.db || args.orm || frontend === 'livewire' || frontend === 'inertia-react' || auth === 'laravel-native')
   ) {
     throw new Error(
       '--runtime, --backend, --db, and --orm require a full-stack project; remove --no-full-stack.',
@@ -195,25 +202,34 @@ export function validateFlagCompatibility(args: ParsedArgs): void {
     throw new Error('Prisma is not available for Hono; choose Drizzle or raw SQL with --orm none.')
   }
 
-  const selectsLivewire = frontend === 'livewire' || auth === 'laravel-native'
-  if (selectsLivewire) {
+  const selectsLaravelIntegrated =
+    frontend === 'livewire' || frontend === 'inertia-react' || auth === 'laravel-native'
+  if (selectsLaravelIntegrated) {
+    const inertiaReact = frontend === 'inertia-react'
     const conflicts =
       (platform !== undefined && platform !== 'web') ||
       args.fullStack === false ||
       (args.runtime !== undefined && runtime !== 'php') ||
       (args.backend !== undefined && backend !== 'laravel') ||
-      (frontend !== undefined && frontend !== 'livewire') ||
-      args.lang !== undefined ||
+      (frontend !== undefined && frontend !== 'livewire' && frontend !== 'inertia-react') ||
+      (args.lang !== undefined &&
+        (inertiaReact
+          ? args.lang.trim().toLowerCase() !== 'typescript'
+          : true)) ||
       args.orm !== undefined ||
       (args.db !== undefined && args.db.trim().toLowerCase() !== 'sqlite') ||
       extras.length > 0
     if (conflicts) {
       throw new Error(
-        'Laravel Livewire currently requires PHP + Laravel + SQLite and does not use a separate frontend, language, ORM, or extras; omit those flags.',
+        inertiaReact
+          ? 'Laravel Inertia React currently requires PHP + Laravel + SQLite + TypeScript and does not accept a separate API, ORM, or extras; omit incompatible flags.'
+          : 'Laravel Livewire currently requires PHP + Laravel + SQLite and does not use a separate frontend, language, ORM, or extras; omit those flags.',
       )
     }
-    if (auth === 'better-auth' && selectsLivewire) {
-      throw new Error('Better Auth is not available for Laravel Livewire; use --auth none or laravel-native.')
+    if (auth === 'better-auth') {
+      throw new Error(
+        `Better Auth is not available for Laravel ${inertiaReact ? 'Inertia React' : 'Livewire'}; use --auth none or laravel-native.`,
+      )
     }
   }
 
@@ -259,7 +275,11 @@ export function isProjectTypeAllowedByFlags(projectType: ProjectType, args: Pars
 
 export function isFrontendAllowedByFlags(frontend: Frontend, args: ParsedArgs): boolean {
   if (args.auth?.trim().toLowerCase() === 'better-auth' && frontend !== MODULE_COMPATIBILITY.auth.frontend) return false
-  if (args.auth?.trim().toLowerCase() === 'laravel-native' && frontend !== 'livewire') return false
+  if (args.auth?.trim().toLowerCase() === 'laravel-native') {
+    const explicitlySelectedInertiaReact =
+      args.frontend?.trim().toLowerCase() === 'inertia-react' && frontend === 'inertia-react'
+    if (frontend !== 'livewire' && !explicitlySelectedInertiaReact) return false
+  }
   if (args.lang?.trim().toLowerCase() === 'javascript' && frontend !== 'react') return false
   if (args.extras?.includes('shadcn') && frontend !== 'react') return false
   if (frontend === 'livewire') {
@@ -269,6 +289,19 @@ export function isFrontendAllowedByFlags(frontend: Frontend, args: ParsedArgs): 
       (args.runtime !== undefined && args.runtime.trim().toLowerCase() !== 'php') ||
       (args.backend !== undefined && args.backend.trim().toLowerCase() !== 'laravel') ||
       args.lang !== undefined ||
+      args.orm !== undefined ||
+      (args.db !== undefined && args.db.trim().toLowerCase() !== 'sqlite') ||
+      (args.extras?.length ?? 0) > 0 ||
+      args.auth?.trim().toLowerCase() === 'better-auth'
+    ) return false
+  }
+  if (frontend === 'inertia-react') {
+    if (
+      args.platform !== undefined && args.platform.trim().toLowerCase() !== 'web' ||
+      args.fullStack === false ||
+      (args.runtime !== undefined && args.runtime.trim().toLowerCase() !== 'php') ||
+      (args.backend !== undefined && args.backend.trim().toLowerCase() !== 'laravel') ||
+      (args.lang !== undefined && args.lang.trim().toLowerCase() !== 'typescript') ||
       args.orm !== undefined ||
       (args.db !== undefined && args.db.trim().toLowerCase() !== 'sqlite') ||
       (args.extras?.length ?? 0) > 0 ||
@@ -295,14 +328,16 @@ export function isRuntimeAllowedByFlags(
     return false
   if (
     (args.frontend?.trim().toLowerCase() === 'livewire' ||
+      args.frontend?.trim().toLowerCase() === 'inertia-react' ||
       args.auth?.trim().toLowerCase() === 'laravel-native') &&
     runtime !== 'php'
   ) return false
   if (args.runtime && args.runtime.trim().toLowerCase() !== runtime) return false
-  const inferredLivewire =
+  const inferredLaravelIntegrated =
     args.frontend?.trim().toLowerCase() === 'livewire' ||
+    args.frontend?.trim().toLowerCase() === 'inertia-react' ||
     args.auth?.trim().toLowerCase() === 'laravel-native'
-  if (!args.runtime && !inferredLivewire && (args.orm || args.backend)) return runtime === 'node'
+  if (!args.runtime && !inferredLaravelIntegrated && (args.orm || args.backend)) return runtime === 'node'
   if (
     args.db &&
     !(RUNTIME_DATABASES[runtime] as readonly string[]).includes(args.db.trim().toLowerCase())
@@ -315,6 +350,7 @@ export function hasFullStackFlags(args: ParsedArgs): boolean {
   return Boolean(
     args.runtime || args.backend || args.db || args.orm ||
     args.frontend?.trim().toLowerCase() === 'livewire' ||
+    args.frontend?.trim().toLowerCase() === 'inertia-react' ||
     args.auth?.trim().toLowerCase() === 'better-auth' ||
     args.auth?.trim().toLowerCase() === 'laravel-native'
   )
@@ -325,7 +361,9 @@ export function validateAnswerCompatibility(answers: Answers): void {
   const authContext: AuthenticationContext = {
     ...answers,
     frontend: answers.frontend,
-    ...(answers.architecture.kind === 'integrated-laravel' ? { language: null } : {}),
+    ...(answers.architecture.kind === 'integrated-laravel' && answers.architecture.mode === 'livewire'
+      ? { language: null }
+      : {}),
   }
   const authenticationError = authenticationCompatibilityReason(
     answers.authentication,
@@ -367,11 +405,21 @@ export function validateAnswerCompatibility(answers: Answers): void {
   if (answers.projectType !== 'web') {
     throw new Error('Mobile and desktop projects must use the native-app architecture.')
   }
+  if (answers.frontend === 'inertia-react' && !integratedLaravel) {
+    throw new Error('Laravel Inertia React must use the integrated Laravel architecture.')
+  }
   if (integratedLaravel) {
+    if (answers.architecture.kind !== 'integrated-laravel') {
+      throw new Error('Integrated Laravel mode must identify its selected UI architecture.')
+    }
+    const livewire = answers.architecture.mode === 'livewire'
+    const inertiaReact = answers.architecture.mode === 'inertia-react'
     if (
       !answers.fullStack ||
-      answers.frontend !== 'livewire' ||
-      answers.language !== null ||
+      !(livewire && answers.frontend === 'livewire') &&
+        !(inertiaReact && answers.frontend === 'inertia-react') ||
+      (livewire && answers.language !== null) ||
+      (inertiaReact && answers.language !== 'typescript') ||
       answers.backendRuntime !== 'php' ||
       answers.backendFramework !== 'laravel' ||
       answers.orm !== null ||
@@ -381,7 +429,9 @@ export function validateAnswerCompatibility(answers: Answers): void {
       answers.extras.shadcn
     ) {
       throw new Error(
-        'Integrated Laravel Livewire currently requires PHP + Laravel + SQLite, with no separate frontend, ORM, or extras.',
+        livewire
+          ? 'Integrated Laravel Livewire currently requires PHP + Laravel + SQLite, with no separate frontend, ORM, or extras.'
+          : 'Integrated Laravel Inertia React currently requires PHP + Laravel + SQLite + TypeScript, with no separate API, ORM, or extras.',
       )
     }
     return

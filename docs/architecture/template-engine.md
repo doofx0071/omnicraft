@@ -9,7 +9,8 @@ For the layer kinds, required files, and what belongs where, see the [template c
 
 `composeLayers(answers)` returns an ordered `Layer[]`, where a layer is `{ src, dest }` — `src` relative
 to the templates root, `dest` relative to the target directory. Supported architecture kinds are
-frontend-only, separate frontend + API, integrated Next.js, and native Expo/Tauri.
+frontend-only, separate frontend + API, integrated Next.js, integrated Laravel (Livewire or Inertia
+React), and native Expo/Tauri.
 
 For separate frontend + API projects, layers are applied in this order:
 
@@ -23,13 +24,16 @@ For separate frontend + API projects, layers are applied in this order:
 6. **Root variant** — database/runtime-specific workspace or frontend-only root files.
 
 Integrated Next.js runs `create-next-app` first, then applies its UI/API overlay, selected database
-adapter, optional root tooling, and the Next.js root variant. Native choices run the official Expo or
-Tauri generator and apply a platform API-client/notes layer. Laravel runs Composer before applying its
-PHP overlay; see the exception below.
+adapter, optional root tooling, and the Next.js root variant. Laravel 13 integrated modes retrieve a
+pinned official starter kit (Livewire through tiged; Inertia React through Composer), apply their
+dedicated root README/scripts, install Composer dependencies, and prepare SQLite. Inertia React also
+installs/builds its Vite assets unless `--skip-install` is set. Native choices run the official Expo or
+Tauri generator and apply a platform API-client/notes layer. The separate Laravel 12 API path runs
+Composer before applying its PHP overlay; see the exception below.
 
 ### The Laravel exception
 
-Laravel templates are **overlays**. `isPostComposerLayer()` identifies `server/php/...` layers; the CLI:
+The Laravel 12 API template is an **overlay**. `isPostComposerLayer()` identifies `server/php/...` layers; the CLI:
 
 1. Applies all non-post layers first.
 2. Runs `composer create-project laravel/laravel:^12.0 server` in the target.

@@ -30,6 +30,7 @@
     "test:integration:python": "tsx scripts/fastapi-integration.ts",
     "test:integration:php": "tsx scripts/php-laravel-e2e.ts",
     "test:integration:php-livewire": "tsx scripts/php-livewire-auth-e2e.ts",
+    "test:integration:php-inertia": "tsx scripts/php-inertia-react-auth-e2e.ts",
     "check:support-matrix": "tsx scripts/check-support-evidence.ts",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build && npm run test"

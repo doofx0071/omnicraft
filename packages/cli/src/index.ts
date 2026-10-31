@@ -5,6 +5,7 @@ import { applyModuleToProject, runAdd } from './add-run.js'
 import {
   CLI_VERSION,
   CNA_PACKAGE,
+  LARAVEL_INERTIA_REACT_STARTER_KITS,
   LARAVEL_LIVEWIRE_STARTER_KITS,
   SHADCN_BASE,
   SHADCN_COMPONENTS,
@@ -230,7 +231,80 @@ async function main(): Promise<void> {
     const integratedLaravel = answers.architecture.kind === 'integrated-laravel'
     const layerPlan = planLayerApplication(layers, answers.architecture)
 
-    if (integratedLaravel) {
+    if (
+      integratedLaravel &&
+      answers.architecture.kind === 'integrated-laravel' &&
+      answers.architecture.mode === 'inertia-react'
+    ) {
+      if (answers.authentication !== 'none' && answers.authentication !== 'laravel-native') {
+        throw new Error('Laravel Inertia React accepts only None or Laravel native authentication.')
+      }
+      spinner.start('Creating the Laravel Inertia React app from its pinned official starter kit...')
+      mkdirSync(answers.targetDir, { recursive: true })
+      const starterKit = LARAVEL_INERTIA_REACT_STARTER_KITS[answers.authentication]
+      const starterCreated = runCommand(
+        'composer',
+        [
+          'create-project',
+          starterKit,
+          'server',
+          '--stability=dev',
+          '--no-install',
+          '--no-scripts',
+          '--no-interaction',
+          '--prefer-dist',
+          '--no-progress',
+        ],
+        answers.targetDir,
+        64 * 1024 * 1024,
+      )
+      if (!starterCreated.ok) {
+        spinner.stop('Laravel Inertia React starter retrieval failed')
+        throw new Error(
+          `Could not retrieve the pinned Laravel Inertia React starter kit — check PHP, Composer, and your connection.\n${starterCreated.output.split('\n').slice(-10).join('\n')}`,
+        )
+      }
+      applyLayers(templatesRoot, layerPlan.afterOfficialGenerator, variables, answers.targetDir)
+      const serverDir = join(answers.targetDir, 'server')
+      const sqliteFile = join(serverDir, 'database', 'database.sqlite')
+      if (!existsSync(join(serverDir, '.env'))) {
+        copyFileSync(join(serverDir, '.env.example'), join(serverDir, '.env'))
+      }
+      if (!existsSync(sqliteFile)) writeFileSync(sqliteFile, '')
+
+      spinner.stop('Laravel Inertia React starter retrieved')
+      const installerEnv = {
+        ...process.env,
+        LARAVEL_INSTALLER_DEFER_HOOKS: 'true',
+        LARAVEL_INSTALLER_NO_NODE: 'true',
+      }
+      p.log.step('Installing PHP dependencies with Composer — live output below')
+      const composerInstalled = await runCommandVisible(
+        'composer',
+        ['install', '--no-interaction', '--prefer-dist', '--no-progress'],
+        serverDir,
+        { env: installerEnv },
+      )
+      if (!composerInstalled) {
+        throw new Error('composer install failed — check the output above, then verify PHP 8.3+ and Composer.')
+      }
+
+      const migrationEnv = createLaravelSqliteMigrationEnv(process.env, sqliteFile)
+      for (const [label, commandArgs] of [
+        ['Generate Laravel application key', ['artisan', 'key:generate', '--force']],
+        ...(answers.authentication === 'laravel-native'
+          ? [['Apply official Laravel starter features', ['artisan', 'install:features', '--answers={}', '--no-interaction']] as const]
+          : []),
+        ['Apply the initial SQLite migrations', ['artisan', 'migrate', '--force']],
+      ] as const) {
+        const result = runCommand('php', [...commandArgs], serverDir, { env: migrationEnv })
+        if (!result.ok) {
+          spinner.stop(`${label} failed`)
+          throw new Error(`${label} failed.\n${result.output.split('\n').slice(-10).join('\n')}`)
+        }
+      }
+      spinner.stop('Laravel Inertia React application created and configured')
+    } else if (integratedLaravel) {
       if (answers.authentication !== 'none' && answers.authentication !== 'laravel-native') {
         throw new Error('Laravel Livewire accepts only None or Laravel native authentication.')
       }
@@ -413,6 +487,34 @@ async function main(): Promise<void> {
           }
         } else {
           p.log.step('Skipped — run "uv sync" inside server/ when ready')
+        }
+      } else if (
+        integratedLaravel &&
+        answers.architecture.kind === 'integrated-laravel' &&
+        answers.architecture.mode === 'inertia-react'
+      ) {
+        const shouldInstall = !args.skipInstall && (args.yes
+          ? true
+          : unwrap(
+              await p.confirm({
+                message: 'Install Inertia React/Vite frontend dependencies with npm and build assets now?',
+                initialValue: true,
+              }),
+            ))
+        if (shouldInstall) {
+          const serverDir = join(answers.targetDir, 'server')
+          p.log.step('Installing Inertia React frontend dependencies with npm — live output below')
+          const installed = await installDependencies(serverDir, 'npm')
+          if (!installed) {
+            p.log.warn('npm install failed — run "npm install" inside server/ and then "npm run build"')
+          } else {
+            p.log.success('Inertia React dependencies installed')
+            const built = await runCommandVisible('npm', ['run', 'build'], serverDir)
+            if (built) p.log.success('Inertia React assets built')
+            else p.log.warn('Asset build failed — run "npm run build" inside server/ when ready')
+          }
+        } else {
+          p.log.step('Skipped — run "npm install" and "npm run build" inside server/ when ready')
         }
       } else if (integratedLaravel) {
         const shouldInstall = !args.skipInstall && (args.yes

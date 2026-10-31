@@ -6,6 +6,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added
+
+- Integrated Laravel 13 + Inertia React + TypeScript scaffolding with SQLite and either `None` or
+  Laravel-native Fortify authentication. The Laravel 12 API and Laravel 13 Livewire paths remain
+  separate; account linking and managed providers are not included.
+- Generated-project checks for both Inertia React auth modes, including the auth lifecycle and
+  pre-write rejection of incompatible combinations.
+
 ## [1.0.3] — 2026-10-31
 
 ### Added

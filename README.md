@@ -24,23 +24,27 @@ Open <a href="docs/demo.html">docs/demo.html</a> in a browser — the same flow 
 │
 ◆  What is the name of your app?          ▸ becomes the folder name
 ◆  What are you building?                 ● Web App · Mobile (Expo) · Desktop (Tauri)
-◆  Select a frontend framework:           ● React · Next.js · Vue · Svelte · Laravel + Livewire
+◆  Select a frontend framework:           ● React · Next.js · Vue · Svelte · Laravel + Livewire · Laravel + Inertia React
 ◆  Select a language:                     ● TypeScript · JavaScript (React/Vite client only)
 ◆  Full-stack?                            Adds backend + database
 ◆  Select a backend runtime:              ● Node.js · Python · PHP
 ◆  Select a backend framework:            ● Express · Fastify · Hono / FastAPI / Laravel
 ◆  Select a database:                     ● PostgreSQL · SQLite (zero setup) · MySQL
 ◆  Select an ORM:                         ● Drizzle · Prisma  (node only)
-◆  Select an authentication setup:        ● None · Better Auth (compatible React + Express + Drizzle) · Laravel native (Livewire only)
+◆  Select an authentication setup:        ● None · Better Auth (compatible React + Express + Drizzle) · Laravel native (Livewire or Inertia React)
 ◆  Pick extras:                           ◉ Tailwind CSS  ◉ ESLint + Prettier
 └  Scaffolds → git init → installs deps → prints next steps
 ```
 
-Next.js skips the separate backend, ORM, authentication, and extras prompts. Its `create-next-app` base always includes Tailwind and ESLint. The auth prompt is filtered by stack: Better Auth appears only for TypeScript React/Vite + Node/Express + Drizzle with SQLite, PostgreSQL, or MySQL; Laravel native auth appears only for integrated Laravel + Livewire with SQLite. Choose `None` to leave the app without an optional auth layer. Better Auth uses the same integration as `omnicraft add auth`; set a private `BETTER_AUTH_SECRET` in `server/.env` and run `npm run db:push` before using its endpoints. OmniCraft never creates or stores a real provider secret.
+Next.js skips the separate backend, ORM, authentication, and extras prompts. Its `create-next-app` base always includes Tailwind and ESLint. The auth prompt is filtered by stack: Better Auth appears only for TypeScript React/Vite + Node/Express + Drizzle with SQLite, PostgreSQL, or MySQL; Laravel native auth appears only for integrated Laravel + Livewire or Inertia React with SQLite. Choose `None` to leave the app without an optional auth layer. Better Auth uses the same integration as `omnicraft add auth`; set a private `BETTER_AUTH_SECRET` in `server/.env` and run `npm run db:push` before using its endpoints. OmniCraft never creates or stores a real provider secret.
 
 ### Laravel + Livewire
 
 `--frontend livewire` creates an integrated Laravel 13 + Livewire 4 app with SQLite; it does not add a separate React/Vite client or Node auth service. `None` uses Laravel's official blank Livewire starter. `Laravel native` uses its official authenticated starter with Fortify. This path requires PHP 8.3+, Composer, and Node 22.18+, 24.11+, or 26+ for the starter kit's Vite Plus tooling. Laravel Composer setup still runs with `--skip-install`; that flag skips optional JavaScript/Python setup and Livewire asset installation/build.
+
+### Laravel + Inertia React
+
+`--frontend inertia-react` creates an integrated Laravel 13 app with Inertia, React, TypeScript, and SQLite. `None` uses Laravel's official blank React starter kit; `Laravel native` uses its Fortify-enabled React starter kit. Laravel routes, sessions, and the React UI live in one `server/` app; this is separate from the React/Vite + Express API architecture and the Laravel 12 API/data scaffold. Only one auth owner is configured, with no account linking. Laravel Composer setup still runs with `--skip-install`; that flag skips the optional npm install and asset build. This path requires PHP 8.3+, Composer, Node.js, and npm.
 
 ## What you get (full-stack React)
 
@@ -76,13 +80,13 @@ The prompt and flags expose these choices. A choice in one row does not imply ev
 | Layer | Selectable choices | Scope notes |
 | --- | --- | --- |
 | Platform | Web, Mobile (Expo), Desktop (Tauri) | Mobile and desktop projects pair with a separately run backend. Native build and device verification limits are in the matrix. |
-| Frontend | React + Vite, Next.js, Vue + Vite, Svelte + Vite, Laravel + Livewire | Next.js and Laravel + Livewire are integrated; the Vite clients use a separate API when full-stack is selected. |
-| Language | TypeScript, JavaScript | JavaScript is selectable only for the web React/Vite client; Vue, Svelte, Next.js, Expo, and Tauri use TypeScript. Livewire uses PHP and does not ask for a separate frontend language. A selected backend keeps its runtime language. |
+| Frontend | React + Vite, Next.js, Vue + Vite, Svelte + Vite, Laravel + Livewire, Laravel + Inertia React | Next.js, Laravel + Livewire, and Laravel + Inertia React are integrated; the Vite clients use a separate API when full-stack is selected. |
+| Language | TypeScript, JavaScript | JavaScript is selectable only for the web React/Vite client; Vue, Svelte, Next.js, Expo, Tauri, and Inertia React use TypeScript. Livewire uses PHP and does not ask for a separate frontend language. A selected backend keeps its runtime language. |
 | Backend | Node: Express, Fastify, Hono · Python: FastAPI · PHP: Laravel | Framework, ORM, and database compatibility is combination-specific. |
 | Data access | Separate Node API: Drizzle, Prisma, or raw SQL · Next.js route handlers: raw SQL · Python: SQLAlchemy + Alembic · Laravel: Eloquent | Prisma is PostgreSQL-only and unavailable for Hono. Raw SQL is not an ORM. |
-| Database | PostgreSQL, SQLite, MySQL (availability varies by runtime and mode) | Laravel + Livewire currently allows SQLite only. The matrix lists which combinations have scaffold or runtime evidence. |
+| Database | PostgreSQL, SQLite, MySQL (availability varies by runtime and mode) | Laravel + Livewire and Laravel + Inertia React currently allow SQLite only. The matrix lists which combinations have scaffold or runtime evidence. |
 | Extras | Tailwind CSS, ESLint + Prettier, shadcn/ui | Next.js always includes Tailwind + ESLint from create-next-app; shadcn/ui is web React/Vite-only and implies Tailwind. |
-| Authentication setup | `None`, Better Auth email/password, Laravel native auth (Fortify) | Better Auth is limited to TypeScript React/Vite + Node/Express + Drizzle + SQLite/PostgreSQL/MySQL. Laravel native auth is limited to integrated Laravel + Livewire + SQLite; it owns Laravel sessions and does not add a second provider layer. Check the matrix for each status. |
+| Authentication setup | `None`, Better Auth email/password, Laravel native auth (Fortify) | Better Auth is limited to TypeScript React/Vite + Node/Express + Drizzle + SQLite/PostgreSQL/MySQL. Laravel native auth is limited to integrated Laravel + Livewire or Inertia React + SQLite; it owns Laravel sessions and does not add a second provider layer. Check the matrix for each status. |
 | `omnicraft add` modules | `docker`, `testing`, Better Auth email/password (`auth`) | `testing` has exact generated-runtime checks for 260 React/Vite paths (six original plus 254 additional); 52 JavaScript + shadcn paths reject before writes because required aliases are absent. Vue, Svelte, and Next.js testing requests also reject before writes. These module checks do not establish backend/database behavior. Auth requires a React frontend with a separate Node + Express + Drizzle API; hosted database flows cover SQLite, PostgreSQL, and MySQL. |
 
 ## Options
@@ -97,13 +101,14 @@ npm create omnicraft@latest [project-name] [options]
   --full-stack         Force the full-stack flow (default: yes; backend/database/ORM, non-None auth, or integrated frontend flags imply it)
   --no-full-stack      Frontend only (cannot be combined with backend/database flags)
   --runtime <name>     Skip the runtime prompt (node, python, php)
-  --frontend <name>    Skip the frontend prompt (react, nextjs, vue, svelte, livewire; Next.js and Livewire are integrated)
+  --frontend <name>    Skip the frontend prompt (react, nextjs, vue, svelte, livewire, inertia-react; integrated modes include Next.js, Livewire, and Laravel Inertia React)
   --backend <name>     Skip the framework prompt (node: express, fastify, hono ·
                        python: fastapi · php: laravel)
   --db <name>          Skip the database prompt (node: postgres, sqlite, mysql ·
                        python: postgres, sqlite · php: postgres, sqlite, mysql)
   --auth <name>        Authentication setup (none, better-auth, laravel-native; Better Auth requires
-                       TypeScript React + Node/Express/Drizzle; Laravel native requires Livewire + SQLite)
+                       TypeScript React + Node/Express/Drizzle; Laravel native requires integrated
+                       Livewire or Inertia React + SQLite)
   --orm <name>         Skip ORM selection (drizzle, prisma, none; Prisma is PostgreSQL-only and
                        unavailable for Hono). Separate Node APIs only; Next.js uses raw SQL and
                        rejects --runtime, --backend, --orm, and --no-full-stack
@@ -113,7 +118,7 @@ npm create omnicraft@latest [project-name] [options]
                        if set with Next.js, use --extras tailwind,eslint. Use none on other stacks to skip all.
   --latest             Pull templates from this CLI version's release tag
                        instead of the embedded templates
-  --skip-install       Skip optional JS/Python/Livewire frontend setup; Laravel Composer setup still runs
+  --skip-install       Skip optional JS/Python/Livewire/Inertia React frontend setup; Laravel Composer setup still runs
   --debug              Print stack traces on errors
   -h, --help           Show this help
   -v, --version        Show version
@@ -126,6 +131,7 @@ npm create omnicraft@latest my-app -- --yes --skip-install
 npm create omnicraft@latest api -- --no-full-stack --extras none
 npm create omnicraft@latest web -- --yes --auth better-auth --skip-install
 npm create omnicraft@latest livewire-app -- --yes --frontend livewire --auth laravel-native
+npm create omnicraft@latest inertia-app -- --yes --frontend inertia-react --auth laravel-native
 ```
 
 ## How it works

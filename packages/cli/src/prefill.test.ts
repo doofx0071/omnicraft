@@ -104,6 +104,14 @@ describe('validateStackFlags', () => {
     ).not.toThrow()
   })
 
+  it('accepts only integrated Laravel Inertia React with TypeScript, SQLite, and its two auth choices', () => {
+    expect(() => validateStackFlags(parseArgs(['--frontend', 'inertia-react']))).not.toThrow()
+    expect(() =>
+      validateStackFlags(parseArgs(['--frontend', 'inertia-react', '--auth', 'laravel-native', '--lang', 'typescript'])),
+    ).not.toThrow()
+    expect(() => validateStackFlags(parseArgs(['--frontend', 'inertia-react', '--auth', 'none']))).not.toThrow()
+  })
+
   it.each([
     [['--frontend', 'livewire', '--runtime', 'node'], /requires PHP \+ Laravel \+ SQLite/],
     [['--frontend', 'livewire', '--backend', 'laravel', '--db', 'postgres'], /requires PHP \+ Laravel \+ SQLite/],
@@ -114,6 +122,19 @@ describe('validateStackFlags', () => {
     [['--frontend', 'react', '--auth', 'laravel-native'], /requires PHP \+ Laravel \+ SQLite/],
     [['--auth', 'laravel-native', '--runtime', 'node'], /requires PHP \+ Laravel \+ SQLite/],
   ])('rejects unsupported Livewire flags before scaffold composition: %j', (argv, message) => {
+    expect(() => validateStackFlags(parseArgs(argv))).toThrow(message)
+  })
+
+  it.each([
+    [['--frontend', 'inertia-react', '--runtime', 'node'], /Inertia React currently requires PHP \+ Laravel \+ SQLite/],
+    [['--frontend', 'inertia-react', '--backend', 'laravel', '--db', 'postgres'], /Inertia React currently requires PHP \+ Laravel \+ SQLite/],
+    [['--frontend', 'inertia-react', '--lang', 'javascript'], /JavaScript is only available/],
+    [['--frontend', 'inertia-react', '--orm', 'none'], /--orm applies to Node\.js backends only/],
+    [['--frontend', 'inertia-react', '--no-full-stack'], /require a full-stack project/],
+    [['--frontend', 'inertia-react', '--auth', 'better-auth'], /Better Auth is not available for Laravel Inertia React/],
+    [['--frontend', 'inertia-react', '--extras', 'tailwind'], /Inertia React currently requires/],
+    [['--frontend', 'inertia-react', '--db', 'mysql'], /Inertia React currently requires PHP \+ Laravel \+ SQLite/],
+  ])('rejects incompatible Inertia React flags before scaffold composition: %j', (argv, message) => {
     expect(() => validateStackFlags(parseArgs(argv))).toThrow(message)
   })
 
@@ -176,6 +197,7 @@ describe('resolveAnswers', () => {
     expect(hasFullStackFlags(parseArgs(['--auth', 'none']))).toBe(false)
     expect(hasFullStackFlags(parseArgs(['--auth', 'better-auth']))).toBe(true)
     expect(hasFullStackFlags(parseArgs(['--frontend', 'livewire']))).toBe(true)
+    expect(hasFullStackFlags(parseArgs(['--frontend', 'inertia-react']))).toBe(true)
     expect(hasFullStackFlags(parseArgs(['--auth', 'laravel-native']))).toBe(true)
   })
 
@@ -250,6 +272,30 @@ describe('resolveAnswers', () => {
       architecture: { kind: 'integrated-laravel', framework: 'laravel', mode: 'livewire' },
     })
   })
+
+  it.each(['none', 'laravel-native'] as const)(
+    'resolves Inertia React with %s as integrated Laravel, TypeScript, and SQLite',
+    (authentication) => {
+      const answers = resolveAnswers(
+        parseArgs(['--yes', '--frontend', 'inertia-react', '--auth', authentication]),
+        base.projectName,
+        base.targetDir,
+      )
+
+      expect(answers).toMatchObject({
+        frontend: 'inertia-react',
+        language: 'typescript',
+        fullStack: true,
+        backendRuntime: 'php',
+        backendFramework: 'laravel',
+        orm: null,
+        database: 'sqlite',
+        authentication,
+        extras: { tailwind: false, eslintPrettier: false, shadcn: false },
+        architecture: { kind: 'integrated-laravel', framework: 'laravel', mode: 'inertia-react' },
+      })
+    },
+  )
 
   it('infers the Livewire architecture from the Laravel-native auth flag', () => {
     const answers = resolveAnswers(
