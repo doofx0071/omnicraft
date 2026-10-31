@@ -59,18 +59,19 @@ export default function App() {
       return;
     }
     let active = true;
-    void supabase
-      .from("notes")
-      .select("id, content, created_at")
-      .order("created_at", { ascending: false })
-      .then(({ data, error: queryError }) => {
+    void (async () => {
+      try {
+        const { data, error: queryError } = await supabase
+          .from("notes")
+          .select("id, content, created_at")
+          .order("created_at", { ascending: false });
         if (!active) return;
         if (queryError) setError(queryError.message);
         else setNotes(data ?? []);
-      })
-      .catch((cause: unknown) => {
+      } catch (cause) {
         if (active) setError(requestErrorMessage(cause));
-      });
+      }
+    })();
     return () => {
       active = false;
     };
