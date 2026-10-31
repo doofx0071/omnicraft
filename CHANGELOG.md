@@ -14,8 +14,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   The Laravel 12 API path remains separate and unchanged.
 - Creation-time `None` or Better Auth selection for React/Vite + Express + Drizzle with SQLite,
   PostgreSQL, or MySQL. The manifest records active authentication separately from `modules`.
-- Runtime checks for 254 compatible React/Vite `omnicraft add testing` paths and pre-write rejection
-  for 52 JavaScript + shadcn paths that lack the template aliases required by shadcn.
+- Runtime checks for 254 additional compatible React/Vite `omnicraft add testing` paths (260 total
+  including the six previously verified paths) and pre-write rejection for 52 JavaScript + shadcn
+  paths that lack the template aliases required by shadcn.
 
 ### Changed
 
