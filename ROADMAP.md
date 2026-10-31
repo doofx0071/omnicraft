@@ -6,19 +6,19 @@
 
 ## Progress overview
 
-| Version | Theme                                   | Progress             | Issues  |
-| ------- | --------------------------------------- | -------------------- | ------- |
-| v0.1.0  | Public launch                           | ✅ 6/6               | #1–#6   |
-| v0.2.0  | Scaffolder hardening                    | ✅ 5/5               | #7–#11  |
-| v0.3.0  | Backend & database expansion            | ✅ 5/5               | #12–#16 |
-| v0.3.1  | Hardening (master-plan PR 2/3/5)        | ✅ tag               | —       |
-| v0.4.0  | Frontend expansion                      | ✅ 4/4               | #17–#20 |
-| v0.5.0  | Platform expansion (mobile, desktop)    | ✅ 2/2               | #21–#22 |
-| v1.0.0  | First stable release                    | ✅ 5/5               | #23–#27 |
-| v1.0.1  | SQLite first-run fix                    | ✅ published         | —       |
-| v1.0.2  | Reliability fixes and runtime evidence  | ✅ published         | —       |
+| Version | Theme                                        | Progress             | Issues  |
+| ------- | -------------------------------------------- | -------------------- | ------- |
+| v0.1.0  | Public launch                                | ✅ 6/6               | #1–#6   |
+| v0.2.0  | Scaffolder hardening                         | ✅ 5/5               | #7–#11  |
+| v0.3.0  | Backend & database expansion                 | ✅ 5/5               | #12–#16 |
+| v0.3.1  | Hardening (master-plan PR 2/3/5)             | ✅ tag               | —       |
+| v0.4.0  | Frontend expansion                           | ✅ 4/4               | #17–#20 |
+| v0.5.0  | Platform expansion (mobile, desktop)         | ✅ 2/2               | #21–#22 |
+| v1.0.0  | First stable release                         | ✅ 5/5               | #23–#27 |
+| v1.0.1  | SQLite first-run fix                         | ✅ published         | —       |
+| v1.0.2  | Reliability fixes and runtime evidence       | ✅ published         | —       |
 | v1.0.3  | Laravel Livewire, auth, and runtime evidence | 🟡 release candidate | —       |
-| v1.0.4  | Laravel Inertia React scaffolding | 🟡 release candidate | —       |
+| v1.0.4  | Laravel Inertia React scaffolding            | 🟡 release candidate | —       |
 
 ---
 

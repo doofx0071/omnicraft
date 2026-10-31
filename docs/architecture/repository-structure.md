@@ -29,6 +29,7 @@ omnicraft/
         ├── vitest.config.ts
         ├── scripts/
         │   ├── smoke-e2e.ts      # scaffolds the combinations currently listed in the script
+        │   ├── php-laravel-sanctum-auth-e2e.ts # generated Laravel 12 Sanctum SPA auth runtime
         │   └── supabase-auth-integration.ts # local Supabase Auth/Data API/RLS generated-project runtime
         ├── src/
         │   ├── index.ts          # entry: orchestration + single catch site
@@ -62,17 +63,20 @@ omnicraft/
             ├── server/node/{express,fastify,hono}/{drizzle,prisma,none}/ # framework×data wiring (not every path exists)
             ├── server/python/fastapi/base/  # FastAPI app + alembic (initial migration included)
             ├── server/php/laravel/          # overlay applied after composer create-project
+            ├── server/php/laravel-sanctum-spa/ # Laravel 12 API auth overlay, SQLite mode only
             ├── db/{drizzle}/{postgres,sqlite,mysql}/   # node db adapters (config, client, schema, seed)
             ├── db/prisma/postgres/          # prisma 7 adapter (postgres only)
             ├── db/none/{postgres,sqlite,mysql}/ # Node raw-SQL adapters
             ├── db/sqlalchemy/{postgres,sqlite}/         # python db adapters (pyproject + database.py)
             ├── auth/supabase-react-vite/ # managed auth overlay for the exact React/Vite TS frontend-only tuple
+            ├── auth/laravel-sanctum-spa-react-vite/ # client auth overlay for Laravel 12 SPA sessions
             ├── extras/{tailwind,eslint,shadcn}/ # opt-in overlays; shadcn is React/Vite-only
             └── root/
                 ├── frontend-only/           # root files when fullStack = false
                 ├── fullstack/{postgres,sqlite,mysql}/   # node+laravel root variants
                 ├── fullstack-python/{postgres,sqlite}/   # python root variants
                 ├── fullstack-php/{postgres,sqlite,mysql}/ # php root variants
+                ├── fullstack-php/sqlite-sanctum-spa-auth/ # React/Vite + Laravel API session-auth root
                 ├── fullstack-next/{postgres,sqlite,mysql}/ # integrated Next.js root variants
                 ├── fullstack-laravel-livewire/            # integrated Laravel 13 + Livewire root files
                 └── fullstack-laravel-inertia-react/       # integrated Laravel 13 + Inertia React root files
@@ -80,22 +84,23 @@ omnicraft/
 
 ## Placement rules
 
-| New artifact                   | Location                                               | Notes                                                                                                |
-| ------------------------------ | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| CLI source module              | `packages/cli/src/` (grouped: `prompts/`, `scaffold/`) | Co-locate its test as `<name>.test.ts`.                                                              |
-| New prompt                     | `src/prompts/run-prompts.ts`                           | Split into `src/prompts/<topic>.ts` if the flow grows; keep `run-prompts.ts` as the orchestrator.    |
-| Capability/availability change | `src/prefill.ts` (`AVAILABLE`), `src/compatibility.ts`, and prompt/validation/composition code | Keep cross-option constraints shared; verify actual template paths and test prompt, flag, and composition behavior. |
-| Framework base template        | `templates/server/<runtime>/<framework>/base/`         | Entry, env validation, health route, tsconfig, package.json, .env.example.                           |
-| Node ORM wiring                | `templates/server/node/<framework>/<orm>/`             | Route registrations + ORM-specific users routes.                                                     |
-| Node db adapter                | `templates/db/<orm>/<database>/`                       | package.json (deps+scripts), db config, client, schema, seed, .env.example.                          |
-| Python db adapter              | `templates/db/sqlalchemy/<database>/`                  | pyproject.toml (deps), app/database.py, .env.example.                                                |
-| Runtime root files             | `templates/root/fullstack[-<runtime>]/<database>/`     | Workspaces package.json, .gitignore, README, docker-compose (containerized DBs only), `_github/` CI. |
-| Extra overlay                  | `templates/extras/<name>/`                             | Merged files only; must compose cleanly with any stack.                                              |
-| Smoke combo                    | `packages/cli/scripts/smoke-e2e.ts` (`combos`)         | Add exact scaffold coverage; smoke generation alone does not establish Supported status.             |
-| Generated demo                 | `scripts/make-demo.mjs` (root)                         | Writes `docs/demo.gif` + `docs/demo.html`; never hand-edit those.                                    |
-| Engineering doc                | `docs/<area>/<topic>.md`                               | Linked from `docs/index.md`.                                                                         |
-| Plan                           | `docs/plans/active/`                                   | Move to `completed/` when done.                                                                      |
-| CI change                      | `.github/workflows/ci.yml`                             | Keep windows + unix jobs' step sets in sync.                                                         |
+| New artifact                   | Location                                                                                       | Notes                                                                                                                         |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| CLI source module              | `packages/cli/src/` (grouped: `prompts/`, `scaffold/`)                                         | Co-locate its test as `<name>.test.ts`.                                                                                       |
+| New prompt                     | `src/prompts/run-prompts.ts`                                                                   | Split into `src/prompts/<topic>.ts` if the flow grows; keep `run-prompts.ts` as the orchestrator.                             |
+| Capability/availability change | `src/prefill.ts` (`AVAILABLE`), `src/compatibility.ts`, and prompt/validation/composition code | Keep cross-option constraints shared; verify actual template paths and test prompt, flag, and composition behavior.           |
+| Framework base template        | `templates/server/<runtime>/<framework>/base/`                                                 | Entry, env validation, health route, tsconfig, package.json, .env.example.                                                    |
+| Node ORM wiring                | `templates/server/node/<framework>/<orm>/`                                                     | Route registrations + ORM-specific users routes.                                                                              |
+| Node db adapter                | `templates/db/<orm>/<database>/`                                                               | package.json (deps+scripts), db config, client, schema, seed, .env.example.                                                   |
+| Python db adapter              | `templates/db/sqlalchemy/<database>/`                                                          | pyproject.toml (deps), app/database.py, .env.example.                                                                         |
+| Runtime root files             | `templates/root/fullstack[-<runtime>]/<database>/`                                             | Workspaces package.json, .gitignore, README, docker-compose (containerized DBs only), `_github/` CI.                          |
+| Framework/auth overlay         | `templates/server/php/` and `templates/auth/`                                                  | Keep Laravel API Sanctum SPA sessions in their own SQLite-only overlay; do not add personal tokens or a second auth provider. |
+| Extra overlay                  | `templates/extras/<name>/`                                                                     | Merged files only; must compose cleanly with any stack.                                                                       |
+| Smoke combo                    | `packages/cli/scripts/smoke-e2e.ts` (`combos`)                                                 | Add exact scaffold coverage; smoke generation alone does not establish Supported status.                                      |
+| Generated demo                 | `scripts/make-demo.mjs` (root)                                                                 | Writes `docs/demo.gif` + `docs/demo.html`; never hand-edit those.                                                             |
+| Engineering doc                | `docs/<area>/<topic>.md`                                                                       | Linked from `docs/index.md`.                                                                                                  |
+| Plan                           | `docs/plans/active/`                                                                           | Move to `completed/` when done.                                                                                               |
+| CI change                      | `.github/workflows/ci.yml`                                                                     | Keep windows + unix jobs' step sets in sync.                                                                                  |
 
 ## Not in this repository
 
