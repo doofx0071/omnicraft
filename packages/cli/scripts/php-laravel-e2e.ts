@@ -101,6 +101,7 @@ function makeAnswers(projectRoot: string, database: TestDatabase): Answers {
     backendFramework: 'laravel',
     orm: null,
     database: database as Database,
+    authentication: 'none',
     extras: { tailwind: false, eslintPrettier: false, shadcn: false },
     architecture: { kind: 'separate-frontend-api' },
   }

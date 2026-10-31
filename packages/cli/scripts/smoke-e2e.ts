@@ -54,6 +54,7 @@ for (const { framework, orm, db } of combos) {
     backendFramework: framework,
     orm,
     database: db,
+    authentication: 'none',
     extras: { tailwind: true, eslintPrettier: true, shadcn: false },
     architecture: { kind: 'separate-frontend-api' },
   })
@@ -71,6 +72,7 @@ scaffold({
   backendFramework: null,
   orm: null,
   database: null,
+  authentication: 'none',
   extras: { tailwind: true, eslintPrettier: true, shadcn: false },
   architecture: { kind: 'frontend-only' },
 })
@@ -88,6 +90,7 @@ for (const fe of ['vue', 'svelte'] as const) {
     backendFramework: 'express',
     orm: 'drizzle',
     database: 'sqlite',
+    authentication: 'none',
     extras: { tailwind: true, eslintPrettier: true, shadcn: false },
     architecture: { kind: 'separate-frontend-api' },
   })
@@ -122,6 +125,7 @@ for (const fe of ['vue', 'svelte'] as const) {
       backendFramework: null,
       orm: 'none',
       database: 'sqlite',
+      authentication: 'none',
       extras: { tailwind: true, eslintPrettier: true, shadcn: false },
       architecture: { kind: 'integrated-fullstack', framework: 'nextjs' },
     }

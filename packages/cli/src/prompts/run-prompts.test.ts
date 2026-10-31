@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { parseArgs } from '../args.js'
+import { resolveAnswers } from '../prefill.js'
 
 const script: Array<{ prompt: 'text' | 'select' | 'confirm' | 'multiselect'; answer: unknown }> = []
 const calls: string[] = []
@@ -81,6 +82,172 @@ describe('runPrompts flow', () => {
     expect(answers.database).toBe('postgres')
     expect(answers.language).toBe('typescript')
     expect(answers.extras).toEqual({ tailwind: true, eslintPrettier: false, shadcn: false })
+  })
+
+  it('offers only None and Better Auth for the supported Express + Drizzle stack', async () => {
+    script.push(
+      { prompt: 'text', answer: 'auth-app' },
+      { prompt: 'select', answer: 'web' },
+      { prompt: 'select', answer: 'react' },
+      { prompt: 'select', answer: 'typescript' },
+      { prompt: 'confirm', answer: true },
+      { prompt: 'select', answer: 'node' },
+      { prompt: 'select', answer: 'express' },
+      { prompt: 'select', answer: 'postgres' },
+      { prompt: 'select', answer: 'drizzle' },
+      { prompt: 'select', answer: 'better-auth' },
+      { prompt: 'multiselect', answer: [] },
+      { prompt: 'confirm', answer: true },
+    )
+
+    const answers = await runPrompts()
+
+    expect(answers.authentication).toBe('better-auth')
+    expect(calls).toContain('select')
+    const authOptions = optionsSeen.find((entry) =>
+      entry.options.some((option) => option.value === 'better-auth'),
+    )
+    expect(authOptions?.options.map((option) => option.value)).toEqual(['none', 'better-auth'])
+  })
+
+  it('omits Better Auth for the selectable JavaScript client path', async () => {
+    script.push(
+      { prompt: 'text', answer: 'js-auth-app' },
+      { prompt: 'select', answer: 'web' },
+      { prompt: 'select', answer: 'react' },
+      { prompt: 'select', answer: 'javascript' },
+      { prompt: 'confirm', answer: true },
+      { prompt: 'select', answer: 'node' },
+      { prompt: 'select', answer: 'express' },
+      { prompt: 'select', answer: 'postgres' },
+      { prompt: 'select', answer: 'drizzle' },
+      { prompt: 'multiselect', answer: [] },
+      { prompt: 'confirm', answer: true },
+    )
+
+    const answers = await runPrompts()
+
+    expect(answers.authentication).toBe('none')
+    expect(
+      optionsSeen.some((entry) => entry.options.some((option) => option.value === 'better-auth')),
+    ).toBe(false)
+  })
+
+  it('keeps explicit Better Auth prompts aligned with the non-interactive defaults', async () => {
+    script.push(
+      { prompt: 'select', answer: 'web' },
+      { prompt: 'select', answer: 'react' },
+      { prompt: 'select', answer: 'typescript' },
+      { prompt: 'select', answer: 'node' },
+      { prompt: 'select', answer: 'express' },
+      { prompt: 'select', answer: 'postgres' },
+      { prompt: 'select', answer: 'drizzle' },
+      { prompt: 'multiselect', answer: ['tailwind', 'eslint'] },
+      { prompt: 'confirm', answer: true },
+    )
+
+    const args = parseArgs(['--auth', 'better-auth'])
+    const interactive = await runPrompts('auth-app', args)
+    const nonInteractive = resolveAnswers(
+      parseArgs(['--yes', '--auth', 'better-auth']),
+      'auth-app',
+      interactive.targetDir,
+    )
+
+    expect(interactive).toMatchObject({
+      frontend: nonInteractive.frontend,
+      language: nonInteractive.language,
+      fullStack: nonInteractive.fullStack,
+      backendRuntime: nonInteractive.backendRuntime,
+      backendFramework: nonInteractive.backendFramework,
+      orm: nonInteractive.orm,
+      database: nonInteractive.database,
+      authentication: nonInteractive.authentication,
+      extras: nonInteractive.extras,
+    })
+    const languageOptions = optionsSeen.find((entry) =>
+      entry.options.some((option) => option.value === 'typescript'),
+    )
+    expect(languageOptions?.options.map((option) => option.value)).toEqual(['typescript'])
+  })
+
+  it('keeps an interactive None selection aligned with --yes --auth none', async () => {
+    script.push(
+      { prompt: 'text', answer: 'auth-app' },
+      { prompt: 'select', answer: 'web' },
+      { prompt: 'select', answer: 'react' },
+      { prompt: 'select', answer: 'typescript' },
+      { prompt: 'confirm', answer: true },
+      { prompt: 'select', answer: 'node' },
+      { prompt: 'select', answer: 'express' },
+      { prompt: 'select', answer: 'postgres' },
+      { prompt: 'select', answer: 'drizzle' },
+      { prompt: 'select', answer: 'none' },
+      { prompt: 'multiselect', answer: ['tailwind', 'eslint'] },
+      { prompt: 'confirm', answer: true },
+    )
+
+    const interactive = await runPrompts()
+    const nonInteractive = resolveAnswers(
+      parseArgs(['--yes', '--auth', 'none']),
+      interactive.projectName,
+      interactive.targetDir,
+    )
+
+    expect(interactive).toMatchObject({
+      frontend: nonInteractive.frontend,
+      language: nonInteractive.language,
+      fullStack: nonInteractive.fullStack,
+      backendRuntime: nonInteractive.backendRuntime,
+      backendFramework: nonInteractive.backendFramework,
+      orm: nonInteractive.orm,
+      database: nonInteractive.database,
+      authentication: 'none',
+      extras: nonInteractive.extras,
+      architecture: nonInteractive.architecture,
+    })
+  })
+
+  it('keeps the Livewire None/native-auth prompt aligned with flags and skips React language choices', async () => {
+    script.push(
+      { prompt: 'select', answer: 'web' },
+      { prompt: 'select', answer: 'livewire' },
+      { prompt: 'select', answer: 'laravel-native' },
+      { prompt: 'confirm', answer: true },
+    )
+
+    const interactive = await runPrompts('livewire-app')
+    const nonInteractive = resolveAnswers(
+      parseArgs(['--yes', '--frontend', 'livewire', '--auth', 'laravel-native']),
+      interactive.projectName,
+      interactive.targetDir,
+    )
+
+    expect(calls).toEqual(['select', 'select', 'select', 'confirm'])
+    expect(interactive).toMatchObject({
+      frontend: nonInteractive.frontend,
+      language: null,
+      fullStack: nonInteractive.fullStack,
+      backendRuntime: nonInteractive.backendRuntime,
+      backendFramework: nonInteractive.backendFramework,
+      orm: null,
+      database: nonInteractive.database,
+      authentication: 'laravel-native',
+      extras: nonInteractive.extras,
+      architecture: nonInteractive.architecture,
+    })
+    const authOptions = optionsSeen.find((entry) =>
+      entry.options.some((option) => option.value === 'laravel-native'),
+    )
+    expect(authOptions?.options.map((option) => option.value)).toEqual(['none', 'laravel-native'])
+    expect(optionsSeen.some((entry) => entry.options.some((option) => option.value === 'typescript'))).toBe(false)
+  })
+
+  it('rejects an incompatible Livewire database before presenting prompts', async () => {
+    await expect(
+      runPrompts('livewire-app', parseArgs(['--frontend', 'livewire', '--db', 'postgres'])),
+    ).rejects.toThrow(/requires PHP \+ Laravel \+ SQLite/)
+    expect(calls).toEqual([])
   })
 
   it('takes the frontend-only shortcut when full-stack is declined', async () => {
@@ -227,6 +394,7 @@ describe('runPrompts flow', () => {
       { prompt: 'select', answer: 'mongodb' }, // db roadmap -> warned, re-prompt
       { prompt: 'select', answer: 'postgres' },
       { prompt: 'select', answer: 'drizzle' },
+      { prompt: 'select', answer: 'none' },
       { prompt: 'multiselect', answer: ['tailwind', 'eslint'] },
       { prompt: 'confirm', answer: true },
     )
@@ -248,6 +416,7 @@ describe('runPrompts flow', () => {
       { prompt: 'select', answer: 'express' },
       { prompt: 'select', answer: 'postgres' },
       { prompt: 'select', answer: 'drizzle' },
+      { prompt: 'select', answer: 'none' },
       { prompt: 'multiselect', answer: [] },
       { prompt: 'confirm', answer: false },
     )

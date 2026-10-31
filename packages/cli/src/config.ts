@@ -33,6 +33,16 @@ export const TEMPLATES_ROOT = fileURLToPath(new URL('../templates/', import.meta
 /** create-next-app pinned major — Next templates are verified against this line. */
 export const CNA_PACKAGE = 'create-next-app@16'
 
+/**
+ * Laravel Livewire generator inputs are pinned to reviewed official starter-kit commits.
+ * The blank kit has no auth routes; the authenticated kit uses Laravel Fortify.
+ */
+export const TIGED_PACKAGE = 'tiged@2.12.8'
+export const LARAVEL_LIVEWIRE_STARTER_KITS = {
+  none: 'laravel/blank-livewire-starter-kit#75cf9e5cfbc18161027774fc025a1ead81eddcea',
+  'laravel-native': 'laravel/livewire-starter-kit#143e0c1e574e122ebe7e294e5342b7bf251df799',
+} as const
+
 /** Ports the generated projects standardize on. */
 export const SERVER_PORT = 3000
 export const CLIENT_PORT = 5173

@@ -1,14 +1,16 @@
 import * as p from '@clack/prompts'
 import { HELP_TEXT, parseArgs } from './args.js'
 import { CancelledError, unwrap } from './cancel.js'
-import { runAdd } from './add-run.js'
+import { applyModuleToProject, runAdd } from './add-run.js'
 import {
   CLI_VERSION,
   CNA_PACKAGE,
+  LARAVEL_LIVEWIRE_STARTER_KITS,
   SHADCN_BASE,
   SHADCN_COMPONENTS,
   SHADCN_PRESET,
   TEMPLATES_ROOT,
+  TIGED_PACKAGE,
   TEMPLATE_REPO,
 } from './config.js'
 import { printNextSteps } from './next-steps.js'
@@ -16,13 +18,14 @@ import { runPrompts } from './prompts/run-prompts.js'
 import { composeLayers, planLayerApplication, templateVariables } from './scaffold/compose.js'
 import { createEnvFiles } from './scaffold/env.js'
 import { applyLayers } from './scaffold/engine.js'
+import { createLaravelSqliteMigrationEnv } from './scaffold/laravel-env.js'
 import { gitInit } from './scaffold/git.js'
-import { runCommand } from './exec.js'
+import { runCommand, runCommandVisible } from './exec.js'
 import { detectPackageManager, installDependencies } from './scaffold/pkg-manager.js'
 import { fetchRemoteTemplates } from './scaffold/remote.js'
 import { validateStackFlags } from './prefill.js'
 import { checkForUpdate } from './update-check.js'
-import { copyFileSync, existsSync, mkdirSync, renameSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, renameSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 
 /**
@@ -224,9 +227,87 @@ async function main(): Promise<void> {
     const layers = composeLayers(answers)
     const variables = templateVariables(answers)
     const integrated = answers.architecture.kind === 'integrated-fullstack'
+    const integratedLaravel = answers.architecture.kind === 'integrated-laravel'
     const layerPlan = planLayerApplication(layers, answers.architecture)
 
-    if (integrated) {
+    if (integratedLaravel) {
+      if (answers.authentication !== 'none' && answers.authentication !== 'laravel-native') {
+        throw new Error('Laravel Livewire accepts only None or Laravel native authentication.')
+      }
+      spinner.start('Creating the Laravel Livewire app from its pinned official starter kit...')
+      mkdirSync(answers.targetDir, { recursive: true })
+      const starterKit = LARAVEL_LIVEWIRE_STARTER_KITS[answers.authentication]
+      const cloned = runCommand(
+        'npx',
+        ['--yes', TIGED_PACKAGE, starterKit, 'server'],
+        answers.targetDir,
+        64 * 1024 * 1024,
+      )
+      if (!cloned.ok) {
+        spinner.stop('Laravel Livewire starter retrieval failed')
+        throw new Error(
+          `Could not retrieve the pinned Laravel Livewire starter kit — check your connection and Node.js.\n${cloned.output.split('\n').slice(-10).join('\n')}`,
+        )
+      }
+      applyLayers(templatesRoot, layerPlan.afterOfficialGenerator, variables, answers.targetDir)
+      const serverDir = join(answers.targetDir, 'server')
+      const sqliteFile = join(serverDir, 'database', 'database.sqlite')
+      copyFileSync(join(serverDir, '.env.example'), join(serverDir, '.env'))
+      if (!existsSync(sqliteFile)) writeFileSync(sqliteFile, '')
+
+      spinner.stop('Laravel Livewire starter retrieved')
+      if (existsSync(join(serverDir, 'rename_livewire_files.php'))) {
+        const renamed = runCommand('php', ['rename_livewire_files.php'], serverDir)
+        if (!renamed.ok) {
+          throw new Error(`Laravel Livewire file setup failed.\n${renamed.output.split('\n').slice(-10).join('\n')}`)
+        }
+      }
+      const installerEnv = {
+        ...process.env,
+        LARAVEL_INSTALLER_DEFER_HOOKS: 'true',
+        LARAVEL_INSTALLER_NO_NODE: 'true',
+      }
+      p.log.step('Installing PHP dependencies with Composer — live output below')
+      const composerInstalled = await runCommandVisible(
+        'composer',
+        ['install', '--no-interaction', '--prefer-dist', '--no-progress'],
+        serverDir,
+        { env: installerEnv },
+      )
+      if (!composerInstalled) {
+        throw new Error('composer install failed — check the output above, then verify PHP 8.3+ and Composer.')
+      }
+      if (answers.authentication === 'laravel-native') {
+        p.log.step('Applying official Laravel starter features with their defaults')
+        const featuresInstalled = await runCommandVisible(
+          'php',
+          ['artisan', 'install:features', '--answers={}', '--no-interaction'],
+          serverDir,
+          { env: installerEnv },
+        )
+        if (!featuresInstalled) {
+          throw new Error('Laravel starter feature setup failed — check the output above.')
+        }
+      }
+      spinner.start('Preparing Laravel application key and SQLite migrations...')
+      const migrationEnv = createLaravelSqliteMigrationEnv(process.env, sqliteFile)
+      for (const [label, commandArgs] of [
+        ['Generate Laravel application key', ['artisan', 'key:generate', '--force']],
+        ['Apply the initial SQLite migrations', ['artisan', 'migrate', '--force']],
+      ] as const) {
+        const result = runCommand(
+          'php',
+          [...commandArgs],
+          serverDir,
+          label === 'Apply the initial SQLite migrations' ? { env: migrationEnv } : undefined,
+        )
+        if (!result.ok) {
+          spinner.stop(`${label} failed`)
+          throw new Error(`${label} failed.\n${result.output.split('\n').slice(-10).join('\n')}`)
+        }
+      }
+      spinner.stop('Laravel Livewire application created and configured')
+    } else if (integrated) {
       // Next.js is created by the pinned create-next-app (the overlay can
       // only be applied onto an existing skeleton). Non-interactive flags
       // mirror our defaults: TS, App Router, Tailwind, @/ alias, npm, no install.
@@ -292,8 +373,21 @@ async function main(): Promise<void> {
     // Project manifest — enables omnicraft add stack detection.
     const { buildManifest } = await import('./manifest.js')
     const { saveManifest } = await import('./add.js')
-    saveManifest(answers.targetDir, buildManifest(answers, CLI_VERSION, detectPackageManager()))
+    const manifest = buildManifest(answers, CLI_VERSION, detectPackageManager())
+    saveManifest(
+      answers.targetDir,
+      answers.authentication === 'better-auth' ? { ...manifest, authentication: 'none' } : manifest,
+    )
     p.log.step('Created .omnicraft/project.json')
+
+    if (answers.authentication === 'better-auth') {
+      const result = applyModuleToProject('auth', answers.targetDir, { recordModule: false })
+      if (result.status !== 'applied') {
+        const details = result.status === 'rejected' ? ` ${result.message}` : ''
+        throw new Error(`Could not configure Better Auth during project creation.${details}`)
+      }
+      p.log.step('Configured Better Auth')
+    }
 
     spinner.start('Initializing git repository...')
     const gitOk = gitInit(answers.targetDir)
@@ -319,6 +413,30 @@ async function main(): Promise<void> {
           }
         } else {
           p.log.step('Skipped — run "uv sync" inside server/ when ready')
+        }
+      } else if (integratedLaravel) {
+        const shouldInstall = !args.skipInstall && (args.yes
+          ? true
+          : unwrap(
+              await p.confirm({
+                message: 'Install Livewire/Vite frontend dependencies with npm and build assets now?',
+                initialValue: true,
+              }),
+            ))
+        if (shouldInstall) {
+          const serverDir = join(answers.targetDir, 'server')
+          p.log.step('Installing Livewire frontend dependencies with npm — live output below')
+          const installed = await installDependencies(serverDir, 'npm')
+          if (!installed) {
+            p.log.warn('npm install failed — run "npm install" inside server/ and then "npm run build"')
+          } else {
+            p.log.success('Frontend dependencies installed')
+            const built = await runCommandVisible('npm', ['run', 'build'], serverDir)
+            if (built) p.log.success('Livewire assets built')
+            else p.log.warn('Asset build failed — run "npm run build" inside server/ when ready')
+          }
+        } else {
+          p.log.step('Skipped — run "npm install" and "npm run build" inside server/ when ready')
         }
       } else if (answers.backendRuntime === 'php') {
         p.log.step('PHP dependencies already installed by Composer')

@@ -6,6 +6,7 @@ import {
   DATABASE_LABELS,
   FRONTEND_LABELS,
   type Answers,
+  type AuthenticationSetup,
   type BackendFramework,
   type BackendRuntime,
   type Database,
@@ -20,10 +21,12 @@ import { AVAILABLE, parseEnumChoice, validateStackFlags } from '../prefill.js'
 import type { ParsedArgs } from '../args.js'
 import {
   hasFullStackFlags,
+  compatibleAuthenticationSetups,
   isFrontendAllowedByFlags,
   isProjectTypeAllowedByFlags,
   isRuntimeAllowedByFlags,
   nodeOrmsForFramework,
+  MODULE_COMPATIBILITY,
   supportsLanguage,
   supportsShadcn,
   validateAnswerCompatibility,
@@ -199,36 +202,43 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
   }
 
   // ── Frontend ────────────────────────────────────────────────────────────
+  const nativeAuthRequested = flags.auth?.trim().toLowerCase() === 'laravel-native'
   const frontend: Frontend = native
     ? 'react' // Expo (React Native) and the Tauri UI are both React-based
-    : flags.frontend
+    : nativeAuthRequested && flags.frontend === undefined
+      ? 'livewire'
+      : flags.frontend
       ? parseEnumChoice('--frontend', flags.frontend, AVAILABLE.frontend)
       : forced
         ? 'react'
         : await selectWithSoon<Frontend>('Select a frontend framework:', frontendChoices(flags))
 
-  // Next.js = integrated full-stack: the framework is the server. The separate
-  // "Full-stack?" / backend prompts collapse into the database questions.
+  // Integrated frameworks are the server; neither has a separate client/API picker.
   const integrated = frontend === 'nextjs'
+  const integratedLaravel = frontend === 'livewire'
 
-  const language: Language = flags.lang
-    ? parseEnumChoice('--lang', flags.lang, AVAILABLE.lang)
-    : forced
-      ? 'typescript'
-      : !native
-        ? await selectWithSoon<Language>(
-            'Select a language:',
-            registryChoices(CAPABILITY_REGISTRY.language).filter((choice) =>
-              supportsLanguage(projectType, frontend, choice.value),
-            ),
-          )
-        : 'typescript'
-  if (!native) p.log.info(`Language: ${language === 'typescript' ? 'TypeScript' : 'JavaScript'}`)
+  const language: Language | null = integratedLaravel
+    ? null
+    : flags.lang
+      ? parseEnumChoice('--lang', flags.lang, AVAILABLE.lang)
+      : forced
+        ? 'typescript'
+        : !native
+          ? await selectWithSoon<Language>(
+              'Select a language:',
+              registryChoices(CAPABILITY_REGISTRY.language).filter((choice) =>
+                supportsLanguage(projectType, frontend, choice.value) &&
+                (flags.auth?.trim().toLowerCase() !== 'better-auth' ||
+                  choice.value === MODULE_COMPATIBILITY.auth.language),
+              ),
+            )
+          : 'typescript'
+  if (language) p.log.info(`Language: ${language === 'typescript' ? 'TypeScript' : 'JavaScript'}`)
 
   // ── Full stack? ─────────────────────────────────────────────────────────
   const fullStackFlagRequested = hasFullStackFlags(flags)
-  let fullStack = integrated ? true : (flags.fullStack ?? (forced || fullStackFlagRequested))
-  if (!native && !integrated && flags.fullStack === undefined && !forced && !fullStackFlagRequested) {
+  let fullStack = integrated || integratedLaravel ? true : (flags.fullStack ?? (forced || fullStackFlagRequested))
+  if (!native && !integrated && !integratedLaravel && flags.fullStack === undefined && !forced && !fullStackFlagRequested) {
     fullStack = unwrap<boolean>(
       await p.confirm({
         message: 'Full-stack? Adds a backend API, database and ready-made boilerplate.',
@@ -237,23 +247,25 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
     )
   }
 
-  const architecture: Answers['architecture'] = integrated
-    ? { kind: 'integrated-fullstack', framework: 'nextjs' }
+  const architecture: Answers['architecture'] = integratedLaravel
+    ? { kind: 'integrated-laravel', framework: 'laravel', mode: 'livewire' }
+    : integrated
+      ? { kind: 'integrated-fullstack', framework: 'nextjs' }
     : fullStack && !native
       ? { kind: 'separate-frontend-api' }
       : native
         ? { kind: 'native-app', platform: projectType === 'mobile' ? 'mobile' : 'desktop' }
         : { kind: 'frontend-only' }
 
-  let backendRuntime: BackendRuntime = 'node'
-  let backendFramework: BackendFramework = 'express'
-  let database: 'postgres' | 'sqlite' | 'mysql' = 'postgres'
-  let orm: 'drizzle' | 'prisma' | 'none' | null = 'drizzle'
+  let backendRuntime: BackendRuntime = integratedLaravel ? 'php' : 'node'
+  let backendFramework: BackendFramework = integratedLaravel ? 'laravel' : 'express'
+  let database: 'postgres' | 'sqlite' | 'mysql' = integratedLaravel ? 'sqlite' : 'postgres'
+  let orm: 'drizzle' | 'prisma' | 'none' | null = integratedLaravel ? null : 'drizzle'
 
   if (fullStack && !native) {
     // Integrated full-stack (Next.js) runs on Node and skips the separate
     // runtime/framework prompts — the framework IS the server.
-    if (!integrated) {
+    if (!integrated && !integratedLaravel) {
       backendRuntime = flags.runtime
         ? parseEnumChoice('--runtime', flags.runtime, AVAILABLE.runtime)
         : forced
@@ -273,15 +285,26 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
           : await selectWithSoon<BackendFramework>(
               'Select a backend framework:',
               frameworkChoices[backendRuntime].filter(
-                (choice) =>
-                  !choice.available ||
-                  !flags.orm ||
-                  nodeOrmsForFramework(choice.value).includes(flags.orm as 'drizzle' | 'prisma' | 'none'),
+                (choice) => {
+                  if (
+                    flags.auth?.trim().toLowerCase() === 'better-auth' &&
+                    choice.value !== MODULE_COMPATIBILITY.auth.backendFramework
+                  )
+                    return false
+                  return (
+                    !choice.available ||
+                    !flags.orm ||
+                    nodeOrmsForFramework(choice.value).includes(flags.orm as 'drizzle' | 'prisma' | 'none')
+                  )
+                },
               ),
             )
-    } else {
+    } else if (integrated) {
       backendRuntime = 'node'
       backendFramework = 'nextjs' as BackendFramework
+    } else {
+      backendRuntime = 'php'
+      backendFramework = 'laravel'
     }
 
     // Shared across runtimes (Next.js reuses the node choices — it runs on Node).
@@ -291,15 +314,20 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
       php: registryChoices(CAPABILITY_REGISTRY.database.php),
     }
 
-    database = flags.db
-      ? parseEnumChoice('--db', flags.db, AVAILABLE.db[backendRuntime])
-      : forced
-        ? 'postgres'
-        : ((await selectWithSoon<Database>('Select a database:', dbChoices[backendRuntime])) as 'postgres' | 'sqlite' | 'mysql')
+    database = integratedLaravel
+      ? 'sqlite'
+      : flags.db
+        ? parseEnumChoice('--db', flags.db, AVAILABLE.db[backendRuntime])
+        : forced
+          ? 'postgres'
+          : ((await selectWithSoon<Database>('Select a database:', dbChoices[backendRuntime])) as 'postgres' | 'sqlite' | 'mysql')
 
     if (integrated) {
       orm = 'none'
       p.log.info('ORM: none — Next.js uses raw SQL')
+    } else if (integratedLaravel) {
+      orm = null
+      p.log.info('ORM: Eloquent — integrated Laravel + Livewire')
     } else if (backendRuntime === 'node') {
       const ormChoices = registryChoices(CAPABILITY_REGISTRY.orm)
         .filter(
@@ -321,7 +349,12 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
           ? 'drizzle'
           : await selectWithSoon<'drizzle' | 'prisma' | 'none'>(
               'Select an ORM:',
-              ormChoices.filter((choice) => nodeOrmsForFramework(backendFramework).includes(choice.value)),
+              ormChoices.filter(
+                (choice) =>
+                  nodeOrmsForFramework(backendFramework).includes(choice.value) &&
+                  (flags.auth?.trim().toLowerCase() !== 'better-auth' ||
+                    choice.value === MODULE_COMPATIBILITY.auth.orm),
+              ),
             )
       p.log.info(orm === 'none' ? 'ORM: none — raw SQL via the driver' : `ORM: ${orm === 'drizzle' ? 'Drizzle' : 'Prisma'}`)
     } else if (backendRuntime === 'python') {
@@ -335,9 +368,32 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
     p.log.info(`Database: ${DATABASE_LABELS[database]}`)
   }
 
+  const authenticationContext = {
+    frontend,
+    language,
+    architecture,
+    backendRuntime: fullStack && (!integrated || integratedLaravel) && !native ? backendRuntime : null,
+    backendFramework: fullStack && (!integrated || integratedLaravel) && !native ? backendFramework : null,
+    orm: fullStack && !native ? orm : null,
+    database: fullStack && !native ? database : null,
+  }
+  const compatibleAuthSetups = compatibleAuthenticationSetups(authenticationContext)
+  const authentication: AuthenticationSetup = flags.auth
+    ? parseEnumChoice('--auth', flags.auth, AVAILABLE.authentication)
+    : forced || compatibleAuthSetups.length <= 1
+      ? compatibleAuthSetups[0] ?? 'none'
+      : await selectWithSoon<AuthenticationSetup>(
+          'Select an authentication setup:',
+          registryChoices(CAPABILITY_REGISTRY.authentication).filter((choice) =>
+            compatibleAuthSetups.includes(choice.value),
+          ),
+        )
+
   // ── Extras ──────────────────────────────────────────────────────────────
   let extras: { tailwind: boolean; eslintPrettier: boolean; shadcn: boolean }
   if (native) {
+    extras = { tailwind: false, eslintPrettier: false, shadcn: false }
+  } else if (integratedLaravel) {
     extras = { tailwind: false, eslintPrettier: false, shadcn: false }
   } else if (integrated) {
     // create-next-app is invoked with --tailwind and --eslint; these are fixed
@@ -379,10 +435,11 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
     frontend,
     language,
     fullStack: fullStack && !native,
-    backendRuntime: fullStack && !integrated && !native ? backendRuntime : null,
-    backendFramework: fullStack && !integrated && !native ? backendFramework : null,
+    backendRuntime: fullStack && (!integrated || integratedLaravel) && !native ? backendRuntime : null,
+    backendFramework: fullStack && (!integrated || integratedLaravel) && !native ? backendFramework : null,
     orm: fullStack && !native ? orm : null,
     database: fullStack && !native ? database : null,
+    authentication,
     extras: native ? { tailwind: false, eslintPrettier: false, shadcn: false } : extras,
     architecture,
   }
@@ -396,8 +453,10 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
     )
     summary.push('Backend:    none — the device app calls a backend you run separately (see generated notes)')
   } else {
-    summary.push(`Stack:      ${FRONTEND_LABELS[frontend]} (web)`)
-    if (integrated) {
+    summary.push(`Stack:      ${FRONTEND_LABELS[frontend]}${integratedLaravel ? ' (integrated)' : ' (web)'}`)
+    if (integratedLaravel) {
+      summary.push(`Server:     Laravel + ${DATABASE_LABELS[database]} (Eloquent, Livewire UI)`)
+    } else if (integrated) {
       summary.push(`Server:     Next.js route handlers + ${DATABASE_LABELS[database]} (${orm === 'drizzle' ? 'Drizzle' : orm === 'prisma' ? 'Prisma' : 'raw SQL'})`)
     } else if (fullStack) {
       const ormLabel =
@@ -426,8 +485,17 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
         .join(', ') || 'none'}`,
     )
   }
+  summary.push(
+    `Authentication: ${
+      authentication === 'better-auth'
+        ? 'Better Auth (email/password)'
+        : authentication === 'laravel-native'
+          ? 'Laravel native auth (Fortify)'
+          : 'none'
+    }`,
+  )
   summary.push(`Folder:     ${targetDir}`)
-  if (!native) summary.push(`Ports:      client ${CLIENT_PORT} · server ${SERVER_PORT}`)
+  if (!native && !integratedLaravel) summary.push(`Ports:      client ${CLIENT_PORT} · server ${SERVER_PORT}`)
   p.note(summary.join('\n'), 'Here is what will be generated')
 
   if (!forced) {

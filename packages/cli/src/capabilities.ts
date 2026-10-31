@@ -1,10 +1,12 @@
 import type {
   BackendFramework,
   BackendRuntime,
+  AuthenticationSetup,
   Database,
   Frontend,
   Language,
   Orm,
+  ProjectArchitecture,
   ProjectType,
 } from './types.js'
 
@@ -15,9 +17,68 @@ type CapabilityOption<T extends string> = {
   hint?: string
 }
 
+type AuthenticationRequirements = {
+  frontend: Frontend
+  language: Language | null
+  backendRuntime: BackendRuntime
+  backendFramework: BackendFramework
+  orm: Orm | null
+  architecture: ProjectArchitecture['kind']
+  databases: readonly Database[]
+}
+
+type AuthenticationCatalogEntry = CapabilityOption<AuthenticationSetup> & {
+  category: 'none' | 'application-library' | 'framework-native'
+  requirements: AuthenticationRequirements | null
+}
+
+/** Current auth setups, with their user-facing choice and stack requirements. */
+export const AUTHENTICATION_CATALOG = {
+  none: {
+    value: 'none',
+    label: 'None',
+    available: true,
+    hint: 'No authentication layer',
+    category: 'none',
+    requirements: null,
+  },
+  'better-auth': {
+    value: 'better-auth',
+    label: 'Better Auth (email/password)',
+    available: true,
+    hint: 'TypeScript React + Node/Express + Drizzle only; SQLite, PostgreSQL, or MySQL',
+    category: 'application-library',
+    requirements: {
+      frontend: 'react',
+      language: 'typescript',
+      backendRuntime: 'node',
+      backendFramework: 'express',
+      orm: 'drizzle',
+      architecture: 'separate-frontend-api',
+      databases: ['postgres', 'sqlite', 'mysql'],
+    },
+  },
+  'laravel-native': {
+    value: 'laravel-native',
+    label: 'Laravel native auth (Fortify)',
+    available: true,
+    hint: 'Official Laravel + Livewire starter with Laravel session auth; SQLite only',
+    category: 'framework-native',
+    requirements: {
+      frontend: 'livewire',
+      language: null,
+      backendRuntime: 'php',
+      backendFramework: 'laravel',
+      orm: null,
+      architecture: 'integrated-laravel',
+      databases: ['sqlite'],
+    },
+  },
+} as const satisfies Record<AuthenticationSetup, AuthenticationCatalogEntry>
+
 /**
- * Selectable options and their prompt metadata. Cross-option constraints live
- * in compatibility.ts; this registry is the source for prompt/flag choices.
+ * Selectable options and prompt metadata. Auth requirements live with their
+ * catalog entries; remaining cross-option rules live in compatibility.ts.
  */
 export const CAPABILITY_REGISTRY = {
   projectType: [
@@ -40,6 +101,12 @@ export const CAPABILITY_REGISTRY = {
     },
     { value: 'vue', label: 'Vue', available: true, hint: 'Vite + TypeScript' },
     { value: 'svelte', label: 'Svelte', available: true, hint: 'Vite + TypeScript' },
+    {
+      value: 'livewire',
+      label: 'Laravel + Livewire',
+      available: true,
+      hint: 'Integrated Laravel app — no separate frontend; SQLite only in this first path',
+    },
   ] as const satisfies readonly CapabilityOption<Frontend>[],
   language: [
     { value: 'typescript', label: 'TypeScript', available: true, hint: 'Recommended' },
@@ -122,6 +189,7 @@ export const CAPABILITY_REGISTRY = {
     { value: 'docker', label: 'docker', available: true, hint: 'Database Compose service' },
     { value: 'testing', label: 'testing', available: true, hint: 'Vitest client test setup' },
   ] as const,
+  authentication: Object.values(AUTHENTICATION_CATALOG),
   ormsByNodeBackend: {
     express: ['drizzle', 'prisma', 'none'],
     fastify: ['drizzle', 'prisma', 'none'],
@@ -159,6 +227,7 @@ export const AVAILABLE = {
   orm: { node: availableValues(CAPABILITY_REGISTRY.orm) },
   extras: availableValues(CAPABILITY_REGISTRY.extras),
   modules: availableValues(CAPABILITY_REGISTRY.modules),
+  authentication: availableValues(CAPABILITY_REGISTRY.authentication),
 } as const
 
 export type ModuleId = (typeof AVAILABLE.modules)[number]

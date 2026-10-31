@@ -6,17 +6,18 @@
 
 ## Progress overview
 
-| Version | Theme                                | Progress | Issues  |
-| ------- | ------------------------------------ | -------- | ------- |
-| v0.1.0  | Public launch                        | ✅ 6/6   | #1–#6   |
-| v0.2.0  | Scaffolder hardening                 | ✅ 5/5   | #7–#11  |
-| v0.3.0  | Backend & database expansion         | ✅ 5/5   | #12–#16 |
-| v0.3.1  | Hardening (master-plan PR 2/3/5)     | ✅ tag   | —       |
-| v0.4.0  | Frontend expansion                   | ✅ 4/4   | #17–#20 |
-| v0.5.0  | Platform expansion (mobile, desktop) | ✅ 2/2   | #21–#22 |
-| v1.0.0  | First stable release                 | ✅ 5/5   | #23–#27 |
-| v1.0.1  | SQLite first-run fix                 | ✅ published | — |
-| v1.0.2  | Reliability fixes and runtime evidence | ✅ published | — |
+| Version | Theme                                   | Progress             | Issues  |
+| ------- | --------------------------------------- | -------------------- | ------- |
+| v0.1.0  | Public launch                           | ✅ 6/6               | #1–#6   |
+| v0.2.0  | Scaffolder hardening                    | ✅ 5/5               | #7–#11  |
+| v0.3.0  | Backend & database expansion            | ✅ 5/5               | #12–#16 |
+| v0.3.1  | Hardening (master-plan PR 2/3/5)        | ✅ tag               | —       |
+| v0.4.0  | Frontend expansion                      | ✅ 4/4               | #17–#20 |
+| v0.5.0  | Platform expansion (mobile, desktop)    | ✅ 2/2               | #21–#22 |
+| v1.0.0  | First stable release                    | ✅ 5/5               | #23–#27 |
+| v1.0.1  | SQLite first-run fix                    | ✅ published         | —       |
+| v1.0.2  | Reliability fixes and runtime evidence  | ✅ published         | —       |
+| v1.0.3  | Laravel Livewire, auth, and runtime evidence | 🟡 release candidate | —       |
 
 ---
 
@@ -75,14 +76,27 @@ Published on 2026-10-27. Issue #27 was delivered early with the template contrac
 - [x] #26 — Multi-OS CI once repo is public _(done early — repo is public, all 3 OS green)_
 - [x] #27 — Contributor docs: template composition guide _(delivered across `docs/templates/` and `docs/architecture/template-engine.md`; issue closed)_
 
+## v1.0.3 — Release candidate
+
+This candidate integrates the auth and runtime work summarized in [CHANGELOG.md](CHANGELOG.md). Its
+support claims remain combination-specific: Laravel native auth is limited to Livewire + SQLite;
+Expo/Tauri remain Scaffold-verified; physical-device Android/iOS paths remain unverified. The active
+native-platform follow-up tracks physical-device evidence separately. Provider-backed auth and other
+Laravel frontend modes remain follow-up work.
+
 ## v1.1.x and beyond — post-v1 priorities
 
-These are follow-up priorities, not release commitments. The post-masterplan audit and testing-infrastructure plans are complete and archived under `docs/plans/completed/`; hosted PR run [#40562224821](https://github.com/doofx0071/omnicraft/actions/runs/40562224821) passed the ten-row Supported matrix. Exact remaining runtime-evidence and registry-consistency work is tracked in [the stack runtime evidence plan](docs/plans/active/omnicraft-stack-runtime-evidence-plan.md). Track roadmap-only features as issues before implementation:
+These are follow-up priorities, not release commitments. The post-masterplan audit, testing-infrastructure,
+stack-runtime-evidence, and React/Vite `add testing` follow-up plans are archived under
+`docs/plans/completed/`; their remaining physical-device scope is tracked in the active
+[native platform evidence follow-up](docs/plans/active/omnicraft-native-platform-evidence-follow-up-plan.md).
+Track roadmap-only features as issues before implementation:
 
 - [x] Keep README, changelog, roadmap, CLI help, and the support matrix aligned with implementation evidence.
 - [x] Derive prompt and flag choices from the typed capability registry; reject unsupported combinations before writing files.
 - [x] Require evidence mappings for Supported rows and gate release on the complete supported runtime matrix.
-- [ ] Expand generated-project runtime evidence for existing selectable combinations that remain Scaffold-verified or unverified; do not promote them before hosted CI passes. See the linked runtime evidence plan.
+- [x] Exercise compatible React/Vite `omnicraft add testing` paths and reject unsupported JavaScript + shadcn paths before writes; see the completed runtime plans.
+- [ ] Add physical Android/iOS device evidence if a device runner or attached devices become available; emulator/simulator results do not cover physical devices.
 - [x] Narrow the JavaScript language contract to the implemented React/Vite client and reject unsupported frontend/platform choices.
 - [x] Tighten `omnicraft add auth` compatibility and regression coverage for the existing Better Auth path.
 - Add `omnicraft doctor` only after project metadata and diagnostic checks have reliable contracts.

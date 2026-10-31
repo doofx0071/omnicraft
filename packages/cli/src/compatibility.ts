@@ -1,28 +1,88 @@
 import type { ParsedArgs } from './args.js'
 import type {
   Answers,
+  AuthenticationSetup,
   BackendFramework,
   Frontend,
   Language,
   Orm,
   ProjectType,
 } from './types.js'
-import { AVAILABLE, CAPABILITY_REGISTRY } from './capabilities.js'
+import { AUTHENTICATION_CATALOG, AVAILABLE, CAPABILITY_REGISTRY } from './capabilities.js'
 
 export const RUNTIME_BACKENDS = AVAILABLE.backend
 export const RUNTIME_DATABASES = AVAILABLE.db
 export const NODE_FRAMEWORK_ORMS = CAPABILITY_REGISTRY.ormsByNodeBackend
 
 export const MODULE_COMPATIBILITY = {
-  auth: {
-    frontend: 'react',
-    backendRuntime: 'node',
-    backendFramework: 'express',
-    orm: 'drizzle',
-    architecture: 'separate-frontend-api',
-    databases: ['postgres', 'sqlite', 'mysql'],
-  },
+  auth: AUTHENTICATION_CATALOG['better-auth'].requirements,
 } as const
+
+export interface AuthenticationContext {
+  frontend: string
+  language?: string | null
+  architecture: { kind: string }
+  backendRuntime: string | null
+  backendFramework: string | null
+  orm: string | null
+  database: string | null
+}
+
+export function authenticationCompatibilityReason(
+  setup: AuthenticationSetup,
+  context: AuthenticationContext,
+): string | null {
+  const definition = AUTHENTICATION_CATALOG[setup]
+  if (definition.category === 'none') return null
+
+  const supported = definition.requirements
+  if (!supported) {
+    throw new Error(`Authentication setup "${setup}" is missing its stack requirements.`)
+  }
+  if (context.frontend !== supported.frontend) {
+    return setup === 'better-auth'
+      ? `Better Auth currently requires the React frontend; ${context.frontend} is not covered yet.`
+      : 'Laravel native authentication currently requires the integrated Livewire mode.'
+  }
+  if (
+    supported.language !== null &&
+    context.language !== undefined &&
+    context.language !== null &&
+    context.language !== supported.language
+  ) {
+    return setup === 'better-auth'
+      ? `Better Auth creation currently requires TypeScript; ${context.language} is not covered yet.`
+      : `Laravel native authentication does not support language "${context.language}".`
+  }
+  if (
+    context.backendRuntime !== supported.backendRuntime ||
+    context.backendFramework !== supported.backendFramework ||
+    context.orm !== supported.orm
+  ) {
+    return setup === 'better-auth'
+      ? 'Better Auth currently requires Node.js + Express + Drizzle; its route patches target Express.'
+      : 'Laravel native authentication currently requires PHP + Laravel with Eloquent and no separate ORM.'
+  }
+  if (context.architecture.kind !== supported.architecture) {
+    return setup === 'better-auth'
+      ? `architecture "${context.architecture.kind}" is not covered yet`
+      : 'Laravel native authentication currently requires the integrated Livewire mode.'
+  }
+  if (!(supported.databases as readonly string[]).includes(context.database ?? '')) {
+    return setup === 'better-auth'
+      ? `Better Auth currently supports SQLite, PostgreSQL, and MySQL; ${context.database ?? 'no database'} is not covered yet.`
+      : `Laravel native authentication currently covers SQLite only; ${context.database ?? 'no database'} is not covered yet.`
+  }
+  return null
+}
+
+export function compatibleAuthenticationSetups(
+  context: AuthenticationContext,
+): AuthenticationSetup[] {
+  return AVAILABLE.authentication.filter(
+    (setup) => authenticationCompatibilityReason(setup, context) === null,
+  )
+}
 
 const NEXTJS_GENERATOR_EXTRAS = ['tailwind', 'eslint'] as const
 
@@ -47,7 +107,8 @@ export function supportsLanguage(
   frontend: Frontend,
   language: Language,
 ): boolean {
-  return language === 'typescript' || (projectType === 'web' && frontend === 'react')
+  return frontend !== 'livewire' &&
+    (language === 'typescript' || (projectType === 'web' && frontend === 'react'))
 }
 
 export function supportsShadcn(
@@ -59,6 +120,7 @@ export function supportsShadcn(
     projectType === 'web' &&
     frontend === 'react' &&
     architecture.kind !== 'integrated-fullstack' &&
+    architecture.kind !== 'integrated-laravel' &&
     architecture.kind !== 'native-app'
   )
 }
@@ -67,7 +129,9 @@ export function supportsShadcn(
 export function validateFlagCompatibility(args: ParsedArgs): void {
   const platform = args.platform?.trim().toLowerCase()
   const frontend = args.frontend?.trim().toLowerCase()
-  const runtime = args.runtime?.trim().toLowerCase() ?? 'node'
+  const auth = args.auth?.trim().toLowerCase()
+  const runtime = args.runtime?.trim().toLowerCase() ??
+    (frontend === 'livewire' || auth === 'laravel-native' ? 'php' : 'node')
   const backend = args.backend?.trim().toLowerCase()
   const orm = args.orm?.trim().toLowerCase()
   const extras = args.extras ?? []
@@ -91,7 +155,10 @@ export function validateFlagCompatibility(args: ParsedArgs): void {
     )
   }
 
-  if (args.fullStack === false && (args.runtime || args.backend || args.db || args.orm)) {
+  if (
+    args.fullStack === false &&
+    (args.runtime || args.backend || args.db || args.orm || frontend === 'livewire' || auth === 'laravel-native')
+  ) {
     throw new Error(
       '--runtime, --backend, --db, and --orm require a full-stack project; remove --no-full-stack.',
     )
@@ -127,6 +194,46 @@ export function validateFlagCompatibility(args: ParsedArgs): void {
   if (runtime === 'node' && backend === 'hono' && orm === 'prisma') {
     throw new Error('Prisma is not available for Hono; choose Drizzle or raw SQL with --orm none.')
   }
+
+  const selectsLivewire = frontend === 'livewire' || auth === 'laravel-native'
+  if (selectsLivewire) {
+    const conflicts =
+      (platform !== undefined && platform !== 'web') ||
+      args.fullStack === false ||
+      (args.runtime !== undefined && runtime !== 'php') ||
+      (args.backend !== undefined && backend !== 'laravel') ||
+      (frontend !== undefined && frontend !== 'livewire') ||
+      args.lang !== undefined ||
+      args.orm !== undefined ||
+      (args.db !== undefined && args.db.trim().toLowerCase() !== 'sqlite') ||
+      extras.length > 0
+    if (conflicts) {
+      throw new Error(
+        'Laravel Livewire currently requires PHP + Laravel + SQLite and does not use a separate frontend, language, ORM, or extras; omit those flags.',
+      )
+    }
+    if (auth === 'better-auth' && selectsLivewire) {
+      throw new Error('Better Auth is not available for Laravel Livewire; use --auth none or laravel-native.')
+    }
+  }
+
+  if (auth === 'better-auth') {
+    const supported = MODULE_COMPATIBILITY.auth
+    const conflicts =
+      (platform !== undefined && platform !== 'web') ||
+      args.fullStack === false ||
+      (args.lang !== undefined && args.lang.trim().toLowerCase() !== supported.language) ||
+      (frontend !== undefined && frontend !== supported.frontend) ||
+      (args.runtime !== undefined && runtime !== supported.backendRuntime) ||
+      (backend !== undefined && backend !== supported.backendFramework) ||
+      (orm !== undefined && orm !== supported.orm) ||
+      (args.db !== undefined && !(supported.databases as readonly string[]).includes(args.db.trim().toLowerCase()))
+    if (conflicts) {
+      throw new Error(
+        '--auth better-auth requires TypeScript with a full-stack React/Vite Express API using Drizzle and SQLite, PostgreSQL, or MySQL.',
+      )
+    }
+  }
 }
 
 /**
@@ -144,13 +251,30 @@ export function isProjectTypeAllowedByFlags(projectType: ProjectType, args: Pars
     args.backend !== undefined ||
     args.db !== undefined ||
     args.orm !== undefined ||
-    (args.extras?.length ?? 0) > 0
+    (args.extras?.length ?? 0) > 0 ||
+    args.auth?.trim().toLowerCase() === 'better-auth' ||
+    args.auth?.trim().toLowerCase() === 'laravel-native'
   return !webOnlyFlags
 }
 
 export function isFrontendAllowedByFlags(frontend: Frontend, args: ParsedArgs): boolean {
+  if (args.auth?.trim().toLowerCase() === 'better-auth' && frontend !== MODULE_COMPATIBILITY.auth.frontend) return false
+  if (args.auth?.trim().toLowerCase() === 'laravel-native' && frontend !== 'livewire') return false
   if (args.lang?.trim().toLowerCase() === 'javascript' && frontend !== 'react') return false
   if (args.extras?.includes('shadcn') && frontend !== 'react') return false
+  if (frontend === 'livewire') {
+    if (
+      args.platform !== undefined && args.platform.trim().toLowerCase() !== 'web' ||
+      args.fullStack === false ||
+      (args.runtime !== undefined && args.runtime.trim().toLowerCase() !== 'php') ||
+      (args.backend !== undefined && args.backend.trim().toLowerCase() !== 'laravel') ||
+      args.lang !== undefined ||
+      args.orm !== undefined ||
+      (args.db !== undefined && args.db.trim().toLowerCase() !== 'sqlite') ||
+      (args.extras?.length ?? 0) > 0 ||
+      args.auth?.trim().toLowerCase() === 'better-auth'
+    ) return false
+  }
   if (frontend === 'nextjs' && !matchesNextjsGeneratorExtras(args.extras)) return false
   if (
     (args.runtime || args.backend || args.orm || args.fullStack === false) &&
@@ -164,8 +288,21 @@ export function isRuntimeAllowedByFlags(
   runtime: 'node' | 'python' | 'php',
   args: ParsedArgs,
 ): boolean {
+  if (
+    args.auth?.trim().toLowerCase() === 'better-auth' &&
+    runtime !== MODULE_COMPATIBILITY.auth.backendRuntime
+  )
+    return false
+  if (
+    (args.frontend?.trim().toLowerCase() === 'livewire' ||
+      args.auth?.trim().toLowerCase() === 'laravel-native') &&
+    runtime !== 'php'
+  ) return false
   if (args.runtime && args.runtime.trim().toLowerCase() !== runtime) return false
-  if (!args.runtime && (args.orm || args.backend)) return runtime === 'node'
+  const inferredLivewire =
+    args.frontend?.trim().toLowerCase() === 'livewire' ||
+    args.auth?.trim().toLowerCase() === 'laravel-native'
+  if (!args.runtime && !inferredLivewire && (args.orm || args.backend)) return runtime === 'node'
   if (
     args.db &&
     !(RUNTIME_DATABASES[runtime] as readonly string[]).includes(args.db.trim().toLowerCase())
@@ -175,12 +312,29 @@ export function isRuntimeAllowedByFlags(
 }
 
 export function hasFullStackFlags(args: ParsedArgs): boolean {
-  return Boolean(args.runtime || args.backend || args.db || args.orm)
+  return Boolean(
+    args.runtime || args.backend || args.db || args.orm ||
+    args.frontend?.trim().toLowerCase() === 'livewire' ||
+    args.auth?.trim().toLowerCase() === 'better-auth' ||
+    args.auth?.trim().toLowerCase() === 'laravel-native'
+  )
 }
 
 /** Throws when an Answers object could silently compose the wrong template. */
 export function validateAnswerCompatibility(answers: Answers): void {
+  const authContext: AuthenticationContext = {
+    ...answers,
+    frontend: answers.frontend,
+    ...(answers.architecture.kind === 'integrated-laravel' ? { language: null } : {}),
+  }
+  const authenticationError = authenticationCompatibilityReason(
+    answers.authentication,
+    authContext,
+  )
+  if (authenticationError) throw new Error(authenticationError)
+
   const integrated = answers.architecture.kind === 'integrated-fullstack'
+  const integratedLaravel = answers.architecture.kind === 'integrated-laravel'
   const native = answers.architecture.kind === 'native-app'
 
   if (native) {
@@ -213,7 +367,29 @@ export function validateAnswerCompatibility(answers: Answers): void {
   if (answers.projectType !== 'web') {
     throw new Error('Mobile and desktop projects must use the native-app architecture.')
   }
-  if (!supportsLanguage(answers.projectType, answers.frontend, answers.language)) {
+  if (integratedLaravel) {
+    if (
+      !answers.fullStack ||
+      answers.frontend !== 'livewire' ||
+      answers.language !== null ||
+      answers.backendRuntime !== 'php' ||
+      answers.backendFramework !== 'laravel' ||
+      answers.orm !== null ||
+      answers.database !== 'sqlite' ||
+      answers.extras.tailwind ||
+      answers.extras.eslintPrettier ||
+      answers.extras.shadcn
+    ) {
+      throw new Error(
+        'Integrated Laravel Livewire currently requires PHP + Laravel + SQLite, with no separate frontend, ORM, or extras.',
+      )
+    }
+    return
+  }
+  if (
+    answers.language === null ||
+    !supportsLanguage(answers.projectType, answers.frontend, answers.language)
+  ) {
     throw new Error('JavaScript is only available for the React/Vite web frontend.')
   }
   if (

@@ -1,4 +1,4 @@
-import type { Answers, BackendFramework, Frontend, Orm } from './types.js'
+import type { Answers, AuthenticationSetup, BackendFramework, Frontend, Orm } from './types.js'
 import type { ParsedArgs } from './args.js'
 import { AVAILABLE } from './capabilities.js'
 import {
@@ -25,9 +25,12 @@ export function parseEnumChoice<T extends string>(
 }
 
 function resolveRuntime(args: ParsedArgs): Runtime {
-  return args.runtime
-    ? parseEnumChoice('--runtime', args.runtime, AVAILABLE.runtime)
-    : 'node'
+  if (args.runtime) return parseEnumChoice('--runtime', args.runtime, AVAILABLE.runtime)
+  if (
+    args.frontend?.trim().toLowerCase() === 'livewire' ||
+    args.auth?.trim().toLowerCase() === 'laravel-native'
+  ) return 'php'
+  return 'node'
 }
 
 /** Validates every stack flag present on the parsed args; throws on bad values. */
@@ -38,6 +41,7 @@ export function validateStackFlags(args: ParsedArgs): void {
   if (args.frontend) parseEnumChoice('--frontend', args.frontend, AVAILABLE.frontend)
   if (args.backend) parseEnumChoice('--backend', args.backend, AVAILABLE.backend[runtime])
   if (args.db) parseEnumChoice('--db', args.db, AVAILABLE.db[runtime])
+  if (args.auth) parseEnumChoice('--auth', args.auth, AVAILABLE.authentication)
   if (args.orm && runtime !== 'node') {
     throw new Error('--orm applies to Node.js backends only (Python uses SQLAlchemy + Alembic, PHP uses Eloquent)')
   }
@@ -72,6 +76,7 @@ export function hasStackFlags(args: ParsedArgs): boolean {
     args.backend !== undefined ||
     args.db !== undefined ||
     args.orm !== undefined ||
+    args.auth !== undefined ||
     args.extras !== undefined
   )
 }
@@ -83,15 +88,26 @@ export function hasStackFlags(args: ParsedArgs): boolean {
 export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir: string): Answers {
   validateStackFlags(args)
   const runtime = resolveRuntime(args)
-  const frontend: Frontend = args.frontend
-    ? parseEnumChoice('--frontend', args.frontend, AVAILABLE.frontend)
-    : 'react'
+  const laravelNative = args.auth?.trim().toLowerCase() === 'laravel-native'
+  const inferredFrontend = laravelNative && args.frontend === undefined ? 'livewire' : undefined
+  const frontend: Frontend = inferredFrontend
+    ? inferredFrontend
+    : args.frontend
+      ? parseEnumChoice('--frontend', args.frontend, AVAILABLE.frontend)
+      : 'react'
   // Next.js is the integrated-full-stack architecture: it IS the server, so
   // the separate backend prompts collapse into the framework choice.
   const integrated = frontend === 'nextjs'
-  const fullStack = integrated ? true : (args.fullStack ?? true)
-  const db = args.db ? parseEnumChoice('--db', args.db, AVAILABLE.db[runtime]) : 'postgres'
-  const backendFramework: BackendFramework | null = fullStack && !integrated
+  const integratedLaravel = frontend === 'livewire'
+  const fullStack = integratedLaravel || integrated ? true : (args.fullStack ?? true)
+  const db = args.db
+    ? parseEnumChoice('--db', args.db, AVAILABLE.db[runtime])
+    : integratedLaravel
+      ? 'sqlite'
+      : 'postgres'
+  const backendFramework: BackendFramework | null = integratedLaravel
+    ? 'laravel'
+    : fullStack && !integrated
     ? args.backend
       ? parseEnumChoice('--backend', args.backend, AVAILABLE.backend[runtime])
       : runtime === 'node'
@@ -100,7 +116,9 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
           ? 'fastapi'
           : 'laravel'
     : null
-  const orm: Orm | null = integrated
+  const orm: Orm | null = integratedLaravel
+    ? null
+    : integrated
     ? 'none'
     : fullStack && runtime === 'node'
     ? args.orm
@@ -116,18 +134,29 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
     targetDir,
     projectType: 'web',
     frontend,
-    language: args.lang ? parseEnumChoice('--lang', args.lang, AVAILABLE.lang) : 'typescript',
+    language: integratedLaravel
+      ? null
+      : args.lang
+        ? parseEnumChoice('--lang', args.lang, AVAILABLE.lang)
+        : 'typescript',
     fullStack,
-    backendRuntime: fullStack && !integrated ? runtime : null,
+    backendRuntime: fullStack && (!integrated || integratedLaravel) ? runtime : null,
     backendFramework,
     orm,
     database: fullStack ? db : null,
-    extras: {
-      tailwind: extrasList.includes('tailwind') || extrasList.includes('shadcn'),
-      eslintPrettier: extrasList.includes('eslint'),
-      shadcn: extrasList.includes('shadcn'),
-    },
-    architecture: integrated
+    authentication: args.auth
+      ? parseEnumChoice<AuthenticationSetup>('--auth', args.auth, AVAILABLE.authentication)
+      : 'none',
+    extras: integratedLaravel
+      ? { tailwind: false, eslintPrettier: false, shadcn: false }
+      : {
+          tailwind: extrasList.includes('tailwind') || extrasList.includes('shadcn'),
+          eslintPrettier: extrasList.includes('eslint'),
+          shadcn: extrasList.includes('shadcn'),
+        },
+    architecture: integratedLaravel
+      ? { kind: 'integrated-laravel', framework: 'laravel', mode: 'livewire' }
+      : integrated
       ? { kind: 'integrated-fullstack', framework: 'nextjs' }
       : fullStack
         ? { kind: 'separate-frontend-api' }

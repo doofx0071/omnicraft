@@ -79,7 +79,7 @@ jobs:
       - name: Install workspace dependencies
         run: npm ci
 
-      - name: Test generated Express + Drizzle against SQLite, PostgreSQL, and MySQL
+      - name: Test creation-time and add-auth Express + Drizzle on SQLite, PostgreSQL, and MySQL
         run: npm run test:integration:db --workspace=create-omnicraft
 
   node-runtime-integration:
@@ -188,7 +188,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scenario: [add-testing-react-vite-ts, shadcn-react-vite-ts-frontend-only]
+        scenario:
+          - add-testing-react-vite-ts
+          - add-testing-react-vite-js-frontend-only
+          - add-testing-react-vite-ts-separate-api
+          - add-testing-react-vite-js-separate-api
+          - add-testing-vue-express-drizzle-sqlite
+          - add-testing-svelte-express-drizzle-sqlite
+          - add-testing-fastapi-sqlite
+          - add-testing-laravel-sqlite
+          - add-testing-nextjs-sqlite
+          - shadcn-react-vite-ts-frontend-only
     steps:
       - uses: actions/checkout@v4
 
@@ -203,6 +213,50 @@ jobs:
       - name: Test generated module path (${{ matrix.scenario }})
         run: npm run test:integration:modules --workspace=create-omnicraft -- --scenario ${{ matrix.scenario }}
 
+  react-vite-add-testing-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        group:
+          - react-vite-testing-node-none
+          - react-vite-testing-python-none
+          - react-vite-testing-php-none
+          - react-vite-testing-frontend-only-tailwind
+          - react-vite-testing-node-tailwind
+          - react-vite-testing-python-tailwind
+          - react-vite-testing-php-tailwind
+          - react-vite-testing-frontend-only-eslint
+          - react-vite-testing-node-eslint
+          - react-vite-testing-python-eslint
+          - react-vite-testing-php-eslint
+          - react-vite-testing-frontend-only-eslint-tailwind
+          - react-vite-testing-node-eslint-tailwind
+          - react-vite-testing-python-eslint-tailwind
+          - react-vite-testing-php-eslint-tailwind
+          - react-vite-testing-frontend-only-shadcn
+          - react-vite-testing-node-shadcn
+          - react-vite-testing-python-shadcn
+          - react-vite-testing-php-shadcn
+          - react-vite-testing-frontend-only-shadcn-eslint
+          - react-vite-testing-node-shadcn-eslint
+          - react-vite-testing-python-shadcn-eslint
+          - react-vite-testing-php-shadcn-eslint
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Test all exact generated React/Vite add-testing paths (${{ matrix.group }})
+        run: npm run test:integration:modules --workspace=create-omnicraft -- --scenario-group ${{ matrix.group }}
+
   native-platform-integration:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
@@ -212,8 +266,14 @@ jobs:
         include:
           - scenario: expo-ios-simulator
             runner: macos-26
+          - scenario: expo-android-emulator
+            runner: ubuntu-24.04
           - scenario: tauri-linux-desktop
             runner: ubuntu-24.04
+          - scenario: tauri-macos-desktop
+            runner: macos-26
+          - scenario: tauri-windows-desktop
+            runner: windows-2025
     steps:
       - uses: actions/checkout@v4
 
@@ -221,6 +281,35 @@ jobs:
         with:
           node-version: 24
           cache: npm
+
+      - name: Install Android emulator SDK packages
+        if: matrix.scenario == 'expo-android-emulator'
+        run: |
+          ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -print -quit)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "Android sdkmanager was not found under $ANDROID_HOME/cmdline-tools" >&2
+            exit 1
+          fi
+          SDKMANAGER_DIR="$(dirname "$SDKMANAGER")"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "$SDKMANAGER_DIR" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/emulator" >> "$GITHUB_PATH"
+          export PATH="$SDKMANAGER_DIR:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+          timeout 5m bash -c 'yes | sdkmanager --licenses >/dev/null'
+          timeout 15m sdkmanager --install \
+            "emulator" \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "system-images;android-36;google_apis;x86_64"
+
+      - name: Enable KVM for the hosted Android emulator
+        if: matrix.scenario == 'expo-android-emulator'
+        run: |
+          sudo chmod 0666 /dev/kvm
+          emulator -accel-check
 
       - name: Install Tauri Linux and virtual display dependencies
         if: matrix.scenario == 'tauri-linux-desktop'
@@ -252,6 +341,35 @@ jobs:
 
       - name: Test generated Laravel API against SQLite, PostgreSQL, and MySQL
         run: npm run test:integration:php --workspace=create-omnicraft
+
+  php-laravel-livewire-auth-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up PHP and Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, sqlite3, xml, zip
+          tools: composer:2.10.3
+          coverage: none
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Build the production CLI
+        run: npx tsup
+        working-directory: packages/cli
+
+      - name: Test generated Laravel Livewire None and native-auth projects on SQLite
+        run: npm run test:integration:php-livewire --workspace=create-omnicraft
 
   python-fastapi-integration:
     runs-on: ubuntu-latest
@@ -384,9 +502,11 @@ jobs:
       - frontend-runtime-integration
       - docker-module-integration
       - module-runtime-integration
+      - react-vite-add-testing-integration
       - native-platform-integration
       - python-fastapi-integration
       - php-laravel-integration
+      - php-laravel-livewire-auth-integration
       - support-evidence
       - package
     runs-on: ubuntu-latest
@@ -400,13 +520,15 @@ jobs:
           FRONTEND_RUNTIME: ${{ needs.frontend-runtime-integration.result }}
           DOCKER_MODULE: ${{ needs.docker-module-integration.result }}
           MODULE_RUNTIME: ${{ needs.module-runtime-integration.result }}
+          REACT_VITE_ADD_TESTING: ${{ needs.react-vite-add-testing-integration.result }}
           NATIVE_PLATFORM: ${{ needs.native-platform-integration.result }}
           PYTHON_DATABASE: ${{ needs.python-fastapi-integration.result }}
           PHP_DATABASE: ${{ needs.php-laravel-integration.result }}
+          PHP_LIVEWIRE_AUTH: ${{ needs.php-laravel-livewire-auth-integration.result }}
           SUPPORT_EVIDENCE: ${{ needs.support-evidence.result }}
           PACKAGE_ARTIFACT: ${{ needs.package.result }}
         run: |
-          for result in "$UNIX_MATRIX" "$NODE_DATABASE" "$NODE_RUNTIME" "$NEXTJS_RUNTIME" "$FRONTEND_RUNTIME" "$DOCKER_MODULE" "$MODULE_RUNTIME" "$NATIVE_PLATFORM" "$PYTHON_DATABASE" "$PHP_DATABASE" "$SUPPORT_EVIDENCE" "$PACKAGE_ARTIFACT"; do
+          for result in "$UNIX_MATRIX" "$NODE_DATABASE" "$NODE_RUNTIME" "$NEXTJS_RUNTIME" "$FRONTEND_RUNTIME" "$DOCKER_MODULE" "$MODULE_RUNTIME" "$REACT_VITE_ADD_TESTING" "$NATIVE_PLATFORM" "$PYTHON_DATABASE" "$PHP_DATABASE" "$PHP_LIVEWIRE_AUTH" "$SUPPORT_EVIDENCE" "$PACKAGE_ARTIFACT"; do
             if [ "$result" != "success" ]; then
               echo "A required release check finished with status: $result"
               exit 1

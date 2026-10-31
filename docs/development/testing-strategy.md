@@ -11,6 +11,11 @@ source checks and smoke scaffolding do not prove that every generated project in
 The 2026-10-28 runtime-evidence branch passed `npx vitest run` (**142 tests in 14 files**),
 `npx tsc --noEmit`, `npx tsup`, and `npm run check:support-matrix` (34 Supported rows). The smoke
 command generated all 17 listed paths.
+
+The v1.0.3 release candidate passes locally with 209 unit tests in 17 files, typecheck, build, the
+support-evidence checker (43 Supported rows), and all 17 smoke paths. These local checks supplement,
+but do not replace, the required exact-head hosted release gate.
+
 Generated-project integration commands also passed locally:
 
 ```text
@@ -19,7 +24,21 @@ npm run test:integration:node      # Express, Fastify, and Hono ORM/raw-SQL scen
 npm run test:integration:nextjs    # Next.js integrated full-stack: SQLite, PostgreSQL, MySQL
 npm run test:integration:python   # FastAPI + SQLite, Python 3.12
 npm run test:integration:php      # Laravel 12: SQLite, PostgreSQL, MySQL, pinned PHP/Composer image
+npm run test:integration:php-livewire # production CLI: Laravel 13 + Livewire, None/Fortify, SQLite
 ```
+
+The local Livewire integration check also sets caller `DB_CONNECTION` and `DB_DATABASE` values to a
+separate empty SQLite file for each mode, then verifies that file remains untouched while the
+generated app's SQLite database is initialized.
+
+The `php-laravel-livewire-auth-integration` job uses the production CLI to generate the official blank
+and authenticated Livewire starters, checks that incompatible Livewire/PostgreSQL flags fail before
+creating files, proves caller `DB_*` settings cannot redirect the initial migration away from the
+generated SQLite file, runs the generated SQLite migrations and feature tests, and installs/builds the
+starter's assets. It is a required dependency of `supported-stack-release-gate`. Hosted
+[run #41094120972 on commit `1c9283c`](https://github.com/doofx0071/omnicraft/actions/runs/41094120972/job/124195318304)
+passed for both exact SQLite modes; the support matrix records them separately. The existing Laravel
+12 API evidence does not cover either integrated mode.
 
 The hosted [closeout PR run #40562224821](https://github.com/doofx0071/omnicraft/actions/runs/40562224821)
 passed on commit `2a1e581312af0e1a84f604c9c86541ea8bdf9eed`, including the full OS/Node matrix, package
@@ -32,6 +51,19 @@ The follow-up [runtime-evidence run #40609596120](https://github.com/doofx0071/o
 passed the release gate on commit `b4c26273eaab033fee604bd77c04e0a2ab1d7e19`. It ran Express + Prisma/PostgreSQL,
 Express + raw SQL on SQLite/PostgreSQL/MySQL, and FastAPI + PostgreSQL through generated install/setup,
 boot, real database operations, and failure checks. The exact jobs are linked from their matrix rows.
+
+The `add testing` runtime fixes passed hosted [run #40880427361](https://github.com/doofx0071/omnicraft/actions/runs/40880427361)
+on commit `fd4d3888037e330ac160a997e91f2a5b6b4e70c9`, including the support-evidence check and strict
+release gate. Six exact React/Vite paths generated production layers, applied `add testing`, installed,
+and ran the generated sample test; they also built the client, booted Vite preview, and checked its
+bundle and missing-asset response. TypeScript client paths ran typecheck. The same run confirmed that
+Vue, Svelte, and Next.js module requests reject before module files, dependencies, scripts, or manifests
+change. This is module-path evidence only; backend and database claims remain tied to their own rows.
+
+The later exhaustive [runtime-evidence run #40918121708](https://github.com/doofx0071/omnicraft/actions/runs/40918121708)
+checked the remaining 306 compatible React/Vite tuples: 254 passed for the testing module and 52
+JavaScript + shadcn tuples reject before writes because their template paths lack shadcn's required
+aliases. The additional module evidence does not establish backend or database support.
 
 The Fastify/Hono runtime slice passed all 15 Node runtime scenarios and the release gate on
 [run #40612114736](https://github.com/doofx0071/omnicraft/actions/runs/40612114736), commit
@@ -46,19 +78,21 @@ The current suite covers:
 
 | File | Coverage |
 | --- | --- |
-| `src/args.test.ts` | Flag parsing and help text. |
+| `src/args.test.ts` | Flag parsing, Livewire/Laravel-native help text, and help/README option parity. |
 | `src/validators.test.ts` | Project-name normalization and npm-name validation. |
 | `src/renderer.test.ts` | Token substitution, unresolved-token detection, dotfile renaming, and binary detection. |
 | `src/merge.test.ts` | `package.json` deep merge semantics. |
-| `src/prefill.test.ts` | Available flag values, runtime-scoped databases/frameworks, Prisma/PostgreSQL validation, and `--yes` answer resolution. |
+| `src/prefill.test.ts` | Available flag values, runtime-scoped databases/frameworks, Prisma/PostgreSQL validation, authentication flag preflight, and `--yes` answer resolution. |
 | `src/update-check.test.ts` | Version comparison, mocked registry fetch, offline behavior, and cache. |
 | `src/prompts/run-prompts.test.ts` | Scripted prompt flow, frontend-only branch, unavailable-option retry, cancellation, and invalid names. |
-| `src/next-steps.test.ts` | Integrated Next.js commands/endpoints and container startup for PostgreSQL. |
+| `src/next-steps.test.ts` | Integrated Next.js commands/endpoints, container startup for PostgreSQL, and Laravel Livewire commands. |
 | `src/exec.test.ts` | Fixed-command output, timeout handling, and stopping a child process. |
-| `src/engine.test.ts` | Selected generated files, layer overrides, manifests, env files, token scans, protected-path examples, and selected engine combinations. |
-| `src/capabilities.test.ts` | Available prompt/flag choices derive from the typed capability registry, and the module menu matches its registered module IDs. |
-| `src/add-run.test.ts` | Module dry-run, success, idempotency, collisions, unsupported stacks, missing patch anchors, and rollback after a failed write. |
-| `src/support-evidence.test.ts` | Every Supported row resolves through selectable values, prompt/flag/composition and module guards, renders from its exact combination, and maps to the matching scenario, script, job, and aggregate release check. |
+| `src/scaffold/laravel-env.test.ts` | Keeps inherited `DB_*` settings from redirecting Laravel's initial SQLite migration. |
+| `src/engine.test.ts` | Selected generated files, layer overrides, manifests, env files, token scans, protected-path examples, selected engine combinations, creation-time auth compatibility, the no-auth `None` scaffold, and both Livewire starter overlays. |
+| `src/compatibility.test.ts`, `src/manifest.test.ts` | Exact creation-time auth choices and constraints, plus manifest separation between active authentication and `modules`. |
+| `src/capabilities.test.ts` | Available prompt/flag choices derive from the typed capability registry; the auth catalog records setup categories and requirements; the module menu matches its registered module IDs. |
+| `src/add-run.test.ts` | Module dry-run, success, idempotency, creation-time auth application, collisions, unsupported stacks, missing patch anchors, and rollback after a failed write. |
+| `src/support-evidence.test.ts` | Every Supported row resolves through selectable values, prompt/flag/composition, module and creation-time auth guards, renders from its exact combination, and maps to the matching scenario, script, job, and aggregate release check. |
 | `src/modules/auth.test.ts` | Better Auth compatibility and secret setup guidance. |
 
 The engine fixtures cover Express + Drizzle with PostgreSQL/SQLite/MySQL, Express + Prisma + PostgreSQL,
@@ -67,14 +101,21 @@ PostgreSQL/SQLite, the Laravel SQLite overlay, React frontend-only, Vue/Svelte c
 Next.js adapters, and shadcn's React/Vite overlay. This is a selected set, not the full runtime ×
 framework × ORM × database product.
 
-Hosted native checks now generate Expo and Tauri projects through the production commands and apply the
-production layers. Expo runs iOS prebuild, a native Debug build, simulator installation, and launch; it
-does not run a browser web build. Tauri builds the Vite web frontend, the native executable, and launches
-a visible Linux desktop window. These checks cover only iPhone simulator and Ubuntu desktop targets; they
-do not establish Android, physical iOS device, macOS, or Windows native support. The support matrix
-records the exact hosted run and keeps the broader native rows provisional. `omnicraft add testing` is
-Supported only for React/Vite TypeScript frontend-only: the hosted generated-project scenario installs the
-module, runs its sample assertion, builds and boots the app, and checks bundle and missing-asset responses.
+Hosted native checks generate Expo and Tauri projects through their production commands and apply the
+production layers. Expo runs iOS and Android prebuild/native Debug builds, installs and launches the apps
+on an iPhone simulator and Android emulator, and checks that the Android app process stays alive; it does
+not run a browser web build. Tauri builds the Vite frontend and native executable, then launches a visible
+window on Linux/Xvfb, macOS, and Windows. These checks verify builds and launch behavior, not full app
+functionality or database operations. Simulators and emulators are not physical devices; physical Android
+and iOS device paths remain Selectable — unverified. The support matrix records exact hosted jobs while
+keeping the broader Expo and Tauri rows Scaffold-verified. `omnicraft add testing` is Supported for the
+six original and 254 additional exact React/Vite module paths listed in the
+[support matrix](../templates/stack-support-matrix.md). Runs [#40880427361](https://github.com/doofx0071/omnicraft/actions/runs/40880427361)
+and [#40918121708](https://github.com/doofx0071/omnicraft/actions/runs/40918121708) passed generated
+installation, sample-test execution, client build, Vite preview, bundle, and missing-asset checks. The
+52 JavaScript + shadcn tuples reject before writes because their template paths lack required aliases;
+Vue, Svelte, and Next.js `add testing` paths also reject before module writes. The module tests exercise
+frontend behavior only and do not establish backend/database support.
 
 ### Level 2 — Scaffold smoke (`scripts/smoke-e2e.ts`)
 
@@ -124,8 +165,14 @@ The current workflow:
    expected files in the default scaffold. The generated project's dependencies are not installed in
    this package job.
 4. Runs hosted Ubuntu `database-integration` cases for Express + Drizzle + SQLite/PostgreSQL/MySQL.
-   Each generated project is installed and typechecked; migrations, API boot, CRUD, and Better Auth
-   flows are exercised.
+   For each database, generated projects exercise both creation-time Better Auth and a fresh
+   auth-module application through the `add auth` handler. Each project is installed and typechecked,
+   then builds, migrates, boots, and exercises CRUD and authentication. Both paths also verify their
+   manifest state and repeated `add auth` idempotency. The generated API also checks Better Auth's default
+   session-cookie attributes in development HTTP and production HTTPS-base-URL modes, then removes the
+   disposable SQLite/PostgreSQL session table or stops the disposable MySQL database container and
+   verifies that a failed session lookup returns a generic 500 response without database details or
+   secrets.
 5. Runs hosted Ubuntu `node-runtime-integration` for the 20 registered Express, Fastify, and Hono
    Prisma, Drizzle, and raw-SQL paths, including the exact Vue, Svelte, and JavaScript React client/API
    pairings. Each generated project is installed, client-built, API-typechecked, initialized or
@@ -145,18 +192,27 @@ The current workflow:
    validates and starts the Compose database, installs and checks the generated app, migrates, boots the
    API, and verifies CRUD and failure cases. Both scenarios passed hosted run #40615980612 on commit
    `77ef06645421edb3977019f63683af3ea531ccbb`.
-9. Runs hosted Ubuntu `module-runtime-integration` for `omnicraft add testing` and shadcn on the exact
-   React/Vite TypeScript frontend-only path. The testing case installs the module into a generated app,
-   runs its sample assertion, builds and boots the app, and checks bundle and missing-asset responses.
-   The shadcn case runs the production init and component install commands, installs, builds, boots, and
-   checks the generated app. Both scenarios passed [run #40618652654](https://github.com/doofx0071/omnicraft/actions/runs/40618652654/job/122588485044)
-   on commit `b28f5c48fd22820461a76defd3d099def5dd594f`; only these exact module paths are Supported.
-10. Runs `native-platform-integration` for Expo on `macos-26` and Tauri on `ubuntu-24.04`. It generates
-   each project through its production command, applies production layers, and installs dependencies.
-   Expo runs iOS prebuild and a native Debug build; Tauri builds the Vite frontend and native executable.
-   The job verifies launch in an iPhone simulator or visible Linux desktop window.
-   Both targets passed run [#40699127397](https://github.com/doofx0071/omnicraft/actions/runs/40699127397)
-   on head `5fff8ad638b203affc168fc948169d75b7cfc719`; the support matrix records the exact limits.
+9. Runs hosted Ubuntu `module-runtime-integration` for the `add testing` and shadcn frontend-only paths.
+   The six original and 254 additional exact React/Vite `add testing` cases generate through production composition, run the real
+   add operation, install, execute the generated `npm test`, build the client, boot Vite preview, and
+   check the bundle and missing-asset response. TypeScript client cases also typecheck. The Vue, Svelte,
+   and Next.js `add testing` cases assert pre-write rejection and unchanged manifests/packages; the 52
+   JavaScript + shadcn tuples reject because the template lacks required aliases. The original six
+   paths passed run [#40880427361](https://github.com/doofx0071/omnicraft/actions/runs/40880427361)
+   and the 254 additional paths passed run [#40918121708](https://github.com/doofx0071/omnicraft/actions/runs/40918121708).
+   The support-evidence check and strict release gate passed in the latter run. See the [support matrix](../templates/stack-support-matrix.md)
+   for exact path-level evidence. This module test does not establish backend/database behavior.
+10. Runs `native-platform-integration` for Expo iOS (`macos-26`), Expo Android (`ubuntu-24.04`), Tauri
+   Linux (`ubuntu-24.04`), macOS (`macos-26`), and Windows (`windows-2025`). It generates each project
+   through its production command, applies production layers, and installs dependencies. Expo builds and
+   launches native apps on the simulator/emulator; Tauri builds the frontend/native executable and checks
+   a visible window on each desktop OS. All five scenario checks passed on exact head
+   `689fbaa24f6e3a30ff142551ccfbe84b0d514d50` in run
+   [#41146678113](https://github.com/doofx0071/omnicraft/actions/runs/41146678113), including the pinned
+   Tauri app generator. The support-evidence check and strict release gate passed in the same run; the
+   tag-only publish job was skipped for the pull-request event.
+   The support matrix records the exact job links and evidence limits. Physical-device paths remain
+   Selectable — unverified.
 11. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
    generated dependencies, runs Alembic migrations, boots Uvicorn, and checks SQLite and PostgreSQL
    CRUD and failure responses. PostgreSQL runs in an isolated Testcontainers instance.

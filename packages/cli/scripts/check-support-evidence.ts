@@ -1,5 +1,12 @@
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -16,9 +23,13 @@ import { composeLayers } from '../src/scaffold/compose.js'
 import {
   INTEGRATION_TARGETS,
   NODE_RUNTIME_SCENARIOS,
+  REJECTED_MODULE_CAPABILITIES,
+  registeredRejectedMatrixRowPrefix,
   registeredMatrixRowPrefix,
+  reactViteTestingGroupId,
   SUPPORTED_CAPABILITIES,
   type NodeRuntimeScenario,
+  type RejectedModuleCapability,
   type SupportedCapability,
   type SupportedCombination,
 } from '../src/support-evidence.js'
@@ -47,6 +58,18 @@ function jobDependencies(job: string, name: string): string[] {
   }
   assert(dependencies.length > 0, `The "${name}" job must require at least one job.`)
   return dependencies
+}
+
+function matrixList(job: string, key: string): string[] {
+  const lines = job.split(/\r?\n/)
+  const start = lines.findIndex((line) => line === `        ${key}:`)
+  assert(start >= 0, `The integration job is missing matrix key "${key}".`)
+  const values: string[] = []
+  for (const line of lines.slice(start + 1)) {
+    if (!line.startsWith('          - ')) break
+    values.push(line.slice('          - '.length).trim())
+  }
+  return values
 }
 
 function argsFor(combination: SupportedCombination) {
@@ -119,6 +142,11 @@ function expectedScenario(
       if (capability.matrixFormat === 'auth-module') {
         assert.equal(combination.module, 'auth', `"${capability.id}" must validate the auth module.`)
       }
+      if (capability.matrixFormat === 'creation-auth') {
+        assert.equal(answers.authentication, 'better-auth', `"${capability.id}" must select Better Auth.`)
+        assert.equal(combination.flags.auth, 'better-auth', `"${capability.id}" must pass --auth better-auth.`)
+        assert.equal(combination.module, undefined, `"${capability.id}" must not model auth as an add module.`)
+      }
       return database
     }
     case 'nextjs-runtime': {
@@ -150,6 +178,25 @@ function expectedScenario(
       assertReactTypescriptApi(answers, capability)
       return database
     }
+    case 'php-laravel-livewire-auth': {
+      const authentication = combination.flags.auth
+      assert(
+        authentication === 'none' || authentication === 'laravel-native',
+        `"${capability.id}" must select None or Laravel native auth.`,
+      )
+      assert.equal(answers.frontend, 'livewire', `"${capability.id}" must use Livewire.`)
+      assert.equal(answers.language, null, `"${capability.id}" must not select a separate frontend language.`)
+      assert.equal(answers.fullStack, true, `"${capability.id}" must be integrated full-stack.`)
+      assert.equal(answers.backendRuntime, 'php', `"${capability.id}" must use PHP.`)
+      assert.equal(answers.backendFramework, 'laravel', `"${capability.id}" must use Laravel.`)
+      assert.equal(answers.orm, null, `"${capability.id}" must use Eloquent without a separate ORM choice.`)
+      assert.equal(answers.database, 'sqlite', `"${capability.id}" must use SQLite.`)
+      assert.equal(answers.architecture.kind, 'integrated-laravel', `"${capability.id}" must be integrated Laravel.`)
+      assert.equal(answers.authentication, authentication)
+      assert.equal(combination.module, undefined, `"${capability.id}" must not model auth as an add module.`)
+      assertExtras(answers, { tailwind: false, eslintPrettier: false, shadcn: false }, capability)
+      return authentication
+    }
     case 'docker-module': {
       const database = requiredDatabase(answers, capability)
       assert.equal(combination.module, 'docker', `"${capability.id}" must validate the docker module.`)
@@ -163,19 +210,115 @@ function expectedScenario(
       return database
     }
     case 'module-runtime':
-      assert.equal(answers.frontend, 'react', `"${capability.id}" must use React/Vite.`)
-      assert.equal(answers.language, 'typescript', `"${capability.id}" must use TypeScript.`)
-      assert.equal(answers.architecture.kind, 'frontend-only', `"${capability.id}" must be frontend-only.`)
       if (capability.matrixFormat === 'testing-module') {
         assert.equal(combination.module, 'testing', `"${capability.id}" must validate the testing module.`)
         assertExtras(answers, { tailwind: false, eslintPrettier: false, shadcn: false }, capability)
-        return 'add-testing-react-vite-ts'
+        const testingScenarios = [
+          {
+            id: 'add-testing-react-vite-ts',
+            frontend: 'react',
+            language: 'typescript',
+            fullStack: false,
+            architecture: 'frontend-only',
+            backendRuntime: null,
+            backendFramework: null,
+            orm: null,
+            database: null,
+          },
+          {
+            id: 'add-testing-react-vite-js-frontend-only',
+            frontend: 'react',
+            language: 'javascript',
+            fullStack: false,
+            architecture: 'frontend-only',
+            backendRuntime: null,
+            backendFramework: null,
+            orm: null,
+            database: null,
+          },
+          {
+            id: 'add-testing-react-vite-ts-separate-api',
+            frontend: 'react',
+            language: 'typescript',
+            fullStack: true,
+            architecture: 'separate-frontend-api',
+            backendRuntime: 'node',
+            backendFramework: 'express',
+            orm: 'drizzle',
+            database: 'sqlite',
+          },
+          {
+            id: 'add-testing-react-vite-js-separate-api',
+            frontend: 'react',
+            language: 'javascript',
+            fullStack: true,
+            architecture: 'separate-frontend-api',
+            backendRuntime: 'node',
+            backendFramework: 'express',
+            orm: 'drizzle',
+            database: 'sqlite',
+          },
+          {
+            id: 'add-testing-fastapi-sqlite',
+            frontend: 'react',
+            language: 'typescript',
+            fullStack: true,
+            architecture: 'separate-frontend-api',
+            backendRuntime: 'python',
+            backendFramework: 'fastapi',
+            orm: null,
+            database: 'sqlite',
+          },
+          {
+            id: 'add-testing-laravel-sqlite',
+            frontend: 'react',
+            language: 'typescript',
+            fullStack: true,
+            architecture: 'separate-frontend-api',
+            backendRuntime: 'php',
+            backendFramework: 'laravel',
+            orm: null,
+            database: 'sqlite',
+          },
+        ] as const
+        const scenario = testingScenarios.find(
+          (candidate) =>
+            candidate.frontend === answers.frontend &&
+            candidate.language === answers.language &&
+            candidate.fullStack === answers.fullStack &&
+            candidate.architecture === answers.architecture.kind &&
+            candidate.backendRuntime === answers.backendRuntime &&
+            candidate.backendFramework === answers.backendFramework &&
+            candidate.orm === answers.orm &&
+            candidate.database === answers.database,
+        )
+        assert(scenario, `No exact testing module scenario matches Supported capability "${capability.id}".`)
+        return scenario.id
       }
+      assert.equal(answers.frontend, 'react', `"${capability.id}" must use React/Vite.`)
+      assert.equal(answers.language, 'typescript', `"${capability.id}" must use TypeScript.`)
+      assert.equal(answers.architecture.kind, 'frontend-only', `"${capability.id}" must be frontend-only.`)
       assert.equal(capability.matrixFormat, 'shadcn-extra', `"${capability.id}" has an unsupported module matrix format.`)
       assert.equal(answers.extras.shadcn, true, `"${capability.id}" must enable shadcn.`)
       assertExtras(answers, { tailwind: true, eslintPrettier: true, shadcn: true }, capability)
       assert.equal(combination.module, undefined, `"${capability.id}" must use the shadcn extra, not an add module.`)
       return 'shadcn-react-vite-ts-frontend-only'
+    case 'module-runtime-react-vite':
+      assert.equal(capability.matrixFormat, 'testing-module-react-vite-family')
+      assert.equal(combination.module, 'testing', `"${capability.id}" must validate the testing module.`)
+      assertExtras(
+        answers,
+        {
+          tailwind:
+            combination.flags.extras.includes('tailwind') ||
+            combination.flags.extras.includes('shadcn'),
+          eslintPrettier: combination.flags.extras.includes('eslint'),
+          shadcn: combination.flags.extras.includes('shadcn'),
+        },
+        capability,
+      )
+      assert.equal(answers.frontend, 'react')
+      return reactViteTestingGroupId(combination.flags)
     default:
       throw new Error(`Supported capability "${capability.id}" has no exact scenario mapping for "${capability.target}".`)
   }
@@ -230,7 +373,84 @@ function validateCombination(
     )
   }
 
+  if (combination.flags.auth === 'better-auth') {
+    const module = MODULES.find((candidate) => candidate.id === 'auth')
+    assert(module, `Supported capability "${capability.id}" requires the existing auth module.`)
+    const manifest = buildManifest(answers, 'support-evidence', 'npm')
+    assert.equal(manifest.authentication, 'better-auth')
+    assert.deepEqual(manifest.modules, [], `"${capability.id}" must keep auth separate from module history.`)
+    const reason = module.incompatible?.(manifest, targetDir) ?? null
+    assert.equal(
+      reason,
+      null,
+      `The existing auth module rejects Supported creation-time capability "${capability.id}": ${reason}`,
+    )
+  }
+
+  if (capability.matrixFormat === 'laravel-livewire-auth') {
+    const manifest = buildManifest(answers, 'support-evidence', 'npm')
+    assert.equal(manifest.authentication, answers.authentication)
+    assert.deepEqual(manifest.modules, [], `"${capability.id}" must keep auth separate from module history.`)
+  }
+
   return expectedScenario(capability, combination, answers)
+}
+
+function validateRejectedCombination(
+  capability: RejectedModuleCapability,
+  combination: SupportedCombination,
+  index: number,
+): string {
+  const args = argsFor(combination)
+  const targetDir = mkdtempSync(join(tmpdir(), `omnicraft-rejected-support-check-${capability.id}-${index}-`))
+  try {
+    validateStackFlags(args)
+    assert(
+      isProjectTypeAllowedByFlags('web', args),
+      `Prompt filtering rejects the project type for "${capability.id}".`,
+    )
+    const answers = resolveAnswers(args, `support-${capability.id}`, targetDir)
+    assert(
+      isFrontendAllowedByFlags(answers.frontend, args),
+      `Prompt filtering rejects the frontend for "${capability.id}".`,
+    )
+    if (answers.backendRuntime) {
+      assert(
+        isRuntimeAllowedByFlags(answers.backendRuntime, args),
+        `Prompt filtering rejects runtime "${answers.backendRuntime}" for "${capability.id}".`,
+      )
+    }
+    assert.equal(answers.frontend, 'react')
+    assert.equal(answers.language, 'javascript')
+    assert(
+      answers.extras.shadcn,
+      `Rejected capability "${capability.id}" must enable shadcn.`,
+    )
+
+    const layers = composeLayers(answers)
+    assert(layers.length > 0, `Composition produced no production layers for "${capability.id}".`)
+    for (const layer of layers) {
+      assert(
+        existsSync(join(TEMPLATES_ROOT, layer.src)),
+        `Rejected capability "${capability.id}" references a missing production layer: ${layer.src}.`,
+      )
+    }
+
+    const module = MODULES.find((candidate) => candidate.id === combination.module)
+    assert(module, `Rejected capability "${capability.id}" references a missing module.`)
+    const appRoot = answers.architecture.kind === 'separate-frontend-api' ? join(targetDir, 'client') : targetDir
+    mkdirSync(join(appRoot, 'src'), { recursive: true })
+    writeFileSync(join(appRoot, 'src', 'main.jsx'), 'export default function App() {}\n')
+    const manifest = buildManifest(answers, 'support-evidence', 'npm')
+    assert.equal(
+      module.incompatible?.(manifest, targetDir) ?? null,
+      capability.reason,
+      `Rejected module capability "${capability.id}" no longer matches the production preflight guard.`,
+    )
+    return reactViteTestingGroupId(combination.flags)
+  } finally {
+    rmSync(targetDir, { recursive: true, force: true })
+  }
 }
 
 export function validateSupportEvidence(
@@ -258,6 +478,20 @@ export function validateSupportEvidence(
     const id = ids[0] ?? ''
     assert(!documentedIds.has(id), `Support id "${id}" appears more than once in the matrix.`)
     documentedIds.set(id, row)
+  }
+
+  const rejectedRows = matrixLines.filter(
+    (line) => line.startsWith('|') && line.includes('**Rejected — unsupported combination**'),
+  )
+  const rejectionIdPattern = /<!-- rejection-id: ([a-z0-9-]+) -->/g
+  const documentedRejections = new Map<string, string>()
+  for (const row of rejectedRows) {
+    const ids = [...row.matchAll(rejectionIdPattern)].map((match) => match[1] ?? '')
+    if (ids.length === 0) continue
+    assert.equal(ids.length, 1, `Every registered rejection row must have exactly one rejection id: ${row}`)
+    const id = ids[0] ?? ''
+    assert(!documentedRejections.has(id), `Rejection id "${id}" appears more than once in the matrix.`)
+    documentedRejections.set(id, row)
   }
 
   const registryIds = new Set<string>()
@@ -295,6 +529,34 @@ export function validateSupportEvidence(
     'The Supported matrix rows and the evidence registry must contain the same ids.',
   )
 
+  const rejectionRegistryIds = new Set<string>()
+  for (const capability of REJECTED_MODULE_CAPABILITIES) {
+    assert(
+      !rejectionRegistryIds.has(capability.id),
+      `Rejection registry duplicates id "${capability.id}".`,
+    )
+    rejectionRegistryIds.add(capability.id)
+    const row = documentedRejections.get(capability.id)
+    assert(row, `Rejection registry entry "${capability.id}" has no Rejected matrix row.`)
+    const exactScenarios = capability.combinations.map((combination, index) =>
+      validateRejectedCombination(capability, combination, index),
+    )
+    const targetScenarios = INTEGRATION_TARGETS[capability.target].scenarios
+    assert(
+      exactScenarios.every((scenario) => targetScenarios.includes(scenario)),
+      `Rejection capability "${capability.id}" references a scenario missing from target "${capability.target}".`,
+    )
+    assert(
+      row.startsWith(registeredRejectedMatrixRowPrefix(capability)),
+      `Rejected matrix row "${capability.id}" no longer matches its registered combinations.`,
+    )
+  }
+  assert.deepEqual(
+    [...documentedRejections.keys()].sort(),
+    [...rejectionRegistryIds].sort(),
+    'Registered Rejected matrix rows and the rejection registry must contain the same ids.',
+  )
+
   for (const [id, target] of Object.entries(INTEGRATION_TARGETS)) {
     assert(target.scenarios.length > 0, `Integration target "${id}" must declare at least one scenario.`)
     assert(
@@ -306,6 +568,30 @@ export function validateSupportEvidence(
       job.includes(target.workflowCommand),
       `CI job "${target.workflowJob}" no longer runs the registered command: ${target.workflowCommand}.`,
     )
+    if (id === 'module-runtime-react-vite') {
+      assert.deepEqual(
+        [...matrixList(job, 'group')].sort(),
+        [...target.scenarios].sort(),
+        'Every registered React/Vite add-testing group must run in the hosted matrix.',
+      )
+    }
+    if (id === 'native-platform') {
+      const nativeScenarios = [...job.matchAll(/^          - scenario: ([a-z0-9-]+)$/gm)].map(
+        (match) => match[1] as string,
+      )
+      assert.deepEqual(
+        [...nativeScenarios].sort(),
+        [...target.scenarios].sort(),
+        'Every registered native platform scenario must run in the hosted matrix.',
+      )
+      const nativeScript = readFileSync(join(repoRoot, 'packages', 'cli', target.script), 'utf8')
+      for (const scenario of target.scenarios) {
+        assert(
+          nativeScript.includes(`scenario === '${scenario}'`),
+          `Native platform scenario "${scenario}" has no script handler.`,
+        )
+      }
+    }
   }
 
   const releaseGate = workflowJob(workflowLines, 'supported-matrix')

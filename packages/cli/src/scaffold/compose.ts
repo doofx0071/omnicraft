@@ -10,6 +10,7 @@ import { validateAnswerCompatibility } from '../compatibility.js'
  *   node:   client → server base → db adapter → framework×ORM wiring
  *   python: client → fastapi base → sqlalchemy db adapter
  *   php:    client → laravel API overlay (applied AFTER composer create-project)
+ *   Livewire: official Laravel starter kit → OmniCraft root scripts/docs overlay
  *   nextjs: (none pre) → next overlay (applied AFTER create-next-app) → db adapter into app/
  *
  * The database choice selects both the db adapter and the root variant
@@ -19,8 +20,9 @@ export function composeLayers(answers: Answers): Layer[] {
   validateAnswerCompatibility(answers)
   const layers: Layer[] = []
   const integrated = answers.architecture.kind === 'integrated-fullstack'
+  const integratedLaravel = answers.architecture.kind === 'integrated-laravel'
   const native = answers.architecture.kind === 'native-app'
-  const clientDest = answers.fullStack && !integrated ? 'client' : '.'
+  const clientDest = answers.fullStack && !integrated && !integratedLaravel ? 'client' : '.'
 
   // Native platforms: the official generator (create-expo-app /
   // create-tauri-app) IS the scaffold — OmniCraft applies only a notes +
@@ -33,6 +35,11 @@ export function composeLayers(answers: Answers): Layer[] {
           : 'platform/desktop/tauri',
       dest: '.',
     })
+    return layers
+  }
+
+  if (integratedLaravel) {
+    layers.push({ src: 'root/fullstack-laravel-livewire', dest: '.' })
     return layers
   }
 
@@ -112,7 +119,7 @@ export function planLayerApplication(
   layers: Layer[],
   architecture: Answers['architecture'],
 ): { afterOfficialGenerator: Layer[]; beforeComposer: Layer[]; afterComposer: Layer[] } {
-  if (architecture.kind === 'integrated-fullstack') {
+  if (architecture.kind === 'integrated-fullstack' || architecture.kind === 'integrated-laravel') {
     return { afterOfficialGenerator: layers, beforeComposer: [], afterComposer: [] }
   }
 
@@ -130,11 +137,13 @@ export function templateVariables(answers: Answers): Record<string, string> {
   const databaseName = name.replace(/-/g, '_')
   const variables: Record<string, string> = {
     projectName: name,
-    clientPackageName: answers.fullStack && answers.architecture.kind !== 'integrated-fullstack' ? `${name}-client` : name,
+    clientPackageName:
+      answers.architecture.kind === 'separate-frontend-api' ? `${name}-client` : name,
     serverPackageName: `${name}-server`,
     databaseName,
     backendFramework: answers.backendFramework ?? '',
     orm: answers.orm ?? '',
+    authSetup: answers.authentication === 'laravel-native' ? 'Laravel native auth (Fortify)' : 'None',
   }
 
   // Laravel .env database block, composed per database choice.

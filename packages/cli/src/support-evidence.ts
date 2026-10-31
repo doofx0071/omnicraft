@@ -1,9 +1,10 @@
-import { AVAILABLE, type ModuleId } from './capabilities.js'
+import { AVAILABLE, CAPABILITY_REGISTRY, type ModuleId } from './capabilities.js'
 import {
   BACKEND_FRAMEWORK_LABELS,
   DATABASE_LABELS,
   FRONTEND_LABELS,
   ORM_LABELS,
+  type AuthenticationSetup,
   type BackendFramework,
   type BackendRuntime,
   type Database,
@@ -67,9 +68,117 @@ export const FRONTEND_RUNTIME_SCENARIOS = ['react-js-frontend-only'] as const
 export const DOCKER_MODULE_SCENARIOS = ['postgres', 'mysql'] as const satisfies readonly Extract<Database, 'postgres' | 'mysql'>[]
 export const MODULE_RUNTIME_SCENARIOS = [
   'add-testing-react-vite-ts',
+  'add-testing-react-vite-js-frontend-only',
+  'add-testing-react-vite-ts-separate-api',
+  'add-testing-react-vite-js-separate-api',
+  'add-testing-vue-express-drizzle-sqlite',
+  'add-testing-svelte-express-drizzle-sqlite',
+  'add-testing-fastapi-sqlite',
+  'add-testing-laravel-sqlite',
+  'add-testing-nextjs-sqlite',
   'shadcn-react-vite-ts-frontend-only',
 ] as const
-export const NATIVE_PLATFORM_SCENARIOS = ['expo-ios-simulator', 'tauri-linux-desktop'] as const
+type SupportedExtras = SupportedCombination['flags']['extras']
+
+function availableExtraSets(): SupportedExtras[] {
+  const extras = AVAILABLE.extras
+  const sets: SupportedExtras[] = []
+  for (let mask = 0; mask < 1 << extras.length; mask += 1) {
+    const selected = extras.filter((_, index) => (mask & (1 << index)) !== 0)
+    if (selected.includes('shadcn') && !selected.includes('tailwind')) continue
+    sets.push(selected)
+  }
+  return sets
+}
+
+function testingExtraGroup(extras: readonly string[]): string {
+  if (extras.includes('shadcn')) return extras.includes('eslint') ? 'shadcn-eslint' : 'shadcn'
+  if (extras.length === 0) return 'none'
+  return [...extras].sort().join('-')
+}
+
+export function reactViteTestingGroupId(flags: SupportedCombination['flags']): string {
+  const family = flags.fullStack ? (flags.runtime ?? 'node') : 'frontend-only'
+  return `react-vite-testing-${family}-${testingExtraGroup(flags.extras)}`
+}
+
+function exactTestingCombinationAlreadySupported(flags: SupportedCombination['flags']): boolean {
+  if (flags.extras.length !== 0) return false
+  if (!flags.fullStack) return true
+  if (flags.runtime === 'node') {
+    return (
+      flags.backend === 'express' &&
+      flags.orm === 'drizzle' &&
+      flags.db === 'sqlite' &&
+      (flags.lang === 'typescript' || flags.lang === 'javascript')
+    )
+  }
+  return (
+    flags.lang === 'typescript' &&
+    flags.db === 'sqlite' &&
+    ((flags.runtime === 'python' && flags.backend === 'fastapi') ||
+      (flags.runtime === 'php' && flags.backend === 'laravel'))
+  )
+}
+
+function allReactViteTestingCombinations(): SupportedCombination[] {
+  const combinations: SupportedCombination[] = []
+  const extrasSets = availableExtraSets()
+
+  for (const language of AVAILABLE.lang) {
+    for (const extras of extrasSets) {
+      combinations.push(frontendOnlyStack(language, extras, 'testing'))
+
+      for (const backend of AVAILABLE.backend.node) {
+        for (const orm of CAPABILITY_REGISTRY.ormsByNodeBackend[backend]) {
+          for (const database of AVAILABLE.db.node) {
+            if (orm === 'prisma' && database !== 'postgres') continue
+            const combination = webStack('react', language, 'node', backend, orm, database, 'testing')
+            combination.flags.extras = [...extras]
+            combinations.push(combination)
+          }
+        }
+      }
+
+      for (const database of AVAILABLE.db.python) {
+        const combination = webStack('react', language, 'python', 'fastapi', undefined, database, 'testing')
+        combination.flags.extras = [...extras]
+        combinations.push(combination)
+      }
+
+      for (const database of AVAILABLE.db.php) {
+        const combination = webStack('react', language, 'php', 'laravel', undefined, database, 'testing')
+        combination.flags.extras = [...extras]
+        combinations.push(combination)
+      }
+    }
+  }
+
+  return combinations
+}
+
+export const REACT_VITE_TESTING_FOLLOWUP_COMBINATIONS = allReactViteTestingCombinations().filter(
+  (combination) => !exactTestingCombinationAlreadySupported(combination.flags),
+)
+export const REACT_VITE_TESTING_REJECTED_COMBINATIONS =
+  REACT_VITE_TESTING_FOLLOWUP_COMBINATIONS.filter(
+    ({ flags }) => flags.lang === 'javascript' && flags.extras.includes('shadcn'),
+  )
+export const REACT_VITE_TESTING_NONREJECTED_COMBINATIONS =
+  REACT_VITE_TESTING_FOLLOWUP_COMBINATIONS.filter(
+    (combination) => !REACT_VITE_TESTING_REJECTED_COMBINATIONS.includes(combination),
+  )
+export const REACT_VITE_TESTING_FOLLOWUP_SCENARIOS = [
+  ...new Set(REACT_VITE_TESTING_FOLLOWUP_COMBINATIONS.map(({ flags }) => reactViteTestingGroupId(flags))),
+]
+export const NATIVE_PLATFORM_SCENARIOS = [
+  'expo-ios-simulator',
+  'expo-android-emulator',
+  'tauri-linux-desktop',
+  'tauri-macos-desktop',
+  'tauri-windows-desktop',
+] as const
+export const LARAVEL_LIVEWIRE_AUTH_SCENARIOS = ['none', 'laravel-native'] as const satisfies readonly AuthenticationSetup[]
 
 export const INTEGRATION_TARGETS = {
   'node-runtime': {
@@ -103,6 +212,13 @@ export const INTEGRATION_TARGETS = {
     workflowCommand: 'npm run test:integration:modules --workspace=create-omnicraft -- --scenario',
     scenarios: MODULE_RUNTIME_SCENARIOS,
   },
+  'module-runtime-react-vite': {
+    script: 'scripts/module-runtime-integration.ts',
+    workflowJob: 'react-vite-add-testing-integration',
+    workflowCommand:
+      'npm run test:integration:modules --workspace=create-omnicraft -- --scenario-group',
+    scenarios: REACT_VITE_TESTING_FOLLOWUP_SCENARIOS,
+  },
   'native-platform': {
     script: 'scripts/native-platform-integration.ts',
     workflowJob: 'native-platform-integration',
@@ -127,6 +243,12 @@ export const INTEGRATION_TARGETS = {
     workflowCommand: 'npm run test:integration:php --workspace=create-omnicraft',
     scenarios: ['sqlite', 'postgres', 'mysql'],
   },
+  'php-laravel-livewire-auth': {
+    script: 'scripts/php-livewire-auth-e2e.ts',
+    workflowJob: 'php-laravel-livewire-auth-integration',
+    workflowCommand: 'npm run test:integration:php-livewire --workspace=create-omnicraft',
+    scenarios: LARAVEL_LIVEWIRE_AUTH_SCENARIOS,
+  },
 } as const satisfies Record<
   string,
   {
@@ -142,13 +264,14 @@ export type IntegrationTargetId = keyof typeof INTEGRATION_TARGETS
 export interface SupportedCombination {
   flags: {
     platform: 'web'
-    lang: Language
+    lang?: Language
     frontend: Frontend
     fullStack: boolean
     runtime?: BackendRuntime
     backend?: BackendFramework
     orm?: Orm
     db?: Database
+    auth?: AuthenticationSetup
     extras: readonly (typeof AVAILABLE.extras)[number][]
   }
   module?: ModuleId
@@ -162,9 +285,12 @@ export type SupportMatrixFormat =
   | 'node-backend'
   | 'python-backend'
   | 'php-backend'
+  | 'laravel-livewire-auth'
   | 'auth-module'
+  | 'creation-auth'
   | 'docker-module'
   | 'testing-module'
+  | 'testing-module-react-vite-family'
   | 'shadcn-extra'
 
 export interface SupportedCapability {
@@ -175,7 +301,12 @@ export interface SupportedCapability {
   combinations: readonly SupportedCombination[]
 }
 
-type SupportedExtras = SupportedCombination['flags']['extras']
+export interface RejectedModuleCapability {
+  id: string
+  target: IntegrationTargetId
+  reason: string
+  combinations: readonly SupportedCombination[]
+}
 
 function webStack(
   frontend: Frontend,
@@ -185,6 +316,7 @@ function webStack(
   orm: Orm | undefined,
   database: Database,
   module?: ModuleId,
+  extras: SupportedExtras = [],
 ): SupportedCombination {
   return {
     flags: {
@@ -196,7 +328,7 @@ function webStack(
       backend,
       ...(orm ? { orm } : {}),
       db: database,
-      extras: [],
+      extras: [...extras],
     },
     ...(module ? { module } : {}),
   }
@@ -213,12 +345,34 @@ function nodeStack(
   return webStack(frontend, language, 'node', backend, orm, database, module)
 }
 
+function creationAuthStack(database: Database): SupportedCombination {
+  const stack = nodeStack('express', 'drizzle', database)
+  return { ...stack, flags: { ...stack.flags, auth: 'better-auth' } }
+}
+
 function pythonStack(database: Database): SupportedCombination {
   return webStack('react', 'typescript', 'python', 'fastapi', undefined, database)
 }
 
 function phpStack(database: Database): SupportedCombination {
   return webStack('react', 'typescript', 'php', 'laravel', undefined, database)
+}
+
+function livewireAuthStack(
+  authentication: Extract<AuthenticationSetup, 'none' | 'laravel-native'>,
+): SupportedCombination {
+  return {
+    flags: {
+      platform: 'web',
+      frontend: 'livewire',
+      fullStack: true,
+      runtime: 'php',
+      backend: 'laravel',
+      db: 'sqlite',
+      auth: authentication,
+      extras: [],
+    },
+  }
 }
 
 function nextjsStack(database: Database): SupportedCombination {
@@ -275,7 +429,7 @@ export function registeredMatrixRowPrefix(capability: SupportedCapability): stri
   if (combinations.length === 0) throw new Error('A Supported matrix row must register a combination.')
   const first = combinations[0] as SupportedCombination
   const frontend = first.flags.frontend as Frontend
-  const language = first.flags.lang as Language
+  const language = first.flags.lang
   const frontendLabel =
     language === 'javascript'
       ? `${FRONTEND_LABELS[frontend]} + Vite JavaScript`
@@ -286,7 +440,11 @@ export function registeredMatrixRowPrefix(capability: SupportedCapability): stri
   const databases = combinations.flatMap((combination) =>
     combination.flags.db ? [combination.flags.db] : [],
   )
-  if (databases.length > 0 && new Set(databases).size !== databases.length) {
+  if (
+    capability.matrixFormat !== 'testing-module-react-vite-family' &&
+    databases.length > 0 &&
+    new Set(databases).size !== databases.length
+  ) {
     throw new Error(`Supported row "${capability.id}" repeats a database combination.`)
   }
 
@@ -330,20 +488,54 @@ export function registeredMatrixRowPrefix(capability: SupportedCapability): stri
     case 'php-backend':
       label = `Laravel 12 | Eloquent | ${oneDatabase()}`
       break
+    case 'laravel-livewire-auth': {
+      const authentication = requireOneCombination(capability).flags.auth
+      if (authentication !== 'none' && authentication !== 'laravel-native') {
+        throw new Error(`Livewire auth row "${capability.id}" must select None or Laravel native auth.`)
+      }
+      const mode = authentication === 'none' ? 'None' : 'Laravel native/Fortify'
+      label = `Laravel 13 + Livewire 4 (${mode}) | Eloquent | ${oneDatabase()}`
+      break
+    }
     case 'auth-module':
       label = `\`omnicraft add auth\` — Express + Drizzle + ${databaseList('/')}`
+      break
+    case 'creation-auth':
+      label = `Creation-time Better Auth — ${frontendLabel} + Express + Drizzle + ${databaseList('/')}`
       break
     case 'docker-module':
       label = `\`omnicraft add docker\` — Express + Drizzle + ${oneDatabase()} separate API`
       break
-    case 'testing-module':
-      label = '`omnicraft add testing` — React/Vite TypeScript frontend-only'
+    case 'testing-module': {
+      const flags = requireOneCombination(capability).flags
+      const testingTarget = '`omnicraft add testing` — '
+      if (!flags.fullStack) {
+        label = `${testingTarget}React/Vite ${language === 'javascript' ? 'JavaScript' : 'TypeScript'} frontend-only`
+      } else {
+        const backend = flags.backend as BackendFramework
+        const dataAccess =
+          flags.runtime === 'node'
+            ? displayOrm(flags.orm)
+            : flags.runtime === 'python'
+              ? 'SQLAlchemy 2 async + Alembic'
+              : 'Eloquent'
+        label = `${testingTarget}${frontendLabel} + ${BACKEND_FRAMEWORK_LABELS[backend]} + ${dataAccess} + ${oneDatabase()} separate API`
+      }
+      break
+    }
+    case 'testing-module-react-vite-family':
+      label = `\`omnicraft add testing\` — ${combinations.length} other exact React/Vite paths`
       break
     case 'shadcn-extra':
       label = 'shadcn/ui — React/Vite TypeScript frontend-only'
       break
   }
   return `| ${label} | **Supported** |`
+}
+
+export function registeredRejectedMatrixRowPrefix(capability: RejectedModuleCapability): string {
+  const label = `\`omnicraft add testing\` — React/Vite JavaScript + shadcn (${capability.combinations.length} exact module paths)`
+  return `| ${label} | **Rejected — unsupported combination** |`
 }
 
 /**
@@ -511,6 +703,20 @@ export const SUPPORTED_CAPABILITIES = [
     combinations: [phpStack('sqlite')],
   },
   {
+    id: 'laravel-livewire-none-sqlite',
+    matrixFormat: 'laravel-livewire-auth',
+    target: 'php-laravel-livewire-auth',
+    scenarios: ['none'],
+    combinations: [livewireAuthStack('none')],
+  },
+  {
+    id: 'laravel-livewire-native-auth-sqlite',
+    matrixFormat: 'laravel-livewire-auth',
+    target: 'php-laravel-livewire-auth',
+    scenarios: ['laravel-native'],
+    combinations: [livewireAuthStack('laravel-native')],
+  },
+  {
     id: 'auth-express-drizzle-sqlite',
     matrixFormat: 'auth-module',
     target: 'node-express-drizzle',
@@ -525,6 +731,17 @@ export const SUPPORTED_CAPABILITIES = [
     combinations: [
       nodeStack('express', 'drizzle', 'postgres', 'react', 'typescript', 'auth'),
       nodeStack('express', 'drizzle', 'mysql', 'react', 'typescript', 'auth'),
+    ],
+  },
+  {
+    id: 'creation-auth-better-auth-express-drizzle',
+    matrixFormat: 'creation-auth',
+    target: 'node-express-drizzle',
+    scenarios: ['sqlite', 'postgres', 'mysql'],
+    combinations: [
+      creationAuthStack('sqlite'),
+      creationAuthStack('postgres'),
+      creationAuthStack('mysql'),
     ],
   },
   {
@@ -598,6 +815,50 @@ export const SUPPORTED_CAPABILITIES = [
     combinations: [frontendOnlyStack('typescript', [], 'testing')],
   },
   {
+    id: 'testing-module-react-vite-js-frontend-only',
+    matrixFormat: 'testing-module',
+    target: 'module-runtime',
+    scenarios: ['add-testing-react-vite-js-frontend-only'],
+    combinations: [frontendOnlyStack('javascript', [], 'testing')],
+  },
+  {
+    id: 'testing-module-react-vite-ts-express-drizzle-sqlite',
+    matrixFormat: 'testing-module',
+    target: 'module-runtime',
+    scenarios: ['add-testing-react-vite-ts-separate-api'],
+    combinations: [nodeStack('express', 'drizzle', 'sqlite', 'react', 'typescript', 'testing')],
+  },
+  {
+    id: 'testing-module-react-vite-js-express-drizzle-sqlite',
+    matrixFormat: 'testing-module',
+    target: 'module-runtime',
+    scenarios: ['add-testing-react-vite-js-separate-api'],
+    combinations: [nodeStack('express', 'drizzle', 'sqlite', 'react', 'javascript', 'testing')],
+  },
+  {
+    id: 'testing-module-react-vite-ts-fastapi-sqlite',
+    matrixFormat: 'testing-module',
+    target: 'module-runtime',
+    scenarios: ['add-testing-fastapi-sqlite'],
+    combinations: [webStack('react', 'typescript', 'python', 'fastapi', undefined, 'sqlite', 'testing')],
+  },
+  {
+    id: 'testing-module-react-vite-ts-laravel-sqlite',
+    matrixFormat: 'testing-module',
+    target: 'module-runtime',
+    scenarios: ['add-testing-laravel-sqlite'],
+    combinations: [webStack('react', 'typescript', 'php', 'laravel', undefined, 'sqlite', 'testing')],
+  },
+  {
+    id: 'testing-module-react-vite-other-exact-paths',
+    matrixFormat: 'testing-module-react-vite-family',
+    target: 'module-runtime-react-vite',
+    scenarios: REACT_VITE_TESTING_NONREJECTED_COMBINATIONS.map(({ flags }) =>
+      reactViteTestingGroupId(flags),
+    ),
+    combinations: REACT_VITE_TESTING_NONREJECTED_COMBINATIONS,
+  },
+  {
     id: 'shadcn-react-vite-ts-frontend-only',
     matrixFormat: 'shadcn-extra',
     target: 'module-runtime',
@@ -605,6 +866,15 @@ export const SUPPORTED_CAPABILITIES = [
     combinations: [frontendOnlyStack('typescript', ['tailwind', 'eslint', 'shadcn'])],
   },
 ] as const satisfies readonly SupportedCapability[]
+
+export const REJECTED_MODULE_CAPABILITIES = [
+  {
+    id: 'testing-module-react-vite-js-shadcn',
+    target: 'module-runtime-react-vite',
+    reason: 'the current shadcn templates require the TypeScript React/Vite app template',
+    combinations: REACT_VITE_TESTING_REJECTED_COMBINATIONS,
+  },
+] as const satisfies readonly RejectedModuleCapability[]
 
 export function integrationScenarios(target: IntegrationTargetId): readonly string[] {
   return INTEGRATION_TARGETS[target].scenarios

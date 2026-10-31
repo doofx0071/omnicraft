@@ -1,4 +1,4 @@
-import type { Answers } from './types.js'
+import type { Answers, AuthenticationSetup } from './types.js'
 
 export interface ProjectManifest {
   schema: 1
@@ -15,6 +15,8 @@ export interface ProjectManifest {
     database: string | null
     extras: string[]
   }
+  /** Creation-time auth selection; independent from the `omnicraft add` module history. */
+  authentication?: AuthenticationSetup
   modules: string[]
   packageManager: string
 }
@@ -38,6 +40,7 @@ export function buildManifest(answers: Answers, cliVersion: string, packageManag
     createdAt: new Date().toISOString(),
     projectName: answers.projectName,
     stack,
+    authentication: answers.authentication,
     modules: [],
     packageManager,
   }

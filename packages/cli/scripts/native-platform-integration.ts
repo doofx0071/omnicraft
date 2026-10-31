@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -15,6 +15,7 @@ import type { Answers } from '../src/types.js'
 const PREPARATION_TIMEOUT_MS = 8 * 60 * 1000
 const EXPO_BUILD_TIMEOUT_MS = 35 * 60 * 1000
 const TAURI_BUILD_TIMEOUT_MS = 25 * 60 * 1000
+const TAURI_APP_GENERATOR = 'create-tauri-app@4.7.5'
 const MAX_OUTPUT_BYTES = 64 * 1024 * 1024
 
 function tail(value: string, length = 12_000): string {
@@ -145,6 +146,7 @@ function makeAnswers(
     backendFramework: null,
     orm: null,
     database: null,
+    authentication: 'none',
     extras: { tailwind: false, eslintPrettier: false, shadcn: false },
     architecture: { kind: 'native-app', platform },
   }
@@ -376,6 +378,90 @@ function findTauriBinary(releaseDir: string): string {
   return binaries[0] ?? ''
 }
 
+function findTauriWindowsExecutable(releaseDir: string): string {
+  const binaries = readdirSync(releaseDir)
+    .map((name) => join(releaseDir, name))
+    .filter((path) => statSync(path).isFile() && path.toLowerCase().endsWith('.exe'))
+  if (binaries.length !== 1) {
+    throw new Error(`Expected one generated Tauri Windows executable in ${releaseDir}, found ${binaries.length}.`)
+  }
+  return binaries[0] ?? ''
+}
+
+function expoAndroidApplicationId(projectRoot: string): string {
+  const gradlePath = join(projectRoot, 'android', 'app', 'build.gradle')
+  requirePath(gradlePath, 'Generated Expo Android app Gradle file')
+  const gradle = readFileSync(gradlePath, 'utf8')
+  const applicationId = /^\s*applicationId\s+["']([^"']+)["']/m.exec(gradle)?.[1]
+  if (!applicationId || !/^[A-Za-z0-9_.]+$/.test(applicationId)) {
+    throw new Error('Generated Expo Android app has no valid applicationId.')
+  }
+  return applicationId
+}
+
+async function waitForAndroidEmulatorBoot(
+  emulatorProcess: ReturnType<typeof startCommand>,
+  projectRoot: string,
+): Promise<void> {
+  let exitResult: { ok: boolean; output: string; exitCode: number | null } | undefined
+  void emulatorProcess.exited.then((result) => {
+    exitResult = result
+  })
+  const deadline = Date.now() + 180_000
+  while (Date.now() < deadline) {
+    const result = runCommand(
+      'adb',
+      ['-s', 'emulator-5554', 'shell', 'getprop', 'sys.boot_completed'],
+      projectRoot,
+      {
+        env: isolatedEnvironment({ ANDROID_SERIAL: 'emulator-5554' }),
+        timeoutMs: 8_000,
+        maxBuffer: 1024 * 1024,
+      },
+    )
+    if (result.ok && result.output.trim() === '1') return
+    if (exitResult) {
+      throw new Error(
+        `The Android emulator exited before boot completed (exit ${exitResult.exitCode ?? 'unknown'}):\n${tail(redact(`${exitResult.output}\n${emulatorProcess.output}`))}`,
+      )
+    }
+    await delay(2_000)
+  }
+  throw new Error(
+    `The Android emulator did not finish booting within 180 seconds:\n${tail(redact(emulatorProcess.output))}`,
+  )
+}
+
+async function waitForAndroidAppProcess(projectRoot: string, applicationId: string): Promise<void> {
+  const deadline = Date.now() + 60_000
+  let consecutiveAliveChecks = 0
+  let lastProcessOutput = ''
+  while (Date.now() < deadline) {
+    const result = runCommand(
+      'adb',
+      ['-s', 'emulator-5554', 'shell', 'pidof', applicationId],
+      projectRoot,
+      {
+        env: isolatedEnvironment({ ANDROID_SERIAL: 'emulator-5554' }),
+        timeoutMs: 8_000,
+        maxBuffer: 1024 * 1024,
+      },
+    )
+    lastProcessOutput = result.output.trim()
+    if (result.ok && /^\d+(?:\s+\d+)*$/.test(lastProcessOutput)) {
+      consecutiveAliveChecks += 1
+      if (consecutiveAliveChecks >= 2) return
+    } else {
+      consecutiveAliveChecks = 0
+    }
+    await delay(1_000)
+  }
+  throw new Error(
+    `Expo app ${applicationId} did not keep a process running in the Android emulator within 60 seconds. ` +
+      `Last pidof output: ${tail(redact(lastProcessOutput), 1_000) || '(empty)'}`,
+  )
+}
+
 function escapeRegularExpression(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -412,6 +498,57 @@ async function waitForTauriWindow(
     await delay(1_000)
   }
   throw new Error(`No visible Tauri window titled "${title}" appeared within 60 seconds:\n${tail(redact(process.output))}`)
+}
+
+async function waitForHostedTauriWindow(
+  appProcess: ReturnType<typeof startCommand>,
+  projectRoot: string,
+  title: string,
+  platform: 'macos' | 'windows',
+): Promise<void> {
+  let exitResult: { ok: boolean; output: string; exitCode: number | null } | undefined
+  void appProcess.exited.then((result) => {
+    exitResult = result
+  })
+  const appleScript = `tell application "System Events"
+set windowNames to {}
+repeat with appProcess in (every application process whose visible is true)
+  try
+    repeat with appWindow in (every window of appProcess)
+      set end of windowNames to name of appWindow
+    end repeat
+  end try
+end repeat
+return windowNames as text
+end tell`
+  const powershellCommand =
+    '"$titles = Get-Process | Where-Object { $_.MainWindowHandle -ne 0 } | ForEach-Object { $_.MainWindowTitle }; $titles"'
+  const deadline = Date.now() + 60_000
+  let lastOutput = ''
+  while (Date.now() < deadline) {
+    const result =
+      platform === 'macos'
+        ? runCommand('osascript', ['-e', appleScript], projectRoot, {
+            timeoutMs: 8_000,
+            maxBuffer: 4 * 1024 * 1024,
+          })
+        : runCommand('powershell', ['-NoProfile', '-NonInteractive', '-Command', powershellCommand], projectRoot, {
+            timeoutMs: 8_000,
+            maxBuffer: 4 * 1024 * 1024,
+          })
+    lastOutput = result.output
+    const windowTitles = result.output.split(/,\s*|\r?\n/).map((value) => value.trim())
+    if (result.ok && windowTitles.includes(title)) return
+    if (exitResult) {
+      throw new Error(
+        `The Tauri ${platform} process exited before its window appeared (exit ${exitResult.exitCode ?? 'unknown'}):\n${tail(redact(`${exitResult.output}\n${appProcess.output}`))}`,
+      )
+    }
+    await delay(1_000)
+  }
+  throw new Error(
+    `No visible Tauri ${platform} window titled "${title}" appeared within 60 seconds. Window query output:\n${tail(redact(lastOutput), 3_000)}\nApp output:\n${tail(redact(appProcess.output), 3_000)}`,
+  )
 }
 
 async function waitForX11Display(
@@ -591,6 +728,158 @@ async function runExpoIosSimulator(): Promise<void> {
   }
 }
 
+async function runExpoAndroidEmulator(): Promise<void> {
+  if (process.platform !== 'linux') {
+    throw new Error('The Expo Android emulator scenario requires a Linux runner with the Android SDK.')
+  }
+
+  const { parent, projectName, projectRoot } = createScratchProject('expo')
+  const answers = makeAnswers(projectRoot, projectName, 'mobile')
+  const avdName = 'omnicraft-expo-runtime-evidence'
+  const androidUserHome = join(parent, '.android')
+  const androidAvdHome = join(androidUserHome, 'avd')
+  const androidEnvironment = {
+    ANDROID_AVD_HOME: androidAvdHome,
+    ANDROID_USER_HOME: androidUserHome,
+    ANDROID_SDK_HOME: parent,
+  }
+  let emulatorProcess: ReturnType<typeof startCommand> | undefined
+
+  try {
+    mkdirSync(androidAvdHome, { recursive: true })
+    runRequired(
+      'Generate Expo SDK 58 project with the production generator command',
+      'npx',
+      [
+        '--yes',
+        'create-expo-app@latest',
+        projectRoot,
+        '--template',
+        'default@sdk-58',
+        '--yes',
+        '--no-install',
+        '--no-agents-md',
+      ],
+      parent,
+    )
+    applyProductionLayers(projectRoot, answers)
+    runRequired('Install Expo project dependencies', 'npm', ['install', '--no-audit', '--no-fund'], projectRoot)
+    runRequired(
+      'Generate the native Android project',
+      'npx',
+      ['expo', 'prebuild', '--platform', 'android', '--no-install'],
+      projectRoot,
+    )
+
+    runRequired(
+      'Create an isolated Android 36 emulator profile',
+      'bash',
+      [
+        '-lc',
+        `printf 'no\\n' | avdmanager create avd --force --name '${avdName}' --package 'system-images;android-36;google_apis;x86_64' --device 'pixel_2' --path '${join(androidAvdHome, `${avdName}.avd`)}'`,
+      ],
+      projectRoot,
+      60_000,
+      androidEnvironment,
+    )
+    const availableAvds = runRequired(
+      'Verify the isolated Android emulator profile is discoverable',
+      'emulator',
+      ['-list-avds'],
+      projectRoot,
+      15_000,
+      androidEnvironment,
+    )
+    if (!availableAvds.split(/\r?\n/).includes(avdName)) {
+      throw new Error(`Android emulator did not discover the isolated AVD ${avdName}.`)
+    }
+    console.log('[native] Start Android 36 x86_64 emulator (hosted emulator, not a physical device).')
+    emulatorProcess = startCommand(
+      'emulator',
+      [
+        '-avd',
+        avdName,
+        '-port',
+        '5554',
+        '-no-window',
+        '-no-audio',
+        '-no-boot-anim',
+        '-no-snapshot',
+        '-wipe-data',
+        '-gpu',
+        'swiftshader_indirect',
+        '-accel',
+        'on',
+      ],
+      projectRoot,
+      {
+        env: isolatedEnvironment({ ...androidEnvironment, ANDROID_SERIAL: 'emulator-5554' }),
+        maxOutputBytes: MAX_OUTPUT_BYTES,
+      },
+    )
+    console.log('[native] Wait for Android emulator boot completion.')
+    await waitForAndroidEmulatorBoot(emulatorProcess, projectRoot)
+
+    const androidRoot = join(projectRoot, 'android')
+    const gradleWrapper = join(androidRoot, 'gradlew')
+    requirePath(gradleWrapper, 'Generated Expo Android Gradle wrapper')
+    await runRequiredAsync(
+      'Build the generated Expo Android Debug APK',
+      gradleWrapper,
+      ['assembleDebug'],
+      androidRoot,
+      EXPO_BUILD_TIMEOUT_MS,
+    )
+    const apkPath = join(androidRoot, 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk')
+    requirePath(apkPath, 'Generated Expo Android Debug APK')
+    const applicationId = expoAndroidApplicationId(projectRoot)
+    runRequired(
+      'Install the generated Expo Android app in the emulator',
+      'adb',
+      ['-s', 'emulator-5554', 'install', '-r', apkPath],
+      projectRoot,
+      120_000,
+      { ANDROID_SERIAL: 'emulator-5554' },
+    )
+    const installedPackage = runRequired(
+      'Verify the Expo Android package is installed',
+      'adb',
+      ['-s', 'emulator-5554', 'shell', 'pm', 'path', applicationId],
+      projectRoot,
+      30_000,
+      { ANDROID_SERIAL: 'emulator-5554' },
+    )
+    if (!installedPackage.includes('package:')) {
+      throw new Error(`Android reported no installed APK for ${applicationId}.`)
+    }
+    runRequired(
+      'Launch the Expo Android app in the emulator',
+      'adb',
+      ['-s', 'emulator-5554', 'shell', 'monkey', '-p', applicationId, '1'],
+      projectRoot,
+      30_000,
+      { ANDROID_SERIAL: 'emulator-5554' },
+    )
+    await waitForAndroidAppProcess(projectRoot, applicationId)
+    console.log(`[native] Expo Android emulator: Debug APK installed and app process remained alive (${applicationId}).`)
+  } finally {
+    if (emulatorProcess) {
+      runCommand('adb', ['-s', 'emulator-5554', 'emu', 'kill'], projectRoot, {
+        env: isolatedEnvironment({ ANDROID_SERIAL: 'emulator-5554' }),
+        timeoutMs: 10_000,
+        maxBuffer: 1024 * 1024,
+      })
+      await emulatorProcess.stop(10_000)
+    }
+    runCommand('avdmanager', ['delete', 'avd', '--name', avdName], projectRoot, {
+      env: isolatedEnvironment(androidEnvironment),
+      timeoutMs: 30_000,
+      maxBuffer: 2 * 1024 * 1024,
+    })
+    rmSync(parent, { recursive: true, force: true, maxRetries: 10, retryDelay: 1_000 })
+  }
+}
+
 async function runTauriLinuxDesktop(): Promise<void> {
   if (process.platform !== 'linux') {
     throw new Error('The Tauri desktop scenario requires a Linux runner with WebKitGTK and Xvfb.')
@@ -608,7 +897,7 @@ async function runTauriLinuxDesktop(): Promise<void> {
       'npx',
       [
         '--yes',
-        'create-tauri-app@latest',
+        TAURI_APP_GENERATOR,
         projectName,
         '--template',
         'react-ts',
@@ -667,6 +956,66 @@ async function runTauriLinuxDesktop(): Promise<void> {
   }
 }
 
+async function runTauriHostedDesktop(platform: 'macos' | 'windows'): Promise<void> {
+  const expectedHost = platform === 'macos' ? 'darwin' : 'win32'
+  if (process.platform !== expectedHost) {
+    throw new Error(`The Tauri ${platform} scenario requires a ${platform} runner.`)
+  }
+
+  const { parent, projectName, projectRoot } = createScratchProject('tauri')
+  const answers = makeAnswers(projectRoot, projectName, 'desktop')
+  let appProcess: ReturnType<typeof startCommand> | undefined
+
+  try {
+    const identifier = `com.omnicraft.${projectName.replace(/[^a-z0-9]/gi, '').toLowerCase() || 'app'}`
+    runRequired(
+      'Generate Tauri 2 React/TypeScript project with the production generator command',
+      'npx',
+      [
+        '--yes',
+        TAURI_APP_GENERATOR,
+        projectName,
+        '--template',
+        'react-ts',
+        '--manager',
+        'npm',
+        '--yes',
+        '--identifier',
+        identifier,
+      ],
+      parent,
+    )
+    applyProductionLayers(projectRoot, answers)
+    // create-tauri-app does not include a package-lock.json in its template.
+    runRequired('Install generated Tauri dependencies', 'npm', ['install', '--no-audit', '--no-fund'], projectRoot)
+    runRequired('Build the generated Tauri frontend', 'npm', ['run', 'build'], projectRoot)
+    runRequired('Verify Rust toolchain', 'cargo', ['--version'], projectRoot, 30_000)
+    runRequired(
+      `Build the native Tauri ${platform} executable`,
+      'npm',
+      ['run', 'tauri', '--', 'build', '--no-bundle'],
+      projectRoot,
+      TAURI_BUILD_TIMEOUT_MS,
+      { CI: 'true' },
+    )
+
+    const releaseDir = join(projectRoot, 'src-tauri', 'target', 'release')
+    const executable =
+      platform === 'windows' ? findTauriWindowsExecutable(releaseDir) : findTauriBinary(releaseDir)
+    const title = tauriWindowTitle(projectRoot)
+    console.log(`[native] Launch the generated Tauri ${platform} executable.`)
+    appProcess = startCommand(executable, [], projectRoot, {
+      env: isolatedEnvironment({ CI: 'true' }),
+      maxOutputBytes: MAX_OUTPUT_BYTES,
+    })
+    await waitForHostedTauriWindow(appProcess, projectRoot, title, platform)
+    console.log(`[native] Tauri ${platform}: native build launched a visible window titled "${title}".`)
+  } finally {
+    if (appProcess) await appProcess.stop(10_000)
+    rmSync(parent, { recursive: true, force: true, maxRetries: 10, retryDelay: 1_000 })
+  }
+}
+
 async function main(): Promise<void> {
   const scenarioIndex = process.argv.indexOf('--scenario')
   const scenario = scenarioIndex < 0 ? undefined : process.argv[scenarioIndex + 1]
@@ -674,12 +1023,24 @@ async function main(): Promise<void> {
     await runExpoIosSimulator()
     return
   }
+  if (scenario === 'expo-android-emulator') {
+    await runExpoAndroidEmulator()
+    return
+  }
   if (scenario === 'tauri-linux-desktop') {
     await runTauriLinuxDesktop()
     return
   }
+  if (scenario === 'tauri-macos-desktop') {
+    await runTauriHostedDesktop('macos')
+    return
+  }
+  if (scenario === 'tauri-windows-desktop') {
+    await runTauriHostedDesktop('windows')
+    return
+  }
   throw new Error(
-    'Usage: tsx scripts/native-platform-integration.ts --scenario expo-ios-simulator|tauri-linux-desktop',
+    'Usage: tsx scripts/native-platform-integration.ts --scenario expo-ios-simulator|expo-android-emulator|tauri-linux-desktop|tauri-macos-desktop|tauri-windows-desktop',
   )
 }
 

@@ -4,7 +4,9 @@ import { readFileSync } from 'node:fs'
 
 describe('parseArgs', () => {
   it('documents the current selectable values and release-tag behavior', () => {
-    expect(HELP_TEXT).toContain('--frontend <name>    Skip the frontend prompt (react, nextjs, vue, svelte; Next.js is integrated)')
+    expect(HELP_TEXT).toContain('--frontend <name>    Skip the frontend prompt (react, nextjs, vue, svelte, livewire; Next.js and Livewire are integrated)')
+    expect(HELP_TEXT).toContain('non-None auth, or integrated frontend flags imply it')
+    expect(HELP_TEXT).toContain('Laravel Composer setup still runs')
     expect(HELP_TEXT).toContain('shadcn is web React/Vite-only')
     expect(HELP_TEXT).toContain("this CLI version's release tag")
 
@@ -28,6 +30,9 @@ describe('parseArgs', () => {
     expect(parseArgs(['--frontend', 'react']).frontend).toBe('react')
     expect(parseArgs(['--backend=fastify']).backend).toBe('fastify')
     expect(parseArgs(['--orm', 'prisma']).orm).toBe('prisma')
+    expect(parseArgs(['--auth', 'none']).auth).toBe('none')
+    expect(parseArgs(['--auth=better-auth']).auth).toBe('better-auth')
+    expect(parseArgs(['--auth', 'laravel-native']).auth).toBe('laravel-native')
   })
 
   it('parses --full-stack / --no-full-stack', () => {
@@ -44,6 +49,7 @@ describe('parseArgs', () => {
   it('throws on a value flag without a value', () => {
     expect(() => parseArgs(['--frontend'])).toThrow(/Missing value for --frontend/)
     expect(() => parseArgs(['--frontend', '--yes'])).toThrow(/Missing value for --frontend/)
+    expect(() => parseArgs(['--auth'])).toThrow(/Missing value for --auth/)
   })
 
   it('throws on unknown options', () => {

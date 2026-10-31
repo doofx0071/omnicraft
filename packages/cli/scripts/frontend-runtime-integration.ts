@@ -62,6 +62,7 @@ function makeAnswers(projectRoot: string): Answers {
     backendFramework: null,
     orm: null,
     database: null,
+    authentication: 'none',
     extras: { tailwind: false, eslintPrettier: false, shadcn: false },
     architecture: { kind: "frontend-only" },
   };
