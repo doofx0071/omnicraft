@@ -26,6 +26,7 @@ npm run test:integration:python   # FastAPI + SQLite, Python 3.12
 npm run test:integration:php      # Laravel 12: SQLite, PostgreSQL, MySQL, pinned PHP/Composer image
 npm run test:integration:php-livewire # production CLI: Laravel 13 + Livewire, None/Fortify, SQLite
 npm run test:integration:php-inertia  # production CLI: Laravel 13 + Inertia React, None/Fortify, SQLite
+npm run test:integration:php-sanctum-auth # production CLI: Laravel 12 API, None/Sanctum SPA, SQLite
 npm run test:integration:supabase-auth # production CLI + disposable local Supabase Auth/Data API/RLS
 ```
 
@@ -49,6 +50,19 @@ public/no-auth and registration/login/dashboard/logout behavior, and verifies `/
 if that sample route exists. PostgreSQL, MySQL, Better Auth, JavaScript, extras, ORM flags, and Node
 runtime flags must reject before creating a target directory. This job is a required dependency of
 `supported-stack-release-gate`.
+
+The `php-laravel-sanctum-spa-auth-integration` job generates both the unchanged public Laravel 12 API
+(`None`) and the opt-in React/Vite + Laravel 12 Sanctum SPA mode through the production CLI. It verifies
+pre-write rejection for non-SQLite databases, JavaScript, frontend-only selection, and incompatible
+runtimes; checks the auth manifest stays separate from `modules`; installs the pinned Sanctum package
+without Fortify or personal access token scaffolding; migrates SQLite; builds the generated React client;
+and runs generated Laravel feature tests. A live local HTTP run checks credentialed CORS preflight, CSRF
+enforcement, account registration/login, cookie-session restoration after a server restart, anonymous
+rejection, per-account record isolation, and sign-out invalidation. The None project runs public
+`/api/users` CRUD. It also verifies invalid credentials produce generic 422 responses without
+framework exception details and exercise the shared 10-request/15-minute throttle using a fresh
+anonymous cookie jar after the successful tenth attempt. This target
+is required by `supported-stack-release-gate`; it covers only the exact SQLite modes above.
 
 On Windows, `npm run test:integration:php-inertia --workspace=create-omnicraft` passed for both
 SQLite modes, including migrations, Inertia typecheck and asset build, auth lifecycle tests, and
@@ -92,24 +106,24 @@ install/setup, boot, database-operation, and failure checks.
 
 The current suite covers:
 
-| File | Coverage |
-| --- | --- |
-| `src/args.test.ts` | Flag parsing, Livewire/Inertia React auth help text, and help/README option parity. |
-| `src/validators.test.ts` | Project-name normalization and npm-name validation. |
-| `src/renderer.test.ts` | Token substitution, unresolved-token detection, dotfile renaming, and binary detection. |
-| `src/merge.test.ts` | `package.json` deep merge semantics. |
-| `src/prefill.test.ts` | Available flag values, runtime-scoped databases/frameworks, Prisma/PostgreSQL validation, authentication flag preflight, and `--yes` answer resolution. |
-| `src/update-check.test.ts` | Version comparison, mocked registry fetch, offline behavior, and cache. |
-| `src/prompts/run-prompts.test.ts` | Scripted prompt flow, frontend-only branch, unavailable-option retry, cancellation, and invalid names. |
-| `src/next-steps.test.ts` | Integrated Next.js commands/endpoints, container startup for PostgreSQL, and Laravel Livewire/Inertia React commands. |
-| `src/exec.test.ts` | Fixed-command output, timeout handling, and stopping a child process. |
-| `src/scaffold/laravel-env.test.ts` | Keeps inherited `DB_*` settings from redirecting Laravel's initial SQLite migration. |
-| `src/engine.test.ts` | Selected generated files, layer overrides, manifests, env files, token scans, protected-path examples, selected engine combinations, creation-time auth compatibility, the no-auth `None` scaffold, and both Livewire and Inertia React starter overlays. |
-| `src/compatibility.test.ts`, `src/manifest.test.ts` | Exact creation-time auth choices and constraints, plus manifest separation between active authentication and `modules`. |
-| `src/capabilities.test.ts` | Available prompt/flag choices derive from the typed capability registry; the auth catalog records setup categories and requirements; the module menu matches its registered module IDs. |
-| `src/add-run.test.ts` | Module dry-run, success, idempotency, creation-time auth application, collisions, unsupported stacks, missing patch anchors, and rollback after a failed write. |
-| `src/support-evidence.test.ts` | Every Supported row resolves through selectable values, prompt/flag/composition, module and creation-time auth guards, renders from its exact combination, and maps to the matching scenario, script, job, and aggregate release check; managed-provider integration target metadata is registered separately until its evidence passes. |
-| `src/modules/auth.test.ts` | Better Auth compatibility and secret setup guidance. |
+| File                                                | Coverage                                                                                                                                                                                                                                                                                                                                 |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/args.test.ts`                                  | Flag parsing, Livewire/Inertia React auth help text, and help/README option parity.                                                                                                                                                                                                                                                      |
+| `src/validators.test.ts`                            | Project-name normalization and npm-name validation.                                                                                                                                                                                                                                                                                      |
+| `src/renderer.test.ts`                              | Token substitution, unresolved-token detection, dotfile renaming, and binary detection.                                                                                                                                                                                                                                                  |
+| `src/merge.test.ts`                                 | `package.json` deep merge semantics.                                                                                                                                                                                                                                                                                                     |
+| `src/prefill.test.ts`                               | Available flag values, runtime-scoped databases/frameworks, Prisma/PostgreSQL validation, authentication flag preflight, and `--yes` answer resolution.                                                                                                                                                                                  |
+| `src/update-check.test.ts`                          | Version comparison, mocked registry fetch, offline behavior, and cache.                                                                                                                                                                                                                                                                  |
+| `src/prompts/run-prompts.test.ts`                   | Scripted prompt flow, frontend-only branch, unavailable-option retry, cancellation, and invalid names.                                                                                                                                                                                                                                   |
+| `src/next-steps.test.ts`                            | Integrated Next.js commands/endpoints, container startup for PostgreSQL, and Laravel Livewire/Inertia React commands.                                                                                                                                                                                                                    |
+| `src/exec.test.ts`                                  | Fixed-command output, timeout handling, and stopping a child process.                                                                                                                                                                                                                                                                    |
+| `src/scaffold/laravel-env.test.ts`                  | Keeps inherited `DB_*` settings from redirecting Laravel's initial SQLite migration.                                                                                                                                                                                                                                                     |
+| `src/engine.test.ts`                                | Selected generated files, layer overrides, manifests, env files, token scans, protected-path examples, selected engine combinations, creation-time auth compatibility, the no-auth `None` scaffold, and both Livewire and Inertia React starter overlays.                                                                                |
+| `src/compatibility.test.ts`, `src/manifest.test.ts` | Exact creation-time auth choices and constraints, plus manifest separation between active authentication and `modules`.                                                                                                                                                                                                                  |
+| `src/capabilities.test.ts`                          | Available prompt/flag choices derive from the typed capability registry; the auth catalog records setup categories and requirements; the module menu matches its registered module IDs.                                                                                                                                                  |
+| `src/add-run.test.ts`                               | Module dry-run, success, idempotency, creation-time auth application, collisions, unsupported stacks, missing patch anchors, and rollback after a failed write.                                                                                                                                                                          |
+| `src/support-evidence.test.ts`                      | Every Supported row resolves through selectable values, prompt/flag/composition, module and creation-time auth guards, renders from its exact combination, and maps to the matching scenario, script, job, and aggregate release check; managed-provider integration target metadata is registered separately until its evidence passes. |
+| `src/modules/auth.test.ts`                          | Better Auth compatibility and secret setup guidance.                                                                                                                                                                                                                                                                                     |
 
 The engine fixtures cover Express + Drizzle with PostgreSQL/SQLite/MySQL, Express + Prisma + PostgreSQL,
 Fastify + Drizzle with PostgreSQL/SQLite/MySQL, Fastify + Prisma + PostgreSQL, FastAPI with
@@ -221,28 +235,28 @@ The current workflow:
    The support-evidence check and strict release gate passed in the latter run. See the [support matrix](../templates/stack-support-matrix.md)
    for exact path-level evidence. This module test does not establish backend/database behavior.
 10. Runs `native-platform-integration` for Expo iOS (`macos-26`), Expo Android (`ubuntu-24.04`), Tauri
-   Linux (`ubuntu-24.04`), macOS (`macos-26`), and Windows (`windows-2025`). It generates each project
-   through its production command, applies production layers, and installs dependencies. Expo builds and
-   launches native apps on the simulator/emulator; Tauri builds the frontend/native executable and checks
-   a visible window on each desktop OS. All five scenario checks passed on exact head
-   `689fbaa24f6e3a30ff142551ccfbe84b0d514d50` in run
-   [#41146678113](https://github.com/doofx0071/omnicraft/actions/runs/41146678113), including the pinned
-   Tauri app generator. The support-evidence check and strict release gate passed in the same run; the
-   tag-only publish job was skipped for the pull-request event.
-   The support matrix records the exact job links and evidence limits. Physical-device paths remain
-   Selectable — unverified.
+    Linux (`ubuntu-24.04`), macOS (`macos-26`), and Windows (`windows-2025`). It generates each project
+    through its production command, applies production layers, and installs dependencies. Expo builds and
+    launches native apps on the simulator/emulator; Tauri builds the frontend/native executable and checks
+    a visible window on each desktop OS. All five scenario checks passed on exact head
+    `689fbaa24f6e3a30ff142551ccfbe84b0d514d50` in run
+    [#41146678113](https://github.com/doofx0071/omnicraft/actions/runs/41146678113), including the pinned
+    Tauri app generator. The support-evidence check and strict release gate passed in the same run; the
+    tag-only publish job was skipped for the pull-request event.
+    The support matrix records the exact job links and evidence limits. Physical-device paths remain
+    Selectable — unverified.
 11. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
-   generated dependencies, runs Alembic migrations, boots Uvicorn, and checks SQLite and PostgreSQL
-   CRUD and failure responses. PostgreSQL runs in an isolated Testcontainers instance.
+    generated dependencies, runs Alembic migrations, boots Uvicorn, and checks SQLite and PostgreSQL
+    CRUD and failure responses. PostgreSQL runs in an isolated Testcontainers instance.
 12. Runs hosted Ubuntu `php-laravel-integration` for SQLite/PostgreSQL/MySQL. The SQLite case uses the
-   pinned PHP/Composer test image without a database service; networked databases use isolated Compose
-   services. Each case installs Composer dependencies, checks platform requirements, migrates, and
-   runs database/API feature tests.
+    pinned PHP/Composer test image without a database service; networked databases use isolated Compose
+    services. Each case installs Composer dependencies, checks platform requirements, migrates, and
+    runs database/API feature tests.
 13. Runs hosted Ubuntu `php-laravel-inertia-react-auth-integration` for Laravel 13 + Inertia React on
-   SQLite. It generates the None and Laravel-native projects through the production CLI, installs and
-   checks Composer/npm dependencies, runs migrations and Laravel feature tests, and enforces pre-write
-   rejection of incompatible flags. The job is required by the aggregate gate; the support matrix
-   contains only exact modes with passing generated-project and hosted evidence.
+    SQLite. It generates the None and Laravel-native projects through the production CLI, installs and
+    checks Composer/npm dependencies, runs migrations and Laravel feature tests, and enforces pre-write
+    rejection of incompatible flags. The job is required by the aggregate gate; the support matrix
+    contains only exact modes with passing generated-project and hosted evidence.
 14. Runs hosted Ubuntu `supabase-auth-integration` on a disposable local Supabase CLI stack. It
     generates the React/Vite TypeScript frontend-only project through the production CLI, installs
     and builds it, applies the local migration, verifies explicit Data API grants and owner RLS,
@@ -250,15 +264,15 @@ The current workflow:
     the browser bundle for privileged credentials. It provisions no hosted Supabase project and
     consumes no real provider credentials. The job is required by the aggregate gate.
 15. Runs `support-evidence` to resolve every exact Supported flag combination through available values,
-   prompt/flag and answer compatibility, production composition, and module guards; it also checks the
-   rendered matrix label, matching scenario, job command, and release aggregate dependency.
-   `supported-matrix` fails unless the OS/Node matrix, runtime jobs, support evidence, and package
-   artifact all pass. It runs for PRs, main pushes, nightly, and version-tag pushes;
-   `workflow_dispatch` supports an explicit pre-release run. The scheduled run uses GitHub-hosted jobs.
+    prompt/flag and answer compatibility, production composition, and module guards; it also checks the
+    rendered matrix label, matching scenario, job command, and release aggregate dependency.
+    `supported-matrix` fails unless the OS/Node matrix, runtime jobs, support evidence, and package
+    artifact all pass. It runs for PRs, main pushes, nightly, and version-tag pushes;
+    `workflow_dispatch` supports an explicit pre-release run. The scheduled run uses GitHub-hosted jobs.
 16. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
-   the release job publishes to npm using OIDC, creates the GitHub Release from the version's changelog
-   section, and updates the release snapshots in `ROADMAP.md` and `docs/architecture/system-overview.md`.
-   The self-hosted Windows job runs only for main-branch pushes and same-repository pull requests.
+    the release job publishes to npm using OIDC, creates the GitHub Release from the version's changelog
+    section, and updates the release snapshots in `ROADMAP.md` and `docs/architecture/system-overview.md`.
+    The self-hosted Windows job runs only for main-branch pushes and same-repository pull requests.
 
 These hosted runtime jobs add real database and API checks for those exact combinations; they do not
 verify other framework/database combinations. The matrix marks a stack Supported only when its row
@@ -284,15 +298,15 @@ baseline above.
 
 ## What each change must test
 
-| Change | Required |
-| --- | --- |
-| Source module change | Add focused unit tests and run the full suite. |
-| Prompt/flag/capability change | Update prompt/flag tests; derive selectable values from `src/capabilities.ts`, exercise `--yes` and invalid combinations, and run the support-evidence check. |
-| Template change | Run engine tests and smoke; install/build/boot every exact combination whose behavior changed before promoting it. |
-| New combination | Add an exact engine or smoke entry and Level 3 evidence before calling it Supported. |
+| Change                            | Required                                                                                                                                                                                  |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Source module change              | Add focused unit tests and run the full suite.                                                                                                                                            |
+| Prompt/flag/capability change     | Update prompt/flag tests; derive selectable values from `src/capabilities.ts`, exercise `--yes` and invalid combinations, and run the support-evidence check.                             |
+| Template change                   | Run engine tests and smoke; install/build/boot every exact combination whose behavior changed before promoting it.                                                                        |
+| New combination                   | Add an exact engine or smoke entry and Level 3 evidence before calling it Supported.                                                                                                      |
 | Managed provider with local stack | Add secret-free generated setup, lifecycle and isolation tests against a disposable local service; gate the hosted job; promote support only after the exact PR-head release gate passes. |
-| Engine/renderer/merge change | Full suite, all smoke entries, token/collision checks, and Level 3 checks for affected runtime families. |
-| Documentation only | Check local links and confirm claims match the matrix and source. |
+| Engine/renderer/merge change      | Full suite, all smoke entries, token/collision checks, and Level 3 checks for affected runtime families.                                                                                  |
+| Documentation only                | Check local links and confirm claims match the matrix and source.                                                                                                                         |
 
 Tests use temporary directories and mocked prompt/network paths where possible. Prompt tests script the
 Clack answer queue rather than emulating a real TTY.

@@ -13,7 +13,8 @@ slow checks; `npm test`, the scaffold smoke script, typechecking, and the CLI bu
   required for the containerized PHP/Laravel runner and the local Supabase Auth integration.
 - Docker image pulls, PHP image package downloads, and Composer package downloads must be reachable
   from the machine running Docker. The generated Node project also installs dependencies from npm.
-- No host PHP or Composer installation is required. Laravel runs in the PHP test image.
+- The containerized database suite does not require host PHP or Composer. The production-CLI Sanctum
+  SPA integration runs a local generated Laravel server and therefore needs host PHP 8.2+ and Composer.
 
 The test images are pinned in the test infrastructure:
 
@@ -40,6 +41,7 @@ npm run test:integration:nextjs --workspace=create-omnicraft
 npm run test:integration:php --workspace=create-omnicraft
 npm run test:integration:php-livewire --workspace=create-omnicraft
 npm run test:integration:php-inertia --workspace=create-omnicraft
+npm run test:integration:php-sanctum-auth --workspace=create-omnicraft
 npm run test:integration:supabase-auth --workspace=create-omnicraft
 ```
 
@@ -91,8 +93,24 @@ portable selects.
 The Laravel suite scaffolds the current Laravel 12 overlay, creates the Composer Laravel skeleton,
 installs/checks Composer dependencies in PHP 8.3, applies the generated migration, and runs Laravel
 feature tests for the selected PostgreSQL or MySQL connection and generated users API. The test asserts
-the active driver so a fallback to SQLite cannot pass. The current Laravel overlay has no OmniCraft
-authentication implementation, so the Laravel lane verifies database and API behavior only.
+the active driver so a fallback to SQLite cannot pass. That multi-database lane checks the base public
+`None` API behavior; authenticated Laravel API coverage is a separate SQLite-only target below.
+
+The separate `php-laravel-sanctum-spa-auth` target uses the built production CLI for the exact React/Vite
+TypeScript + Laravel 12 API + SQLite `None` and Laravel-native modes. It checks incompatible choices
+reject before writes, verifies `None` keeps anonymous `/api/users` CRUD public, and confirms the native
+manifest records auth separately from module history. It checks the generated dependency is the pinned
+Sanctum release and that Fortify, personal-access-token routes, traits, and migrations are absent. The
+generated native app is migrated, its client is built, and Laravel feature tests check hashed passwords,
+registration/login/logout, and protected routes. A live loopback HTTP test uses independent cookie jars to
+verify credentialed CORS preflight, the CSRF cookie/header requirement, session restoration after a server
+restart, per-account record isolation, cross-account read/delete rejection, and sign-out invalidation.
+It verifies that failed credentials return a generic 422 without framework exception details, count
+toward the shared IP-based registration/login throttle, and receive a 429 response once that limit is
+reached.
+The generated docs require explicit production SPA origins, a shared session-cookie parent domain, and
+secure cookies over HTTPS. All accounts and records use synthetic test values; the job creates no
+external service or credential.
 
 The separate `php-laravel-inertia-react-auth-integration` target generates Laravel 13 + Inertia React
 through the production CLI using pinned official blank/authenticated React kits. Its `None` and
@@ -145,9 +163,9 @@ This section records the commands and outcomes actually run for this change.
   and MySQL. Both ran Composer platform checks, migrations, database-driver assertions, API feature
   tests, and cleanup.
 - `npm run test:integration:php-inertia --workspace=create-omnicraft` — passed locally for Laravel 13
-  + Inertia React with `None` and Laravel-native/Fortify on SQLite. Both modes were generated through
-  the production CLI, migrated, typechecked/built, and exercised with generated Laravel feature tests;
-  incompatible choices rejected before target creation.
+  - Inertia React with `None` and Laravel-native/Fortify on SQLite. Both modes were generated through
+    the production CLI, migrated, typechecked/built, and exercised with generated Laravel feature tests;
+    incompatible choices rejected before target creation.
 - `npm run test:integration:node --workspace=create-omnicraft -- --scenario ...` — all 15 registered
   Express, Fastify, and Hono scenarios passed locally through install, client build/API typecheck,
   database initialization, API boot, CRUD/failure checks, and cleanup. Generated-project checks fixed

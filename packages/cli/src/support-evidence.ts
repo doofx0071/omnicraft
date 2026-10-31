@@ -180,6 +180,7 @@ export const NATIVE_PLATFORM_SCENARIOS = [
 ] as const
 export const LARAVEL_LIVEWIRE_AUTH_SCENARIOS = ['none', 'laravel-native'] as const satisfies readonly AuthenticationSetup[]
 export const LARAVEL_INERTIA_REACT_AUTH_SCENARIOS = ['none', 'laravel-native'] as const satisfies readonly AuthenticationSetup[]
+export const LARAVEL_SANCTUM_SPA_AUTH_SCENARIOS = ['none', 'laravel-native'] as const satisfies readonly AuthenticationSetup[]
 
 export const INTEGRATION_TARGETS = {
   'node-runtime': {
@@ -255,6 +256,12 @@ export const INTEGRATION_TARGETS = {
     workflowJob: 'php-laravel-inertia-react-auth-integration',
     workflowCommand: 'npm run test:integration:php-inertia --workspace=create-omnicraft',
     scenarios: LARAVEL_INERTIA_REACT_AUTH_SCENARIOS,
+  },
+  'php-laravel-sanctum-spa-auth': {
+    script: 'scripts/php-laravel-sanctum-auth-e2e.ts',
+    workflowJob: 'php-laravel-sanctum-spa-auth-integration',
+    workflowCommand: 'npm run test:integration:php-sanctum-auth --workspace=create-omnicraft',
+    scenarios: LARAVEL_SANCTUM_SPA_AUTH_SCENARIOS,
   },
   'supabase-auth': {
     script: 'scripts/supabase-auth-integration.ts',

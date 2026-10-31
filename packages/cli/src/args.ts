@@ -1,23 +1,23 @@
 export interface ParsedArgs {
-  projectName?: string
-  latest: boolean
-  skipInstall: boolean
-  debug: boolean
-  help: boolean
-  version: boolean
+  projectName?: string;
+  latest: boolean;
+  skipInstall: boolean;
+  debug: boolean;
+  help: boolean;
+  version: boolean;
   /** Accept all defaults — skip every prompt (CI-friendly, also enables non-TTY runs). */
-  yes: boolean
+  yes: boolean;
   /** Stack overrides; when present the matching prompt is skipped. */
-  fullStack?: boolean
-  platform?: string
-  lang?: string
-  runtime?: string
-  frontend?: string
-  backend?: string
-  orm?: string
-  db?: string
-  auth?: string
-  extras?: string[]
+  fullStack?: boolean;
+  platform?: string;
+  lang?: string;
+  runtime?: string;
+  frontend?: string;
+  backend?: string;
+  orm?: string;
+  db?: string;
+  auth?: string;
+  extras?: string[];
 }
 
 export const HELP_TEXT = `Usage: npm create omnicraft@latest [project-name] [options]
@@ -40,8 +40,9 @@ Options:
                        python: postgres, sqlite · php: postgres, sqlite, mysql)
   --auth <name>        Authentication setup (none, better-auth, supabase-auth, laravel-native;
                        Supabase Auth requires TypeScript React/Vite frontend-only; Better Auth
-                       requires React + Node/Express/Drizzle; Laravel native requires integrated
-                       Livewire or Inertia React + SQLite)
+                       requires React + Node/Express/Drizzle; Laravel native uses Fortify in
+                       integrated Livewire/Inertia React or Sanctum SPA sessions for React/Vite
+                       + Laravel API; Laravel auth requires SQLite)
   --orm <name>         Skip ORM selection (drizzle, prisma, none; Prisma is PostgreSQL-only and
                        unavailable for Hono). Separate Node APIs only; Next.js uses raw SQL and
                        rejects --runtime, --backend, --orm, and --no-full-stack
@@ -51,7 +52,7 @@ Options:
                        if set with Next.js, use --extras tailwind,eslint. Use none on other stacks to skip all.
   --latest             Pull templates from this CLI version's release tag
                        instead of the embedded templates
-  --skip-install       Skip optional JS/Python/Livewire/Inertia React frontend setup; Laravel Composer setup still runs
+  --skip-install       Skip optional JS/Python/React API client and integrated Laravel frontend setup; Laravel Composer setup still runs
   --debug              Print stack traces on errors
   -h, --help           Show this help
   -v, --version        Show version
@@ -63,9 +64,20 @@ Examples:
   npm create omnicraft@latest my-app -- --no-full-stack --extras tailwind
   npm create omnicraft@latest my-app -- --yes --frontend livewire --auth laravel-native
   npm create omnicraft@latest my-app -- --yes --frontend inertia-react --auth laravel-native
-`
+  npm create omnicraft@latest my-app -- --yes --frontend react --auth laravel-native
+`;
 
-const VALUE_FLAGS = new Set(['--lang', '--platform', '--runtime', '--frontend', '--backend', '--orm', '--db', '--auth', '--extras'])
+const VALUE_FLAGS = new Set([
+  "--lang",
+  "--platform",
+  "--runtime",
+  "--frontend",
+  "--backend",
+  "--orm",
+  "--db",
+  "--auth",
+  "--extras",
+]);
 
 export function parseArgs(argv: string[]): ParsedArgs {
   const args: ParsedArgs = {
@@ -75,66 +87,66 @@ export function parseArgs(argv: string[]): ParsedArgs {
     help: false,
     version: false,
     yes: false,
-  }
-  const positional: string[] = []
+  };
+  const positional: string[] = [];
 
-  let i = 0
+  let i = 0;
   while (i < argv.length) {
-    const arg = argv[i]
-    const valueFlag = VALUE_FLAGS.has(arg.split('=')[0]) ? arg.split('=')[0] : null
+    const arg = argv[i];
+    const valueFlag = VALUE_FLAGS.has(arg.split("=")[0]) ? arg.split("=")[0] : null;
 
     if (valueFlag) {
-      let value: string
-      if (arg.startsWith(valueFlag + '=')) {
-        value = arg.slice(valueFlag.length + 1)
+      let value: string;
+      if (arg.startsWith(valueFlag + "=")) {
+        value = arg.slice(valueFlag.length + 1);
       } else {
-        const next = argv[i + 1]
-        if (next === undefined || next.startsWith('-')) {
-          throw new Error(`Missing value for ${valueFlag}. Example: ${valueFlag} react`)
+        const next = argv[i + 1];
+        if (next === undefined || next.startsWith("-")) {
+          throw new Error(`Missing value for ${valueFlag}. Example: ${valueFlag} react`);
         }
-        value = next
-        i++
+        value = next;
+        i++;
       }
-      if (valueFlag === '--lang') args.lang = value
-      else if (valueFlag === '--runtime') args.runtime = value
-      else if (valueFlag === '--platform') args.platform = value
-      else if (valueFlag === '--frontend') args.frontend = value
-      else if (valueFlag === '--backend') args.backend = value
-      else if (valueFlag === '--orm') args.orm = value
-      else if (valueFlag === '--db') args.db = value
-      else if (valueFlag === '--auth') args.auth = value
-      else args.extras = splitList(value)
-    } else if (arg === '--latest') args.latest = true
-    else if (arg === '--skip-install') args.skipInstall = true
-    else if (arg === '--debug') args.debug = true
-    else if (arg === '--help' || arg === '-h') args.help = true
-    else if (arg === '--version' || arg === '-v') args.version = true
-    else if (arg === '--yes') args.yes = true
-    else if (arg === '--full-stack') args.fullStack = true
-    else if (arg === '--no-full-stack') args.fullStack = false
-    else if (arg.startsWith('-')) {
-      throw new Error(`Unknown option: ${arg}. Run with --help to see usage.`)
+      if (valueFlag === "--lang") args.lang = value;
+      else if (valueFlag === "--runtime") args.runtime = value;
+      else if (valueFlag === "--platform") args.platform = value;
+      else if (valueFlag === "--frontend") args.frontend = value;
+      else if (valueFlag === "--backend") args.backend = value;
+      else if (valueFlag === "--orm") args.orm = value;
+      else if (valueFlag === "--db") args.db = value;
+      else if (valueFlag === "--auth") args.auth = value;
+      else args.extras = splitList(value);
+    } else if (arg === "--latest") args.latest = true;
+    else if (arg === "--skip-install") args.skipInstall = true;
+    else if (arg === "--debug") args.debug = true;
+    else if (arg === "--help" || arg === "-h") args.help = true;
+    else if (arg === "--version" || arg === "-v") args.version = true;
+    else if (arg === "--yes") args.yes = true;
+    else if (arg === "--full-stack") args.fullStack = true;
+    else if (arg === "--no-full-stack") args.fullStack = false;
+    else if (arg.startsWith("-")) {
+      throw new Error(`Unknown option: ${arg}. Run with --help to see usage.`);
     } else {
-      positional.push(arg)
+      positional.push(arg);
     }
-    i++
+    i++;
   }
 
   if (positional.length > 1) {
-    throw new Error(`Expected at most one project name, got: ${positional.join(' ')}`)
+    throw new Error(`Expected at most one project name, got: ${positional.join(" ")}`);
   }
-  if (positional.length === 1) args.projectName = positional[0]
-  return args
+  if (positional.length === 1) args.projectName = positional[0];
+  return args;
 }
 
 function splitList(value: string): string[] {
   const items = value
-    .split(',')
+    .split(",")
     .map((s) => s.trim().toLowerCase())
-    .filter(Boolean)
+    .filter(Boolean);
   if (items.length === 0) {
-    throw new Error('Empty list. Available extras: tailwind, eslint (or "none")')
+    throw new Error('Empty list. Available extras: tailwind, eslint (or "none")');
   }
-  if (items.length === 1 && items[0] === 'none') return []
-  return items
+  if (items.length === 1 && items[0] === "none") return [];
+  return items;
 }
