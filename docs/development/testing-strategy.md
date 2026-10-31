@@ -257,19 +257,24 @@ The current workflow:
     checks Composer/npm dependencies, runs migrations and Laravel feature tests, and enforces pre-write
     rejection of incompatible flags. The job is required by the aggregate gate; the support matrix
     contains only exact modes with passing generated-project and hosted evidence.
-14. Runs hosted Ubuntu `supabase-auth-integration` on a disposable local Supabase CLI stack. It
+14. Runs hosted Ubuntu `php-laravel-sanctum-spa-auth-integration` for React/Vite TypeScript + Laravel
+    12 API + SQLite. It generates both `None` and Laravel-native projects through the production CLI,
+    checks pre-write rejection and public `None` behavior, then exercises registration, login, CSRF,
+    session restoration, protected routes, per-user ownership, and logout. This job is required by the
+    aggregate gate; only the SQLite native-auth tuple is Supported.
+15. Runs hosted Ubuntu `supabase-auth-integration` on a disposable local Supabase CLI stack. It
     generates the React/Vite TypeScript frontend-only project through the production CLI, installs
     and builds it, applies the local migration, verifies explicit Data API grants and owner RLS,
     exercises signup/sign-in/session restoration/local sign-out and two-user row isolation, and scans
     the browser bundle for privileged credentials. It provisions no hosted Supabase project and
     consumes no real provider credentials. The job is required by the aggregate gate.
-15. Runs `support-evidence` to resolve every exact Supported flag combination through available values,
+16. Runs `support-evidence` to resolve every exact Supported flag combination through available values,
     prompt/flag and answer compatibility, production composition, and module guards; it also checks the
     rendered matrix label, matching scenario, job command, and release aggregate dependency.
     `supported-matrix` fails unless the OS/Node matrix, runtime jobs, support evidence, and package
     artifact all pass. It runs for PRs, main pushes, nightly, and version-tag pushes;
     `workflow_dispatch` supports an explicit pre-release run. The scheduled run uses GitHub-hosted jobs.
-16. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
+17. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
     the release job publishes to npm using OIDC, creates the GitHub Release from the version's changelog
     section, and updates the release snapshots in `ROADMAP.md` and `docs/architecture/system-overview.md`.
     The self-hosted Windows job runs only for main-branch pushes and same-repository pull requests.

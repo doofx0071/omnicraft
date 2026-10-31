@@ -85,7 +85,7 @@ The v1.0.3 tag points to 37f89cc and contains the scope recorded in its changelo
 
 This candidate adds integrated Laravel 13 + Inertia React + TypeScript + SQLite scaffolding with None or Laravel-native Fortify auth. Both modes passed generated-project checks and the hosted release gate. Laravel Inertia React does not add account linking or managed providers; the broader auth expansion remains active.
 
-The remaining owner-approved provider/API work is tracked in the [active auth and PHP expansion follow-up](docs/plans/active/omnicraft-auth-provider-php-stack-expansion-follow-up-plan.md). Supabase Auth and Laravel 12 API Sanctum modes remain subject to their exact generated-project and hosted release-gate evidence; this roadmap entry does not mark them Supported.
+The owner-approved Supabase Auth frontend-only target and Laravel 12 API Sanctum SPA sessions on SQLite now have exact generated-project runtime and hosted release-gate evidence in open [PR #58](https://github.com/doofx0071/omnicraft/pull/58); the support matrix records only those exact targets as Supported. PR #58 is unmerged, so this work is not part of a released version. The active [auth and PHP expansion follow-up](docs/plans/active/omnicraft-auth-provider-php-stack-expansion-follow-up-plan.md) remains open until the updated support-evidence mapping and final PR-head gate pass; other providers and combinations remain deferred.
 
 - [x] Verify Laravel 13 + Inertia React + SQLite with None or Laravel-native Fortify through exact-head generated-project CI.
 

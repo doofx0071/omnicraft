@@ -110,7 +110,7 @@ toward the shared IP-based registration/login throttle, and receive a 429 respon
 reached.
 The generated docs require explicit production SPA origins, a shared session-cookie parent domain, and
 secure cookies over HTTPS. All accounts and records use synthetic test values; the job creates no
-external service or credential.
+external service or credential. The exact SQLite target passed hosted run [#41236876899](https://github.com/doofx0071/omnicraft/actions/runs/41236876899/job/124642398182), including both generated auth scenarios; the same run's [supported-stack release gate](https://github.com/doofx0071/omnicraft/actions/runs/41236876899/job/124648617575) passed.
 
 The separate `php-laravel-inertia-react-auth-integration` target generates Laravel 13 + Inertia React
 through the production CLI using pinned official blank/authenticated React kits. Its `None` and

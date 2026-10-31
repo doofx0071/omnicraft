@@ -97,6 +97,33 @@ describe("support matrix evidence", () => {
     expect(LARAVEL_SANCTUM_SPA_AUTH_SCENARIOS).toEqual(["none", "laravel-native"]);
   });
 
+  it("maps only the Laravel 12 API + SQLite native-auth tuple to Sanctum runtime evidence", () => {
+    const capability = SUPPORTED_CAPABILITIES.find(
+      ({ id }) => id === "laravel-api-sanctum-spa-auth-sqlite",
+    );
+    const combination = capability?.combinations[0];
+
+    expect(capability?.target).toBe("php-laravel-sanctum-spa-auth");
+    expect(capability?.scenarios).toEqual(["laravel-native"]);
+    expect(capability?.combinations).toHaveLength(1);
+    expect(combination?.flags).toMatchObject({
+      platform: "web",
+      lang: "typescript",
+      frontend: "react",
+      fullStack: true,
+      runtime: "php",
+      backend: "laravel",
+      db: "sqlite",
+      auth: "laravel-native",
+      extras: [],
+    });
+    expect(combination?.flags.orm).toBeUndefined();
+    expect(combination?.module).toBeUndefined();
+    expect(capability && registeredMatrixRowPrefix(capability)).toBe(
+      "| React + Vite + TypeScript + Laravel 12 API + Sanctum SPA sessions | Eloquent | SQLite | **Supported** |",
+    );
+  });
+
   it("registers Supabase Auth as a single generated-project runtime scenario", () => {
     const target = INTEGRATION_TARGETS["supabase-auth"];
     expect(target.script).toBe("scripts/supabase-auth-integration.ts");
