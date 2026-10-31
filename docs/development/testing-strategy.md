@@ -122,7 +122,7 @@ The current suite covers:
 | `src/compatibility.test.ts`, `src/manifest.test.ts` | Exact creation-time auth choices and constraints, plus manifest separation between active authentication and `modules`.                                                                                                                                                                                                                  |
 | `src/capabilities.test.ts`                          | Available prompt/flag choices derive from the typed capability registry; the auth catalog records setup categories and requirements; the module menu matches its registered module IDs.                                                                                                                                                  |
 | `src/add-run.test.ts`                               | Module dry-run, success, idempotency, creation-time auth application, collisions, unsupported stacks, missing patch anchors, and rollback after a failed write.                                                                                                                                                                          |
-| `src/support-evidence.test.ts`                      | Every Supported row resolves through selectable values, prompt/flag/composition, module and creation-time auth guards, renders from its exact combination, and maps to the matching scenario, script, job, and aggregate release check; managed-provider integration target metadata is registered separately until its evidence passes. |
+| `src/support-evidence.test.ts`                      | Every Supported row resolves through selectable values, prompt/flag/composition, module and creation-time auth guards, renders from its exact combination, and maps to the matching scenario, script, job, and aggregate release check. The Supabase Auth target is included only for its verified React/Vite TypeScript frontend-only path; other managed providers remain unselectable. |
 | `src/modules/auth.test.ts`                          | Better Auth compatibility and secret setup guidance.                                                                                                                                                                                                                                                                                     |
 
 The engine fixtures cover Express + Drizzle with PostgreSQL/SQLite/MySQL, Express + Prisma + PostgreSQL,
@@ -261,7 +261,8 @@ The current workflow:
     12 API + SQLite. It generates both `None` and Laravel-native projects through the production CLI,
     checks pre-write rejection and public `None` behavior, then exercises registration, login, CSRF,
     session restoration, protected routes, per-user ownership, and logout. This job is required by the
-    aggregate gate; only the SQLite native-auth tuple is Supported.
+    aggregate gate; only the SQLite native-auth tuple is Supported. The exact PR head `3d5fd3c` passed
+    this job and the release gate in [run #41239882961](https://github.com/doofx0071/omnicraft/actions/runs/41239882961).
 15. Runs hosted Ubuntu `supabase-auth-integration` on a disposable local Supabase CLI stack. It
     generates the React/Vite TypeScript frontend-only project through the production CLI, installs
     and builds it, applies the local migration, verifies explicit Data API grants and owner RLS,

@@ -1,9 +1,10 @@
 # OmniCraft Auth Provider and PHP Stack Expansion Follow-up Plan
 
-**Status:** Active — owner-approved Supabase and Laravel API slices in progress  
+**Status:** Complete — every owner-approved in-scope target has exact generated-project and hosted release-gate evidence<br>
 **Opened:** 31 October 2026  
 **Owner decisions recorded:** 31 October and 1 November 2026  
 **Repository:** <https://github.com/doofx0071/omnicraft>  
+**Current repository path:** `docs/plans/completed/omnicraft-auth-provider-php-stack-expansion-follow-up-plan.md`<br>
 **Previous plan:** [Archived proposal and scope disposition](../completed/omnicraft-auth-provider-php-stack-expansion-plan.md)  
 **Decision record:** [Authentication provider and Laravel mode audit](../../research/auth-provider-laravel-decision-audit.md)  
 **Current release baseline:** v1.0.4, main commit `0c5304679c2ddf7be41184b59252501e72e602c9`
@@ -81,3 +82,29 @@ For every approved combination:
 - Supabase Auth on any target besides React/Vite TypeScript frontend-only in this plan.
 - Personal tokens, external JWTs, account linking, transaction-scoped JWT bridges, and managed providers besides Supabase Auth.
 - Physical-device guarantees based only on simulator/emulator evidence.
+
+## Completion evidence
+
+The approved Supabase Auth and Laravel API Sanctum slices were verified on exact PR head
+`3d5fd3cc43c32c90e3c4587d0cc681a3e5dda136` in hosted run
+[#41239882961](https://github.com/doofx0071/omnicraft/actions/runs/41239882961). PR #58 remains open,
+unmerged, and stacked on open PR #57; this evidence does not mean the changes are released.
+
+| Target | Hosted evidence |
+| --- | --- |
+| Supabase Auth — React/Vite TypeScript frontend-only | [`supabase-auth-integration`](https://github.com/doofx0071/omnicraft/actions/runs/41239882961/job/124651400492) generated the production CLI output, ran the disposable local Supabase stack, checked explicit grants and owner RLS, tested sign-up/sign-in/session restoration/sign-out and two-user row isolation, and verified privileged credentials were absent from the browser bundle. |
+| Laravel API Sanctum SPA — React/Vite TypeScript + Laravel 12 API + SQLite | [`php-laravel-sanctum-spa-auth-integration`](https://github.com/doofx0071/omnicraft/actions/runs/41239882961/job/124651400547) tested both `None` and native auth generation, pre-write rejection, public `None` behavior, registration/login, CSRF, session restoration, protected resources, per-user ownership, and sign-out. |
+| Exact support mapping and release gate | [`support-evidence`](https://github.com/doofx0071/omnicraft/actions/runs/41239882961/job/124651400660) verified the exact registered rows; [`supported-stack-release-gate`](https://github.com/doofx0071/omnicraft/actions/runs/41239882961/job/124657718885) passed with 81 successful jobs. The expected npm publish/GitHub Release job was skipped for the pull-request event. |
+
+Local validation on the same implementation included `npx vitest run` (18 files, 269 tests),
+`npx tsc --noEmit`, `npx tsup`, `npm run check:support-matrix --workspace=create-omnicraft` (47
+Supported rows mapped), and `npm run test:integration:php-sanctum-auth --workspace=create-omnicraft`.
+The Laravel integration reported that `None` and Sanctum generation, SQLite, CSRF, sessions, ownership,
+and sign-out passed. Targeted Markdown checks passed for the README, roadmap, and database/auth
+integration guide, and the new successor plan was formatted. Prettier also flags `docs/index.md`, the
+testing strategy, this plan, and the support matrix at their clean-base versions; those existing layouts
+were preserved rather than broadly rewritten.
+
+The remaining deferred provider, JWT, database, and Laravel mode expansions are tracked in the
+[auth provider and PHP next-target plan](../active/omnicraft-auth-provider-php-next-targets-plan.md).
+They remain unselectable and do not inherit support from this completion.
