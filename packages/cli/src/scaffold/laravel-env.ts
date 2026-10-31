@@ -1,6 +1,6 @@
 /**
- * Keeps the one-time Laravel Livewire migration on the SQLite file created for
- * the new project, even when the caller has database overrides in their shell.
+ * Keeps one-time Laravel setup migrations on the generated SQLite file even
+ * when the caller has database overrides in their shell.
  */
 export function createLaravelSqliteMigrationEnv(
   sourceEnv: NodeJS.ProcessEnv,

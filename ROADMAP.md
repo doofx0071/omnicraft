@@ -6,19 +6,19 @@
 
 ## Progress overview
 
-| Version | Theme                                   | Progress             | Issues  |
-| ------- | --------------------------------------- | -------------------- | ------- |
-| v0.1.0  | Public launch                           | ✅ 6/6               | #1–#6   |
-| v0.2.0  | Scaffolder hardening                    | ✅ 5/5               | #7–#11  |
-| v0.3.0  | Backend & database expansion            | ✅ 5/5               | #12–#16 |
-| v0.3.1  | Hardening (master-plan PR 2/3/5)        | ✅ tag               | —       |
-| v0.4.0  | Frontend expansion                      | ✅ 4/4               | #17–#20 |
-| v0.5.0  | Platform expansion (mobile, desktop)    | ✅ 2/2               | #21–#22 |
-| v1.0.0  | First stable release                    | ✅ 5/5               | #23–#27 |
-| v1.0.1  | SQLite first-run fix                    | ✅ published         | —       |
-| v1.0.2  | Reliability fixes and runtime evidence  | ✅ published         | —       |
+| Version | Theme                                        | Progress             | Issues  |
+| ------- | -------------------------------------------- | -------------------- | ------- |
+| v0.1.0  | Public launch                                | ✅ 6/6               | #1–#6   |
+| v0.2.0  | Scaffolder hardening                         | ✅ 5/5               | #7–#11  |
+| v0.3.0  | Backend & database expansion                 | ✅ 5/5               | #12–#16 |
+| v0.3.1  | Hardening (master-plan PR 2/3/5)             | ✅ tag               | —       |
+| v0.4.0  | Frontend expansion                           | ✅ 4/4               | #17–#20 |
+| v0.5.0  | Platform expansion (mobile, desktop)         | ✅ 2/2               | #21–#22 |
+| v1.0.0  | First stable release                         | ✅ 5/5               | #23–#27 |
+| v1.0.1  | SQLite first-run fix                         | ✅ published         | —       |
+| v1.0.2  | Reliability fixes and runtime evidence       | ✅ published         | —       |
 | v1.0.3  | Laravel Livewire, auth, and runtime evidence | 🟡 release candidate | —       |
-| v1.0.4  | Laravel Inertia React scaffolding | 🟡 release candidate | —       |
+| v1.0.4  | Laravel Inertia React scaffolding            | 🟡 release candidate | —       |
 
 ---
 
@@ -83,9 +83,9 @@ The v1.0.3 tag points to 37f89cc and contains the scope recorded in its changelo
 
 ## v1.0.4 — Release candidate
 
-This candidate adds integrated Laravel 13 + Inertia React + TypeScript + SQLite scaffolding with None or Laravel-native Fortify auth. Both modes passed generated-project checks and the hosted release gate. Laravel Inertia React does not add account linking or managed providers; the broader auth expansion remains active.
+This candidate adds integrated Laravel 13 + Inertia React + TypeScript + SQLite scaffolding with None or Laravel-native Fortify auth. Both modes passed generated-project checks and the hosted release gate. Laravel Inertia React does not add account linking or managed providers. Open PRs #57 and #58 carry the separately approved Supabase Auth and Laravel API Sanctum slices.
 
-The remaining owner-approved provider/API work is tracked in the [active auth and PHP expansion follow-up](docs/plans/active/omnicraft-auth-provider-php-stack-expansion-follow-up-plan.md). Supabase Auth and Laravel 12 API Sanctum modes remain subject to their exact generated-project and hosted release-gate evidence; this roadmap entry does not mark them Supported.
+The completed [auth and PHP expansion follow-up](docs/plans/completed/omnicraft-auth-provider-php-stack-expansion-follow-up-plan.md) records exact generated-project and support-evidence results on PR #58 head `3d5fd3c`, including the hosted release gate. PR #58 remains unmerged, so this work is not part of a released version. Remaining provider, JWT, database, and Laravel mode choices are tracked in the active [next-target plan](docs/plans/active/omnicraft-auth-provider-php-next-targets-plan.md); those combinations remain unselectable.
 
 - [x] Verify Laravel 13 + Inertia React + SQLite with None or Laravel-native Fortify through exact-head generated-project CI.
 

@@ -11,6 +11,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 - Added a manual-setup Supabase Auth option for React/Vite TypeScript frontend-only apps. Generated
   notes use the Supabase Data API with explicit authenticated-role grants and per-user RLS policies;
   generated browser configuration contains placeholders and a publishable key only.
+- Added opt-in Laravel 12 API authentication for React/Vite TypeScript + SQLite using Laravel's
+  native session guard and first-party Sanctum SPA cookie sessions. `None` keeps the existing API
+  sample public; native auth protects `/api/me` and `/api/users` and scopes sample records by owner.
+
+### Fixed
+
+- Reset Laravel's stock SQLite file after the Composer starter migration so Laravel 12 API projects
+  apply the selected OmniCraft migration schema instead of retaining stale starter columns.
 
 ## [1.0.4] — 2026-10-31
 

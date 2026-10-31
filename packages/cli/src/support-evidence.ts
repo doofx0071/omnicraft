@@ -180,6 +180,7 @@ export const NATIVE_PLATFORM_SCENARIOS = [
 ] as const
 export const LARAVEL_LIVEWIRE_AUTH_SCENARIOS = ['none', 'laravel-native'] as const satisfies readonly AuthenticationSetup[]
 export const LARAVEL_INERTIA_REACT_AUTH_SCENARIOS = ['none', 'laravel-native'] as const satisfies readonly AuthenticationSetup[]
+export const LARAVEL_SANCTUM_SPA_AUTH_SCENARIOS = ['none', 'laravel-native'] as const satisfies readonly AuthenticationSetup[]
 
 export const INTEGRATION_TARGETS = {
   'node-runtime': {
@@ -256,6 +257,12 @@ export const INTEGRATION_TARGETS = {
     workflowCommand: 'npm run test:integration:php-inertia --workspace=create-omnicraft',
     scenarios: LARAVEL_INERTIA_REACT_AUTH_SCENARIOS,
   },
+  'php-laravel-sanctum-spa-auth': {
+    script: 'scripts/php-laravel-sanctum-auth-e2e.ts',
+    workflowJob: 'php-laravel-sanctum-spa-auth-integration',
+    workflowCommand: 'npm run test:integration:php-sanctum-auth --workspace=create-omnicraft',
+    scenarios: LARAVEL_SANCTUM_SPA_AUTH_SCENARIOS,
+  },
   'supabase-auth': {
     script: 'scripts/supabase-auth-integration.ts',
     workflowJob: 'supabase-auth-integration',
@@ -301,6 +308,7 @@ export type SupportMatrixFormat =
   | 'supabase-auth'
   | 'laravel-livewire-auth'
   | 'laravel-inertia-react-auth'
+  | 'laravel-sanctum-spa-auth'
   | 'auth-module'
   | 'creation-auth'
   | 'docker-module'
@@ -371,6 +379,11 @@ function pythonStack(database: Database): SupportedCombination {
 
 function phpStack(database: Database): SupportedCombination {
   return webStack('react', 'typescript', 'php', 'laravel', undefined, database)
+}
+
+function sanctumSpaAuthStack(): SupportedCombination {
+  const stack = phpStack('sqlite')
+  return { ...stack, flags: { ...stack.flags, auth: 'laravel-native' } }
 }
 
 function livewireAuthStack(
@@ -550,6 +563,28 @@ export function registeredMatrixRowPrefix(capability: SupportedCapability): stri
       }
       const mode = authentication === 'none' ? 'None' : 'Laravel native/Fortify'
       label = `Laravel 13 + Inertia React (${mode}) | Eloquent | ${oneDatabase()}`
+      break
+    }
+    case 'laravel-sanctum-spa-auth': {
+      const combination = requireOneCombination(capability)
+      const flags = combination.flags
+      if (
+        flags.frontend !== 'react' ||
+        flags.lang !== 'typescript' ||
+        !flags.fullStack ||
+        flags.runtime !== 'php' ||
+        flags.backend !== 'laravel' ||
+        flags.orm !== undefined ||
+        flags.db !== 'sqlite' ||
+        flags.auth !== 'laravel-native' ||
+        flags.extras.length !== 0 ||
+        combination.module !== undefined
+      ) {
+        throw new Error(
+          `Sanctum SPA auth row "${capability.id}" must use React/Vite TypeScript + Laravel 12 API + SQLite with Laravel native auth.`,
+        )
+      }
+      label = 'React + Vite + TypeScript + Laravel 12 API + Sanctum SPA sessions | Eloquent | SQLite'
       break
     }
     case 'auth-module':
@@ -784,6 +819,13 @@ export const SUPPORTED_CAPABILITIES = [
     target: 'php-laravel-inertia-react-auth',
     scenarios: ['laravel-native'],
     combinations: [inertiaReactAuthStack('laravel-native')],
+  },
+  {
+    id: 'laravel-api-sanctum-spa-auth-sqlite',
+    matrixFormat: 'laravel-sanctum-spa-auth',
+    target: 'php-laravel-sanctum-spa-auth',
+    scenarios: ['laravel-native'],
+    combinations: [sanctumSpaAuthStack()],
   },
   {
     id: 'auth-express-drizzle-sqlite',

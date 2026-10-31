@@ -8,89 +8,89 @@ import type {
   Orm,
   ProjectArchitecture,
   ProjectType,
-} from './types.js'
+} from "./types.js";
 
 type CapabilityOption<T extends string> = {
-  value: T
-  label: string
-  available: boolean
-  hint?: string
-}
+  value: T;
+  label: string;
+  available: boolean;
+  hint?: string;
+};
 
 type AuthenticationRequirements = {
-  frontend: Frontend | readonly Frontend[]
-  language: Language | null | readonly (Language | null)[]
-  backendRuntime: BackendRuntime | null
-  backendFramework: BackendFramework | null
-  orm: Orm | null
-  architecture: ProjectArchitecture['kind']
-  databases: readonly (Database | null)[]
-}
+  frontend: Frontend | readonly Frontend[];
+  language: Language | null | readonly (Language | null)[];
+  backendRuntime: BackendRuntime | null;
+  backendFramework: BackendFramework | null;
+  orm: Orm | null;
+  architecture: ProjectArchitecture["kind"] | readonly ProjectArchitecture["kind"][];
+  databases: readonly (Database | null)[];
+};
 
 type AuthenticationCatalogEntry = CapabilityOption<AuthenticationSetup> & {
-  category: 'none' | 'application-library' | 'framework-native' | 'managed-provider'
-  requirements: AuthenticationRequirements | null
-}
+  category: "none" | "application-library" | "framework-native" | "managed-provider";
+  requirements: AuthenticationRequirements | null;
+};
 
 /** Current auth setups, with their user-facing choice and stack requirements. */
 export const AUTHENTICATION_CATALOG = {
   none: {
-    value: 'none',
-    label: 'None',
+    value: "none",
+    label: "None",
     available: true,
-    hint: 'No authentication layer',
-    category: 'none',
+    hint: "No authentication layer",
+    category: "none",
     requirements: null,
   },
-  'better-auth': {
-    value: 'better-auth',
-    label: 'Better Auth (email/password)',
+  "better-auth": {
+    value: "better-auth",
+    label: "Better Auth (email/password)",
     available: true,
-    hint: 'TypeScript React + Node/Express + Drizzle only; SQLite, PostgreSQL, or MySQL',
-    category: 'application-library',
+    hint: "TypeScript React + Node/Express + Drizzle only; SQLite, PostgreSQL, or MySQL",
+    category: "application-library",
     requirements: {
-      frontend: 'react',
-      language: 'typescript',
-      backendRuntime: 'node',
-      backendFramework: 'express',
-      orm: 'drizzle',
-      architecture: 'separate-frontend-api',
-      databases: ['postgres', 'sqlite', 'mysql'],
+      frontend: "react",
+      language: "typescript",
+      backendRuntime: "node",
+      backendFramework: "express",
+      orm: "drizzle",
+      architecture: "separate-frontend-api",
+      databases: ["postgres", "sqlite", "mysql"],
     },
   },
-  'supabase-auth': {
-    value: 'supabase-auth',
-    label: 'Supabase Auth',
+  "supabase-auth": {
+    value: "supabase-auth",
+    label: "Supabase Auth",
     available: true,
-    hint: 'React/Vite + TypeScript frontend-only; Supabase Data API with user-scoped RLS',
-    category: 'managed-provider',
+    hint: "React/Vite + TypeScript frontend-only; Supabase Data API with user-scoped RLS",
+    category: "managed-provider",
     requirements: {
-      frontend: 'react',
-      language: 'typescript',
+      frontend: "react",
+      language: "typescript",
       backendRuntime: null,
       backendFramework: null,
       orm: null,
-      architecture: 'frontend-only',
+      architecture: "frontend-only",
       databases: [null],
     },
   },
-  'laravel-native': {
-    value: 'laravel-native',
-    label: 'Laravel native auth (Fortify)',
+  "laravel-native": {
+    value: "laravel-native",
+    label: "Laravel native auth",
     available: true,
-    hint: 'Official Laravel Livewire or Inertia React starter with Laravel session auth; SQLite only',
-    category: 'framework-native',
+    hint: "Fortify for integrated Laravel or Sanctum SPA sessions for the Laravel API; SQLite only",
+    category: "framework-native",
     requirements: {
-      frontend: ['livewire', 'inertia-react'],
-      language: ['typescript', null],
-      backendRuntime: 'php',
-      backendFramework: 'laravel',
+      frontend: ["livewire", "inertia-react", "react"],
+      language: ["typescript", null],
+      backendRuntime: "php",
+      backendFramework: "laravel",
       orm: null,
-      architecture: 'integrated-laravel',
-      databases: ['sqlite'],
+      architecture: ["integrated-laravel", "separate-frontend-api"],
+      databases: ["sqlite"],
     },
   },
-} as const satisfies Record<AuthenticationSetup, AuthenticationCatalogEntry>
+} as const satisfies Record<AuthenticationSetup, AuthenticationCatalogEntry>;
 
 /**
  * Selectable options and prompt metadata. Auth requirements live with their
@@ -98,136 +98,158 @@ export const AUTHENTICATION_CATALOG = {
  */
 export const CAPABILITY_REGISTRY = {
   projectType: [
-    { value: 'web', label: 'Web App', available: true, hint: 'Browser app' },
+    { value: "web", label: "Web App", available: true, hint: "Browser app" },
     {
-      value: 'mobile',
-      label: 'Mobile App',
+      value: "mobile",
+      label: "Mobile App",
       available: true,
-      hint: 'Expo + TypeScript (iOS/Android)',
+      hint: "Expo + TypeScript (iOS/Android)",
     },
-    { value: 'desktop', label: 'Desktop App', available: true, hint: 'Tauri 2 + React UI' },
+    { value: "desktop", label: "Desktop App", available: true, hint: "Tauri 2 + React UI" },
   ] as const satisfies readonly CapabilityOption<ProjectType>[],
   frontend: [
-    { value: 'react', label: 'React', available: true, hint: 'Vite + TypeScript' },
+    { value: "react", label: "React", available: true, hint: "Vite + TypeScript" },
     {
-      value: 'nextjs',
-      label: 'Next.js',
+      value: "nextjs",
+      label: "Next.js",
       available: true,
-      hint: 'Integrated full-stack — Next.js IS the server',
+      hint: "Integrated full-stack — Next.js IS the server",
     },
-    { value: 'vue', label: 'Vue', available: true, hint: 'Vite + TypeScript' },
-    { value: 'svelte', label: 'Svelte', available: true, hint: 'Vite + TypeScript' },
+    { value: "vue", label: "Vue", available: true, hint: "Vite + TypeScript" },
+    { value: "svelte", label: "Svelte", available: true, hint: "Vite + TypeScript" },
     {
-      value: 'livewire',
-      label: 'Laravel + Livewire',
+      value: "livewire",
+      label: "Laravel + Livewire",
       available: true,
-      hint: 'Integrated Laravel app — no separate frontend; SQLite only in this first path',
+      hint: "Integrated Laravel app — no separate frontend; SQLite only in this first path",
     },
     {
-      value: 'inertia-react',
-      label: 'Laravel + Inertia React',
+      value: "inertia-react",
+      label: "Laravel + Inertia React",
       available: true,
-      hint: 'Integrated Laravel 13 app with React + TypeScript; SQLite only',
+      hint: "Integrated Laravel 13 app with React + TypeScript; SQLite only",
     },
   ] as const satisfies readonly CapabilityOption<Frontend>[],
   language: [
-    { value: 'typescript', label: 'TypeScript', available: true, hint: 'Recommended' },
+    { value: "typescript", label: "TypeScript", available: true, hint: "Recommended" },
     {
-      value: 'javascript',
-      label: 'JavaScript',
+      value: "javascript",
+      label: "JavaScript",
       available: true,
-      hint: 'React/Vite client ships as JS; a selected server remains TypeScript',
+      hint: "React/Vite client ships as JS; a selected server remains TypeScript",
     },
   ] as const satisfies readonly CapabilityOption<Language>[],
   runtime: [
-    { value: 'node', label: 'Node.js', available: true, hint: 'Express, Fastify, Hono' },
-    { value: 'python', label: 'Python', available: true, hint: 'FastAPI + SQLAlchemy' },
-    { value: 'php', label: 'PHP (Laravel)', available: true, hint: 'Laravel + Eloquent' },
+    { value: "node", label: "Node.js", available: true, hint: "Express, Fastify, Hono" },
+    { value: "python", label: "Python", available: true, hint: "FastAPI + SQLAlchemy" },
+    { value: "php", label: "PHP (Laravel)", available: true, hint: "Laravel + Eloquent" },
   ] as const satisfies readonly CapabilityOption<BackendRuntime>[],
   backend: {
     node: [
-      { value: 'express', label: 'Express', available: true, hint: 'The classic, huge ecosystem' },
-      { value: 'fastify', label: 'Fastify', available: true, hint: 'Fast, schema-first' },
-      { value: 'hono', label: 'Hono', available: true, hint: 'Ultra-light' },
-      { value: 'nestjs', label: 'NestJS', available: false },
+      { value: "express", label: "Express", available: true, hint: "The classic, huge ecosystem" },
+      { value: "fastify", label: "Fastify", available: true, hint: "Fast, schema-first" },
+      { value: "hono", label: "Hono", available: true, hint: "Ultra-light" },
+      { value: "nestjs", label: "NestJS", available: false },
     ] as const satisfies readonly CapabilityOption<BackendFramework>[],
     python: [
-      { value: 'fastapi', label: 'FastAPI', available: true, hint: 'SQLAlchemy + Alembic' },
-      { value: 'django', label: 'Django', available: false },
+      { value: "fastapi", label: "FastAPI", available: true, hint: "SQLAlchemy + Alembic" },
+      { value: "django", label: "Django", available: false },
     ] as const satisfies readonly CapabilityOption<BackendFramework>[],
     php: [
-      { value: 'laravel', label: 'Laravel', available: true, hint: 'Laravel 12 API or Laravel 13 integrated app + Eloquent' },
-      { value: 'symfony', label: 'Symfony', available: false },
+      {
+        value: "laravel",
+        label: "Laravel",
+        available: true,
+        hint: "Laravel 12 API or Laravel 13 integrated app + Eloquent",
+      },
+      { value: "symfony", label: "Symfony", available: false },
     ] as const satisfies readonly CapabilityOption<BackendFramework>[],
   } satisfies Record<BackendRuntime, readonly CapabilityOption<BackendFramework>[]>,
   database: {
     node: [
-      { value: 'postgres', label: 'PostgreSQL', available: true, hint: 'Drizzle or Prisma' },
-      { value: 'sqlite', label: 'SQLite', available: true, hint: 'Zero setup — file-based (Drizzle)' },
-      { value: 'mysql', label: 'MySQL', available: true, hint: 'Drizzle' },
-      { value: 'mongodb', label: 'MongoDB', available: false },
+      { value: "postgres", label: "PostgreSQL", available: true, hint: "Drizzle or Prisma" },
+      {
+        value: "sqlite",
+        label: "SQLite",
+        available: true,
+        hint: "Zero setup — file-based (Drizzle)",
+      },
+      { value: "mysql", label: "MySQL", available: true, hint: "Drizzle" },
+      { value: "mongodb", label: "MongoDB", available: false },
     ] as const satisfies readonly CapabilityOption<Database>[],
     python: [
-      { value: 'postgres', label: 'PostgreSQL', available: true, hint: 'asyncpg + Alembic' },
-      { value: 'sqlite', label: 'SQLite', available: true, hint: 'Zero setup — file-based (aiosqlite)' },
-      { value: 'mysql', label: 'MySQL', available: false },
-      { value: 'mongodb', label: 'MongoDB', available: false },
+      { value: "postgres", label: "PostgreSQL", available: true, hint: "asyncpg + Alembic" },
+      {
+        value: "sqlite",
+        label: "SQLite",
+        available: true,
+        hint: "Zero setup — file-based (aiosqlite)",
+      },
+      { value: "mysql", label: "MySQL", available: false },
+      { value: "mongodb", label: "MongoDB", available: false },
     ] as const satisfies readonly CapabilityOption<Database>[],
     php: [
-      { value: 'postgres', label: 'PostgreSQL', available: true, hint: 'Eloquent' },
-      { value: 'sqlite', label: 'SQLite', available: true, hint: 'Zero setup — file-based (Eloquent)' },
-      { value: 'mysql', label: 'MySQL', available: true, hint: 'Eloquent' },
-      { value: 'mongodb', label: 'MongoDB', available: false },
+      { value: "postgres", label: "PostgreSQL", available: true, hint: "Eloquent" },
+      {
+        value: "sqlite",
+        label: "SQLite",
+        available: true,
+        hint: "Zero setup — file-based (Eloquent)",
+      },
+      { value: "mysql", label: "MySQL", available: true, hint: "Eloquent" },
+      { value: "mongodb", label: "MongoDB", available: false },
     ] as const satisfies readonly CapabilityOption<Database>[],
   } satisfies Record<BackendRuntime, readonly CapabilityOption<Database>[]>,
   orm: [
-    { value: 'drizzle', label: 'Drizzle', available: true, hint: 'SQL-like, lightweight' },
+    { value: "drizzle", label: "Drizzle", available: true, hint: "SQL-like, lightweight" },
     {
-      value: 'prisma',
-      label: 'Prisma',
+      value: "prisma",
+      label: "Prisma",
       available: true,
-      hint: 'Schema-first; PostgreSQL only for now',
+      hint: "Schema-first; PostgreSQL only for now",
     },
     {
-      value: 'none',
-      label: 'None — raw SQL',
+      value: "none",
+      label: "None — raw SQL",
       available: true,
-      hint: 'Driver + parameterized queries + SQL-file migrations',
+      hint: "Driver + parameterized queries + SQL-file migrations",
     },
-    { value: 'mongoose', label: 'Mongoose', available: false },
+    { value: "mongoose", label: "Mongoose", available: false },
   ] as const satisfies readonly CapabilityOption<Orm>[],
   extras: [
-    { value: 'tailwind', label: 'Tailwind CSS', available: true, hint: 'Utility-first styling' },
-    { value: 'eslint', label: 'ESLint + Prettier', available: true, hint: 'Linting + formatting' },
+    { value: "tailwind", label: "Tailwind CSS", available: true, hint: "Utility-first styling" },
+    { value: "eslint", label: "ESLint + Prettier", available: true, hint: "Linting + formatting" },
     {
-      value: 'shadcn',
-      label: 'shadcn/ui',
+      value: "shadcn",
+      label: "shadcn/ui",
       available: true,
-      hint: 'Component library (includes Tailwind) — runs shadcn CLI',
+      hint: "Component library (includes Tailwind) — runs shadcn CLI",
     },
-  ] as const satisfies readonly CapabilityOption<'tailwind' | 'eslint' | 'shadcn'>[],
+  ] as const satisfies readonly CapabilityOption<"tailwind" | "eslint" | "shadcn">[],
   modules: [
-    { value: 'auth', label: 'auth', available: true, hint: 'Better Auth email/password' },
-    { value: 'docker', label: 'docker', available: true, hint: 'Database Compose service' },
-    { value: 'testing', label: 'testing', available: true, hint: 'Vitest client test setup' },
+    { value: "auth", label: "auth", available: true, hint: "Better Auth email/password" },
+    { value: "docker", label: "docker", available: true, hint: "Database Compose service" },
+    { value: "testing", label: "testing", available: true, hint: "Vitest client test setup" },
   ] as const,
   authentication: Object.values(AUTHENTICATION_CATALOG),
   ormsByNodeBackend: {
-    express: ['drizzle', 'prisma', 'none'],
-    fastify: ['drizzle', 'prisma', 'none'],
-    hono: ['drizzle', 'none'],
-  } as const satisfies Record<'express' | 'fastify' | 'hono', readonly Orm[]>,
-} as const
+    express: ["drizzle", "prisma", "none"],
+    fastify: ["drizzle", "prisma", "none"],
+    hono: ["drizzle", "none"],
+  } as const satisfies Record<"express" | "fastify" | "hono", readonly Orm[]>,
+} as const;
 
 type AvailableValue<Options extends readonly { value: string; available: boolean }[]> = Extract<
   Options[number],
   { available: true }
->['value']
+>["value"];
 
-function availableValues<
-  const Options extends readonly { value: string; available: boolean }[],
->(options: Options): AvailableValue<Options>[] {
-  return options.filter((option) => option.available).map((option) => option.value) as AvailableValue<Options>[]
+function availableValues<const Options extends readonly { value: string; available: boolean }[]>(
+  options: Options,
+): AvailableValue<Options>[] {
+  return options
+    .filter((option) => option.available)
+    .map((option) => option.value) as AvailableValue<Options>[];
 }
 
 /** Values accepted by flags and used by non-interactive defaults. */
@@ -250,6 +272,6 @@ export const AVAILABLE = {
   extras: availableValues(CAPABILITY_REGISTRY.extras),
   modules: availableValues(CAPABILITY_REGISTRY.modules),
   authentication: availableValues(CAPABILITY_REGISTRY.authentication),
-} as const
+} as const;
 
-export type ModuleId = (typeof AVAILABLE.modules)[number]
+export type ModuleId = (typeof AVAILABLE.modules)[number];
