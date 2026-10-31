@@ -18,6 +18,7 @@
 | v1.0.1  | SQLite first-run fix                    | ✅ published         | —       |
 | v1.0.2  | Reliability fixes and runtime evidence  | ✅ published         | —       |
 | v1.0.3  | Laravel Livewire, auth, and runtime evidence | 🟡 release candidate | —       |
+| v1.0.4  | Laravel Inertia React scaffolding | 🟡 release candidate | —       |
 
 ---
 
@@ -78,16 +79,13 @@ Published on 2026-10-27. Issue #27 was delivered early with the template contrac
 
 ## v1.0.3 — Release candidate
 
-This candidate integrates the auth and runtime work summarized in [CHANGELOG.md](CHANGELOG.md). Its
-support claims remain combination-specific: Laravel native auth is currently Supported for Laravel 13
-Livewire or Inertia React + SQLite;
-Expo/Tauri remain Scaffold-verified; physical-device Android/iOS paths remain unverified. The active
-native-platform follow-up tracks physical-device evidence separately. Provider-backed auth and other
-Laravel frontend modes remain follow-up work. The Inertia React None/Fortify slice has exact generated-project
-and hosted release-gate evidence; the broader auth expansion plan remains active.
+The v1.0.3 tag points to 37f89cc and contains the scope recorded in its changelog section. It includes Laravel 13 + Livewire 4 with SQLite, creation-time auth, and the completed React/Vite testing evidence. Laravel Inertia React is part of v1.0.4. Expo/Tauri remain Scaffold-verified; physical-device Android/iOS remain unverified.
 
-- [x] Verify Laravel 13 + Inertia React + SQLite with `None` or Laravel-native Fortify through exact-head
-  generated-project CI; account linking remains out of scope.
+## v1.0.4 — Release candidate
+
+This candidate adds integrated Laravel 13 + Inertia React + TypeScript + SQLite scaffolding with None or Laravel-native Fortify auth. Both modes passed generated-project checks and the hosted release gate. Laravel Inertia React does not add account linking or managed providers; the broader auth expansion remains active.
+
+- [x] Verify Laravel 13 + Inertia React + SQLite with None or Laravel-native Fortify through exact-head generated-project CI.
 
 ## v1.1.x and beyond — post-v1 priorities
 
