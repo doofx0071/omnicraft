@@ -2,12 +2,17 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
+import { runBusyAction } from "./run-busy-action";
 
 type Note = {
   id: string;
   content: string;
   created_at: string;
 };
+
+function requestErrorMessage(cause: unknown): string {
+  return cause instanceof Error ? cause.message : "The request could not be completed.";
+}
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -23,12 +28,19 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
-    void supabase.auth.getSession().then(({ data, error: sessionError }) => {
-      if (!active) return;
-      if (sessionError) setError(sessionError.message);
-      setSession(data.session);
-      setSessionReady(true);
-    });
+    void supabase.auth
+      .getSession()
+      .then(({ data, error: sessionError }) => {
+        if (!active) return;
+        if (sessionError) setError(sessionError.message);
+        setSession(data.session);
+        setSessionReady(true);
+      })
+      .catch((cause: unknown) => {
+        if (!active) return;
+        setError(requestErrorMessage(cause));
+        setSessionReady(true);
+      });
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       setSessionReady(true);
@@ -55,6 +67,9 @@ export default function App() {
         if (!active) return;
         if (queryError) setError(queryError.message);
         else setNotes(data ?? []);
+      })
+      .catch((cause: unknown) => {
+        if (active) setError(requestErrorMessage(cause));
       });
     return () => {
       active = false;
@@ -83,37 +98,52 @@ export default function App() {
 
   async function addNote(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setBusy(true);
     setError(null);
-    const { error: insertError } = await supabase.from("notes").insert({ content: note.trim() });
-    if (insertError) setError(insertError.message);
-    else {
-      setNote("");
-      const { data, error: queryError } = await supabase
-        .from("notes")
-        .select("id, content, created_at")
-        .order("created_at", { ascending: false });
-      if (queryError) setError(queryError.message);
-      else setNotes(data ?? []);
-    }
-    setBusy(false);
+    await runBusyAction(
+      async () => {
+        const { error: insertError } = await supabase
+          .from("notes")
+          .insert({ content: note.trim() });
+        if (insertError) {
+          setError(insertError.message);
+          return;
+        }
+        setNote("");
+        const { data, error: queryError } = await supabase
+          .from("notes")
+          .select("id, content, created_at")
+          .order("created_at", { ascending: false });
+        if (queryError) setError(queryError.message);
+        else setNotes(data ?? []);
+      },
+      setBusy,
+      (cause) => setError(requestErrorMessage(cause)),
+    );
   }
 
   async function deleteNote(id: string) {
-    setBusy(true);
     setError(null);
-    const { error: deleteError } = await supabase.from("notes").delete().eq("id", id);
-    if (deleteError) setError(deleteError.message);
-    else setNotes((current) => current.filter((item) => item.id !== id));
-    setBusy(false);
+    await runBusyAction(
+      async () => {
+        const { error: deleteError } = await supabase.from("notes").delete().eq("id", id);
+        if (deleteError) setError(deleteError.message);
+        else setNotes((current) => current.filter((item) => item.id !== id));
+      },
+      setBusy,
+      (cause) => setError(requestErrorMessage(cause)),
+    );
   }
 
   async function signOut() {
-    setBusy(true);
     setError(null);
-    const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
-    if (signOutError) setError(signOutError.message);
-    setBusy(false);
+    await runBusyAction(
+      async () => {
+        const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
+        if (signOutError) setError(signOutError.message);
+      },
+      setBusy,
+      (cause) => setError(requestErrorMessage(cause)),
+    );
   }
 
   return (
