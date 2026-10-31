@@ -272,6 +272,7 @@ function isolatedTestEnv(serverDir: string): NodeJS.ProcessEnv {
   return {
     ...env,
     APP_ENV: "testing",
+    APP_DEBUG: "false",
     DB_CONNECTION: "sqlite",
     DB_DATABASE: join(serverDir, "database", "database.sqlite"),
     CACHE_STORE: "file",
@@ -586,8 +587,8 @@ async function verifySanctumAuth(cliPath: string, tempRoot: string): Promise<voi
     const route = routes.find((candidate) => candidate.uri === uri);
     assert(route, "Generated Laravel Sanctum auth route missing: " + uri);
     assert(
-      route.middleware.includes("throttle:10,15"),
-      uri + " must keep the explicit sign-in rate limit.",
+      route.middleware.some((middleware) => middleware.includes("ThrottleRequests:10,15")),
+      uri + " must keep the explicit sign-in rate limit; found: " + route.middleware.join(", "),
     );
   }
 
@@ -789,6 +790,14 @@ async function verifySanctumAuth(cliPath: string, tempRoot: string): Promise<voi
       "Account B session after sign-out",
     );
 
+    runRequired(
+      "Clear generated Laravel cache before the isolated rate-limit test",
+      "php",
+      ["artisan", "cache:clear", "--no-ansi"],
+      serverDir,
+      isolatedTestEnv(serverDir),
+    );
+
     const failedLoginJar: CookieJar = new Map();
     assertStatus(
       await apiRequest(live.baseUrl, failedLoginJar, "/sanctum/csrf-cookie"),
@@ -796,14 +805,16 @@ async function verifySanctumAuth(cliPath: string, tempRoot: string): Promise<voi
       "Rate-limit test CSRF bootstrap",
     );
     for (let attempt = 0; attempt < 9; attempt += 1) {
-      assertStatus(
-        await apiRequest(live.baseUrl, failedLoginJar, "/api/auth/login", {
-          method: "POST",
-          csrf: true,
-          body: { email: "missing@example.test", password: "incorrect-password" },
-        }),
-        422,
-        "Failed sign-in attempt " + (attempt + 1),
+      const failedLogin = await apiRequest(live.baseUrl, failedLoginJar, "/api/auth/login", {
+        method: "POST",
+        csrf: true,
+        body: { email: "missing@example.test", password: "incorrect-password" },
+      });
+      assertStatus(failedLogin, 422, "Failed sign-in attempt " + (attempt + 1));
+      assert(
+        !JSON.stringify(failedLogin.body).includes('"exception"') &&
+          !JSON.stringify(failedLogin.body).includes('"trace"'),
+        "Authentication errors must not expose framework exception details.",
       );
     }
     assertStatus(
@@ -815,14 +826,16 @@ async function verifySanctumAuth(cliPath: string, tempRoot: string): Promise<voi
       200,
       "Tenth sign-in attempt remains available",
     );
-    assertStatus(
-      await apiRequest(live.baseUrl, failedLoginJar, "/api/auth/login", {
-        method: "POST",
-        csrf: true,
-        body: { email: "missing@example.test", password: "incorrect-password" },
-      }),
-      429,
-      "Sign-in rate limit after ten attempts",
+    const rateLimitedLogin = await apiRequest(live.baseUrl, failedLoginJar, "/api/auth/login", {
+      method: "POST",
+      csrf: true,
+      body: { email: "missing@example.test", password: "incorrect-password" },
+    });
+    assertStatus(rateLimitedLogin, 429, "Sign-in rate limit after ten attempts");
+    assert(
+      !JSON.stringify(rateLimitedLogin.body).includes('"exception"') &&
+        !JSON.stringify(rateLimitedLogin.body).includes('"trace"'),
+      "Rate-limit responses must not expose framework exception details.",
     );
   } finally {
     await live.process.stop();
