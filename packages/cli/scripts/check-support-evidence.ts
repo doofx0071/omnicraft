@@ -164,6 +164,23 @@ function expectedScenario(
       assert.equal(answers.architecture.kind, 'frontend-only', `"${capability.id}" must be frontend-only.`)
       assertExtras(answers, { tailwind: false, eslintPrettier: false, shadcn: false }, capability)
       return 'react-js-frontend-only'
+    case 'supabase-auth': {
+      assert.equal(answers.frontend, 'react', `"${capability.id}" must use React/Vite.`)
+      assert.equal(answers.language, 'typescript', `"${capability.id}" must use TypeScript.`)
+      assert.equal(answers.fullStack, false, `"${capability.id}" must be frontend-only.`)
+      assert.equal(answers.architecture.kind, 'frontend-only', `"${capability.id}" must be frontend-only.`)
+      assert.equal(answers.backendRuntime, null, `"${capability.id}" must not add a backend.`)
+      assert.equal(answers.backendFramework, null, `"${capability.id}" must not add a backend.`)
+      assert.equal(answers.database, null, `"${capability.id}" must not select a local database.`)
+      assert.equal(answers.authentication, 'supabase-auth', `"${capability.id}" must select Supabase Auth.`)
+      assert.equal(combination.flags.auth, 'supabase-auth', `"${capability.id}" must pass --auth supabase-auth.`)
+      assert.equal(combination.module, undefined, `"${capability.id}" must not model auth as an add module.`)
+      assertExtras(answers, { tailwind: false, eslintPrettier: false, shadcn: false }, capability)
+      const manifest = buildManifest(answers, 'support-evidence', 'npm')
+      assert.equal(manifest.authentication, 'supabase-auth')
+      assert.deepEqual(manifest.modules, [], `"${capability.id}" must keep auth separate from module history.`)
+      return 'react-ts-supabase-auth-frontend-only'
+    }
     case 'python-fastapi': {
       const database = requiredDatabase(answers, capability)
       assert.equal(answers.backendRuntime, 'python', `"${capability.id}" must use Python.`)

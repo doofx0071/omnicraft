@@ -298,6 +298,7 @@ export type SupportMatrixFormat =
   | 'node-backend'
   | 'python-backend'
   | 'php-backend'
+  | 'supabase-auth'
   | 'laravel-livewire-auth'
   | 'laravel-inertia-react-auth'
   | 'auth-module'
@@ -437,6 +438,11 @@ function frontendOnlyStack(
   }
 }
 
+function supabaseAuthStack(): SupportedCombination {
+  const stack = frontendOnlyStack('typescript')
+  return { ...stack, flags: { ...stack.flags, auth: 'supabase-auth' } }
+}
+
 function requiredDatabase(combination: SupportedCombination): Database {
   const database = combination.flags.db
   if (!database) throw new Error('A Supported matrix combination must specify its database.')
@@ -495,6 +501,14 @@ export function registeredMatrixRowPrefix(capability: SupportedCapability): stri
     case 'frontend-only':
       label = `${frontendLabel}, frontend-only`
       break
+    case 'supabase-auth': {
+      const authentication = requireOneCombination(capability).flags.auth
+      if (authentication !== 'supabase-auth') {
+        throw new Error(`Supabase Auth row "${capability.id}" must select Supabase Auth.`)
+      }
+      label = 'React + Vite + TypeScript + Supabase Auth + Data API/RLS, frontend-only'
+      break
+    }
     case 'nextjs-integrated':
       label =
         oneDatabase() === 'MySQL'
@@ -826,6 +840,13 @@ export const SUPPORTED_CAPABILITIES = [
     target: 'frontend-runtime',
     scenarios: ['react-js-frontend-only'],
     combinations: [frontendOnlyStack('javascript')],
+  },
+  {
+    id: 'supabase-auth-react-vite-typescript',
+    matrixFormat: 'supabase-auth',
+    target: 'supabase-auth',
+    scenarios: ['react-ts-supabase-auth-frontend-only'],
+    combinations: [supabaseAuthStack()],
   },
   {
     id: 'nextjs-raw-sqlite',
