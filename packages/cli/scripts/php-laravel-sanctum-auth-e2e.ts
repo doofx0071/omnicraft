@@ -277,7 +277,10 @@ function isolatedTestEnv(serverDir: string): NodeJS.ProcessEnv {
     DB_DATABASE: join(serverDir, "database", "database.sqlite"),
     CACHE_STORE: "file",
     MAIL_MAILER: "array",
+    SESSION_COOKIE: "omnicraft_session",
     SESSION_DRIVER: "file",
+    SESSION_SAME_SITE: "lax",
+    SESSION_SECURE_COOKIE: "false",
     SANCTUM_STATEFUL_DOMAINS: "localhost:5173,127.0.0.1:5173",
   };
 }
@@ -669,7 +672,11 @@ async function verifySanctumAuth(cliPath: string, tempRoot: string): Promise<voi
     assert(registeredA.body && typeof registeredA.body === "object");
     assert.equal((registeredA.body as { user?: { email?: string } }).user?.email, accountA.email);
     const sessionCookie = registeredA.setCookies.find((cookie) => /^[^=]+_session=/i.test(cookie));
-    assert(sessionCookie, "Registration must return the Laravel session cookie.");
+    assert(
+      sessionCookie,
+      "Registration must return the Laravel session cookie; Set-Cookie names: " +
+        registeredA.setCookies.map((cookie) => cookie.split("=", 1)[0]).join(", "),
+    );
     assert(
       /(?:^|;)\s*httponly(?:;|$)/i.test(sessionCookie),
       "The session cookie must be HttpOnly.",
@@ -826,11 +833,22 @@ async function verifySanctumAuth(cliPath: string, tempRoot: string): Promise<voi
       200,
       "Tenth sign-in attempt remains available",
     );
-    const rateLimitedLogin = await apiRequest(live.baseUrl, failedLoginJar, "/api/auth/login", {
-      method: "POST",
-      csrf: true,
-      body: { email: "missing@example.test", password: "incorrect-password" },
-    });
+    const rateLimitedLoginJar: CookieJar = new Map();
+    assertStatus(
+      await apiRequest(live.baseUrl, rateLimitedLoginJar, "/sanctum/csrf-cookie"),
+      204,
+      "Anonymous rate-limited sign-in CSRF bootstrap",
+    );
+    const rateLimitedLogin = await apiRequest(
+      live.baseUrl,
+      rateLimitedLoginJar,
+      "/api/auth/login",
+      {
+        method: "POST",
+        csrf: true,
+        body: { email: "missing@example.test", password: "incorrect-password" },
+      },
+    );
     assertStatus(rateLimitedLogin, 429, "Sign-in rate limit after ten attempts");
     assert(
       !JSON.stringify(rateLimitedLogin.body).includes('"exception"') &&

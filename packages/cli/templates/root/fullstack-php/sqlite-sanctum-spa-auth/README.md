@@ -39,6 +39,9 @@ Each account can list, create, and delete only its own sample users. The existin
 scaffold with `--auth none` remains public. This mode does not issue personal access tokens or add a
 second provider-based identity layer.
 
+Registration and sign-in share a Laravel IP-based limit of 10 requests per 15 minutes. Invalid
+credentials return a generic 422 response and count toward that limit.
+
 ## Browser and production domains
 
 The local Vite config proxies `/api` and `/sanctum` to Laravel. `server/.env` includes

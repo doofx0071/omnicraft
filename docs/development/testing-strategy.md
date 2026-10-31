@@ -59,7 +59,9 @@ without Fortify or personal access token scaffolding; migrates SQLite; builds th
 and runs generated Laravel feature tests. A live local HTTP run checks credentialed CORS preflight, CSRF
 enforcement, account registration/login, cookie-session restoration after a server restart, anonymous
 rejection, per-account record isolation, and sign-out invalidation. The None project runs public
-`/api/users` CRUD. This target
+`/api/users` CRUD. It also verifies invalid credentials produce generic 422 responses without
+framework exception details and exercise the shared 10-request/15-minute throttle using a fresh
+anonymous cookie jar after the successful tenth attempt. This target
 is required by `supported-stack-release-gate`; it covers only the exact SQLite modes above.
 
 On Windows, `npm run test:integration:php-inertia --workspace=create-omnicraft` passed for both

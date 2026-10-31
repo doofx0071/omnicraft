@@ -105,6 +105,9 @@ generated native app is migrated, its client is built, and Laravel feature tests
 registration/login/logout, and protected routes. A live loopback HTTP test uses independent cookie jars to
 verify credentialed CORS preflight, the CSRF cookie/header requirement, session restoration after a server
 restart, per-account record isolation, cross-account read/delete rejection, and sign-out invalidation.
+It verifies that failed credentials return a generic 422 without framework exception details, count
+toward the shared IP-based registration/login throttle, and receive a 429 response once that limit is
+reached.
 The generated docs require explicit production SPA origins, a shared session-cookie parent domain, and
 secure cookies over HTTPS. All accounts and records use synthetic test values; the job creates no
 external service or credential.
