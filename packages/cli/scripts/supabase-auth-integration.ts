@@ -433,7 +433,13 @@ async function runScenario(): Promise<void> {
       bundle.includes("sb_publishable_"),
       "The frontend bundle should include only the local publishable key.",
     );
-    assert(!bundle.includes("sb_secret_"), "The frontend bundle must not contain a secret key.");
+    assert(
+      bundle.includes(publishableKey),
+      "The frontend bundle should include the configured local publishable key.",
+    );
+    // The Supabase SDK itself includes the `sb_secret_` prefix in its key-type
+    // detection code. Check actual privileged local values below instead of
+    // treating that harmless SDK marker as a leaked secret.
     for (const secret of privilegedSecrets) {
       assert(
         !bundle.includes(secret),
