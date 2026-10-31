@@ -1,7 +1,7 @@
 {
   "name": "create-omnicraft",
-  "version": "1.0.3",
-  "description": "Interactive CLI for full-stack project scaffolding across Node.js, FastAPI, and Laravel Livewire, with React/Vite, Next.js, Vue, Svelte, Expo, and Tauri templates.",
+  "version": "1.0.4",
+  "description": "Interactive CLI for project scaffolding across Node.js, FastAPI, and Laravel (Livewire and Inertia React), with React/Vite, Next.js, Vue, Svelte, Expo, and Tauri templates.",
   "license": "MIT",
   "repository": {
     "type": "git",

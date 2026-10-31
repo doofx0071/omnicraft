@@ -587,7 +587,6 @@ jobs:
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
-          package-manager-cache: false
 
       - name: Install npm version with trusted publishing support
         run: npm install --global npm@12.2.1

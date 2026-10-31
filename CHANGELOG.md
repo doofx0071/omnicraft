@@ -6,6 +6,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [1.0.4] — 2026-10-31
+
 ### Added
 
 - Integrated Laravel 13 + Inertia React + TypeScript scaffolding with SQLite and either `None` or
