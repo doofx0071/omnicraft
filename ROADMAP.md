@@ -1,6 +1,6 @@
 # 🗺️ OmniCraft Roadmap
 
-> **Versioning model:** `v1.0.0` is the first stable release. As checked on 2026-10-28, npm `latest` is `1.0.2`, published from Git commit `b359b91`, and GitHub tag `v1.0.2` points to that same commit. Future releases follow semver; release versions do not mean every selectable stack combination is fully verified.
+> **Versioning model:** `v1.0.0` is the first stable release. As checked on 2026-11-01, npm `latest` is `1.0.2`, published from Git commit `b359b91`, and GitHub tag `v1.0.2` points to that same commit. The repository's next release candidate is `v1.0.5`; v1.0.3 was tagged and v1.0.4 was prepared in the repository, but neither was published to npm. Future releases follow semver; release versions do not mean every selectable stack combination is fully verified.
 >
 > Progress is tracked with GitHub issues — this file is the big picture, the issues are the work. Check off here when the linked issue closes.
 
@@ -17,8 +17,9 @@
 | v1.0.0  | First stable release                         | ✅ 5/5               | #23–#27 |
 | v1.0.1  | SQLite first-run fix                         | ✅ published         | —       |
 | v1.0.2  | Reliability fixes and runtime evidence       | ✅ published         | —       |
-| v1.0.3  | Laravel Livewire, auth, and runtime evidence | 🟡 release candidate | —       |
-| v1.0.4  | Laravel Inertia React scaffolding            | 🟡 release candidate | —       |
+| v1.0.3  | Laravel Livewire, auth, and runtime evidence | 🟡 consolidated into v1.0.5 | —       |
+| v1.0.4  | Laravel Inertia React scaffolding            | 🟡 consolidated into v1.0.5 | —       |
+| v1.0.5  | Auth integrations and verified stack updates | 🟡 release candidate | —       |
 
 ---
 
@@ -77,17 +78,35 @@ Published on 2026-10-27. Issue #27 was delivered early with the template contrac
 - [x] #26 — Multi-OS CI once repo is public _(done early — repo is public, all 3 OS green)_
 - [x] #27 — Contributor docs: template composition guide _(delivered across `docs/templates/` and `docs/architecture/template-engine.md`; issue closed)_
 
-## v1.0.3 — Release candidate
+## v1.0.5 — Release candidate
 
-The v1.0.3 tag points to 37f89cc and contains the scope recorded in its changelog section. It includes Laravel 13 + Livewire 4 with SQLite, creation-time auth, and the completed React/Vite testing evidence. Laravel Inertia React is part of v1.0.4. Expo/Tauri remain Scaffold-verified; physical-device Android/iOS remain unverified.
+The repository baseline is version 1.0.4; npm `latest` remains 1.0.2. This candidate consolidates
+the earlier v1.0.3 and v1.0.4 candidate scopes with the Supabase Auth and Laravel Sanctum changes
+merged to `main`. It is the next version to publish to npm; the earlier versions were not published
+as npm releases.
 
-## v1.0.4 — Release candidate
+The release includes the exact supported combinations documented in the
+[stack support matrix](docs/templates/stack-support-matrix.md): Laravel 13 + Livewire 4 and Laravel
+13 + Inertia React on SQLite, each with `None` or Fortify; creation-time Better Auth for React/Vite
+TypeScript + Express + Drizzle on SQLite, PostgreSQL, and MySQL; Supabase Auth for React/Vite
+TypeScript frontend-only apps using the Supabase Data API and user-scoped RLS; and Laravel 12 API
+Sanctum SPA sessions for React/Vite TypeScript + SQLite. No managed-provider, third-party JWT
+bridge, or other Laravel mode is implied by these rows. Deferred targets remain in the active
+[auth next-target plan](docs/plans/active/omnicraft-auth-provider-php-next-targets-plan.md).
 
-This candidate adds integrated Laravel 13 + Inertia React + TypeScript + SQLite scaffolding with None or Laravel-native Fortify auth. Both modes passed generated-project checks and the hosted release gate. Laravel Inertia React does not add account linking or managed providers. Open PRs #57 and #58 carry the separately approved Supabase Auth and Laravel API Sanctum slices.
+The `omnicraft add testing` evidence covers 260 compatible React/Vite paths, including six earlier
+checks and 254 additional paths. Fifty-two JavaScript + shadcn paths reject before writing because
+the templates lack required aliases. These results concern the testing module only and do not
+establish backend or database support. Expo Android-emulator/iOS-simulator checks and Tauri desktop
+checks remain Scaffold-verified; physical Android/iOS paths remain Selectable — unverified.
 
-The completed [auth and PHP expansion follow-up](docs/plans/completed/omnicraft-auth-provider-php-stack-expansion-follow-up-plan.md) records exact generated-project and support-evidence results on PR #58 head `3d5fd3c`, including the hosted release gate. PR #58 remains unmerged, so this work is not part of a released version. Remaining provider, JWT, database, and Laravel mode choices are tracked in the active [next-target plan](docs/plans/active/omnicraft-auth-provider-php-next-targets-plan.md); those combinations remain unselectable.
+The release PR must pass the `supported-stack-release-gate` on its exact versioned commit before it
+is merged. Pushing the matching `v1.0.5` tag will trigger the npm publishing workflow.
 
-- [x] Verify Laravel 13 + Inertia React + SQLite with None or Laravel-native Fortify through exact-head generated-project CI.
+## v1.0.3 and v1.0.4 — candidate scopes consolidated into v1.0.5
+
+The v1.0.3 tag and repository-only v1.0.4 candidate captured separate stages of this work. Neither
+version was published to npm. Their changes are included in the v1.0.5 candidate above.
 
 ## v1.1.x and beyond — post-v1 priorities
 
