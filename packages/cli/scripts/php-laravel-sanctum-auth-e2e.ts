@@ -16,13 +16,13 @@ import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runCommand, startCommand, type StartedCommand } from "../src/exec.js";
 import { integrationScenarios } from "../src/support-evidence.js";
-import type { AuthenticationSetup } from "../src/types.js";
+import type { Database } from "../src/types.js";
 
 const COMMAND_TIMEOUT_MS = 15 * 60 * 1000;
 const SPA_ORIGIN = "http://127.0.0.1:5173";
-const AUTHENTICATION_SETUPS = integrationScenarios(
-  "php-laravel-sanctum-spa-auth",
-) as readonly AuthenticationSetup[];
+const SANCTUM_AUTH_SCENARIOS = integrationScenarios("php-laravel-sanctum-spa-auth");
+const SANCTUM_DATABASES = ["sqlite", "postgres", "mysql"] as const satisfies readonly Database[];
+type SanctumDatabase = (typeof SANCTUM_DATABASES)[number];
 
 interface GeneratedManifest {
   authentication: string;
@@ -105,14 +105,6 @@ function generateProject(
 function assertRejectedBeforeWrites(cliPath: string, tempRoot: string): void {
   const cases = [
     {
-      name: "sanctum-postgres",
-      flags: ["--frontend", "react", "--auth", "laravel-native", "--db", "postgres"],
-    },
-    {
-      name: "sanctum-mysql",
-      flags: ["--frontend", "react", "--auth", "laravel-native", "--db", "mysql"],
-    },
-    {
       name: "sanctum-javascript",
       flags: ["--frontend", "react", "--lang", "javascript", "--auth", "laravel-native"],
     },
@@ -152,6 +144,40 @@ function assertRejectedBeforeWrites(cliPath: string, tempRoot: string): void {
         "workos",
       ],
     },
+    ...(["postgres", "mysql"] as const).flatMap((database) => [
+      {
+        name: `sanctum-livewire-${database}`,
+        flags: [
+          "--frontend",
+          "livewire",
+          "--runtime",
+          "php",
+          "--backend",
+          "laravel",
+          "--db",
+          database,
+          "--auth",
+          "laravel-native",
+        ],
+      },
+      {
+        name: `sanctum-inertia-${database}`,
+        flags: [
+          "--frontend",
+          "inertia-react",
+          "--lang",
+          "typescript",
+          "--runtime",
+          "php",
+          "--backend",
+          "laravel",
+          "--db",
+          database,
+          "--auth",
+          "laravel-native",
+        ],
+      },
+    ]),
   ];
 
   for (const testCase of cases) {
@@ -170,7 +196,7 @@ function assertRejectedBeforeWrites(cliPath: string, tempRoot: string): void {
   }
 }
 
-function assertNativeManifest(projectRoot: string): void {
+function assertNativeManifest(projectRoot: string, database: SanctumDatabase): void {
   const manifest = JSON.parse(
     readFileSync(join(projectRoot, ".omnicraft", "project.json"), "utf8"),
   ) as GeneratedManifest;
@@ -187,7 +213,7 @@ function assertNativeManifest(projectRoot: string): void {
     backendRuntime: "php",
     backendFramework: "laravel",
     orm: null,
-    database: "sqlite",
+    database,
     extras: ["tailwind", "eslintPrettier"],
   });
 }
@@ -204,7 +230,7 @@ function assertNoneManifest(projectRoot: string): void {
   );
 }
 
-function assertSanctumSetup(projectRoot: string): void {
+function assertSanctumSetup(projectRoot: string, database: SanctumDatabase): void {
   const serverDir = join(projectRoot, "server");
   const composer = JSON.parse(readFileSync(join(serverDir, "composer.json"), "utf8")) as {
     require: Record<string, string>;
@@ -238,6 +264,19 @@ function assertSanctumSetup(projectRoot: string): void {
   assert(
     environmentExample.includes("CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173"),
   );
+  const expectedConnection = database === "postgres" ? "pgsql" : database;
+  assert(environmentExample.includes(`DB_CONNECTION=${expectedConnection}`));
+  assert(environmentExample.includes("SESSION_DRIVER=file"));
+  const readme = readFileSync(join(projectRoot, "README.md"), "utf8");
+  const expectedDatabaseLabel =
+    database === "postgres" ? "PostgreSQL" : database === "mysql" ? "MySQL" : "SQLite";
+  assert(readme.includes(`| Database | ${expectedDatabaseLabel}`));
+  assert(readme.includes("session store remains file-based"));
+  for (const otherDatabase of SANCTUM_DATABASES.filter((candidate) => candidate !== database)) {
+    const otherLabel =
+      otherDatabase === "postgres" ? "PostgreSQL" : otherDatabase === "mysql" ? "MySQL" : "SQLite";
+    assert(!readme.includes(`| Database | ${otherLabel}`));
+  }
   const migrationNames = readdirSync(join(serverDir, "database", "migrations"));
   assert(
     !migrationNames.some((name) => name.toLowerCase().includes("personal_access_tokens")),
@@ -255,7 +294,10 @@ function assertOwnedTempDirectory(tempRoot: string): void {
   assert(basename(absoluteRoot).startsWith("omnicraft-laravel-sanctum-auth-"));
 }
 
-function isolatedTestEnv(serverDir: string): NodeJS.ProcessEnv {
+function isolatedTestEnv(
+  serverDir: string,
+  database: SanctumDatabase = "sqlite",
+): NodeJS.ProcessEnv {
   const env = { ...process.env };
   for (const key of [
     "DATABASE_URL",
@@ -269,12 +311,37 @@ function isolatedTestEnv(serverDir: string): NodeJS.ProcessEnv {
   ]) {
     delete env[key];
   }
+  const databaseEnvironment: NodeJS.ProcessEnv =
+    database === "sqlite"
+      ? {
+          DB_CONNECTION: "sqlite",
+          DB_DATABASE: join(serverDir, "database", "database.sqlite"),
+          OMNICRAFT_EXPECTED_DB_DRIVER: "sqlite",
+        }
+      : database === "postgres"
+        ? {
+            DB_CONNECTION: "pgsql",
+            DB_HOST: process.env.OMNICRAFT_POSTGRES_HOST ?? "127.0.0.1",
+            DB_PORT: process.env.OMNICRAFT_POSTGRES_PORT ?? "5432",
+            DB_DATABASE: process.env.OMNICRAFT_POSTGRES_DATABASE ?? "omnicraft",
+            DB_USERNAME: process.env.OMNICRAFT_POSTGRES_USERNAME ?? "omnicraft",
+            DB_PASSWORD: process.env.OMNICRAFT_POSTGRES_PASSWORD ?? "omnicraft",
+            OMNICRAFT_EXPECTED_DB_DRIVER: "pgsql",
+          }
+        : {
+            DB_CONNECTION: "mysql",
+            DB_HOST: process.env.OMNICRAFT_MYSQL_HOST ?? "127.0.0.1",
+            DB_PORT: process.env.OMNICRAFT_MYSQL_PORT ?? "3306",
+            DB_DATABASE: process.env.OMNICRAFT_MYSQL_DATABASE ?? "omnicraft",
+            DB_USERNAME: process.env.OMNICRAFT_MYSQL_USERNAME ?? "omnicraft",
+            DB_PASSWORD: process.env.OMNICRAFT_MYSQL_PASSWORD ?? "omnicraft",
+            OMNICRAFT_EXPECTED_DB_DRIVER: "mysql",
+          };
   return {
     ...env,
     APP_ENV: "testing",
     APP_DEBUG: "false",
-    DB_CONNECTION: "sqlite",
-    DB_DATABASE: join(serverDir, "database", "database.sqlite"),
+    ...databaseEnvironment,
     CACHE_STORE: "file",
     MAIL_MAILER: "array",
     SESSION_COOKIE: "omnicraft_session",
@@ -306,6 +373,7 @@ async function wait(milliseconds: number): Promise<void> {
 
 async function startLaravel(
   serverDir: string,
+  database: SanctumDatabase = "sqlite",
 ): Promise<{ process: StartedCommand; baseUrl: string }> {
   const port = await availablePort();
   const process = startCommand(
@@ -313,7 +381,7 @@ async function startLaravel(
     ["artisan", "serve", "--host=127.0.0.1", "--port=" + port],
     serverDir,
     {
-      env: isolatedTestEnv(serverDir),
+      env: isolatedTestEnv(serverDir, database),
       maxOutputBytes: 32 * 1024,
     },
   );
@@ -422,9 +490,10 @@ function assertUser(value: unknown, label: string): asserts value is ApiUser {
 
 async function withLaravel(
   serverDir: string,
+  database: SanctumDatabase,
   run: (server: { process: StartedCommand; baseUrl: string }) => Promise<void>,
 ): Promise<void> {
-  const server = await startLaravel(serverDir);
+  const server = await startLaravel(serverDir, database);
   try {
     await run(server);
   } finally {
@@ -466,7 +535,7 @@ async function verifyPublicNoneApi(cliPath: string, tempRoot: string): Promise<v
     0,
     "The Laravel starter database must be reset so the selected OmniCraft migrations run from a clean schema.",
   );
-  const env = isolatedTestEnv(serverDir);
+  const env = isolatedTestEnv(serverDir, "sqlite");
   runRequired(
     "Migrate the Laravel None-mode SQLite project",
     "php",
@@ -497,7 +566,7 @@ async function verifyPublicNoneApi(cliPath: string, tempRoot: string): Promise<v
     "The Laravel None-mode migration did not write its SQLite database.",
   );
 
-  await withLaravel(serverDir, async ({ baseUrl }) => {
+  await withLaravel(serverDir, "sqlite", async ({ baseUrl }) => {
     const jar: CookieJar = new Map();
     const empty = await apiRequest(baseUrl, jar, "/api/users");
     assertStatus(empty, 200, "Anonymous None-mode user list");
@@ -522,11 +591,16 @@ async function verifyPublicNoneApi(cliPath: string, tempRoot: string): Promise<v
   });
 }
 
-async function verifySanctumAuth(cliPath: string, tempRoot: string): Promise<void> {
+async function verifySanctumAuth(
+  cliPath: string,
+  tempRoot: string,
+  database: SanctumDatabase,
+): Promise<void> {
+  const projectName = `laravel-api-native-auth-${database}`;
   const projectRoot = generateProject(
     cliPath,
     tempRoot,
-    "laravel-api-native-auth",
+    projectName,
     [
       "--frontend",
       "react",
@@ -535,24 +609,26 @@ async function verifySanctumAuth(cliPath: string, tempRoot: string): Promise<voi
       "--backend",
       "laravel",
       "--db",
-      "sqlite",
+      database,
       "--auth",
       "laravel-native",
     ],
     true,
   );
-  assertNativeManifest(projectRoot);
-  assertSanctumSetup(projectRoot);
+  assertNativeManifest(projectRoot, database);
+  assertSanctumSetup(projectRoot, database);
 
   const serverDir = join(projectRoot, "server");
   const databaseFile = join(serverDir, "database", "database.sqlite");
-  assert(existsSync(databaseFile), "The Sanctum-mode Laravel database file was not generated.");
-  assert.equal(
-    statSync(databaseFile).size,
-    0,
-    "The Laravel starter database must be reset before the Sanctum schema is migrated.",
-  );
-  const env = isolatedTestEnv(serverDir);
+  const env = isolatedTestEnv(serverDir, database);
+  if (database === "sqlite") {
+    assert(existsSync(databaseFile), "The Sanctum-mode Laravel database file was not generated.");
+    assert.equal(
+      statSync(databaseFile).size,
+      0,
+      "The Laravel starter database must be reset before the Sanctum schema is migrated.",
+    );
+  }
   runRequired(
     "Migrate the Laravel Sanctum SQLite project",
     "php",
@@ -560,10 +636,12 @@ async function verifySanctumAuth(cliPath: string, tempRoot: string): Promise<voi
     serverDir,
     env,
   );
-  assert(
-    statSync(databaseFile).size > 0,
-    "The Laravel Sanctum migration did not write its SQLite database.",
-  );
+  if (database === "sqlite") {
+    assert(
+      statSync(databaseFile).size > 0,
+      "The Laravel Sanctum migration did not write its SQLite database.",
+    );
+  }
 
   const routesOutput = runRequired(
     "List generated Laravel Sanctum routes",
@@ -623,7 +701,7 @@ async function verifySanctumAuth(cliPath: string, tempRoot: string): Promise<voi
   const jarA: CookieJar = new Map();
   const jarB: CookieJar = new Map();
 
-  let live = await startLaravel(serverDir);
+  let live = await startLaravel(serverDir, database);
   try {
     const preflight = await fetch(live.baseUrl + "/api/auth/register", {
       method: "OPTIONS",
@@ -692,7 +770,7 @@ async function verifySanctumAuth(cliPath: string, tempRoot: string): Promise<voi
     assertStatus(await apiRequest(live.baseUrl, jarA, "/api/me"), 200, "Account A session profile");
 
     await live.process.stop();
-    live = await startLaravel(serverDir);
+    live = await startLaravel(serverDir, database);
     assertStatus(
       await apiRequest(live.baseUrl, jarA, "/api/me"),
       200,
@@ -802,7 +880,7 @@ async function verifySanctumAuth(cliPath: string, tempRoot: string): Promise<voi
       "php",
       ["artisan", "cache:clear", "--no-ansi"],
       serverDir,
-      isolatedTestEnv(serverDir),
+      isolatedTestEnv(serverDir, database),
     );
 
     const failedLoginJar: CookieJar = new Map();
@@ -872,11 +950,18 @@ async function main(): Promise<void> {
   let failure: unknown;
   try {
     assertRejectedBeforeWrites(cliPath, tempRoot);
-    assert.deepEqual(AUTHENTICATION_SETUPS, ["none", "laravel-native"]);
+    assert.deepEqual(SANCTUM_AUTH_SCENARIOS, [
+      "none-sqlite",
+      "laravel-native-sqlite",
+      "laravel-native-postgres",
+      "laravel-native-mysql",
+    ]);
     await verifyPublicNoneApi(cliPath, tempRoot);
-    await verifySanctumAuth(cliPath, tempRoot);
+    for (const database of SANCTUM_DATABASES) {
+      await verifySanctumAuth(cliPath, tempRoot, database);
+    }
     console.log(
-      "[laravel-api-sanctum] None and Sanctum generation, SQLite, CSRF, sessions, ownership, and sign-out passed",
+      "[laravel-api-sanctum] None on SQLite and Sanctum SPA lifecycle on SQLite, PostgreSQL, and MySQL passed",
     );
   } catch (error) {
     failure = error;

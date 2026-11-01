@@ -40,9 +40,10 @@ Options:
                        python: postgres, sqlite · php: postgres, sqlite, mysql)
   --auth <name>        Authentication setup (none, better-auth, supabase-auth, laravel-native;
                        Supabase Auth requires TypeScript React/Vite frontend-only; Better Auth
-                       requires React + Node/Express/Drizzle; Laravel native uses Fortify in
-                       integrated Livewire/Inertia React or Sanctum SPA sessions for React/Vite
-                       + Laravel API; Laravel auth requires SQLite)
+                       requires React + Node/Express/Drizzle; Laravel native uses Fortify for
+                       integrated Livewire/Inertia React (SQLite only) or Sanctum SPA sessions for
+                       React/Vite + TypeScript + Laravel 12 API (SQLite, PostgreSQL, or MySQL;
+                       Supported for this exact tuple, see the matrix))
   --orm <name>         Skip ORM selection (drizzle, prisma, none; Prisma is PostgreSQL-only and
                        unavailable for Hono). Separate Node APIs only; Next.js uses raw SQL and
                        rejects --runtime, --backend, --orm, and --no-full-stack

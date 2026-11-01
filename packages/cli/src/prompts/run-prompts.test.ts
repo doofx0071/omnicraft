@@ -399,83 +399,83 @@ describe("runPrompts flow", () => {
     },
   );
 
-  it("keeps React/Vite Laravel API native auth prompt choices aligned with --yes flags", async () => {
-    script.push(
-      { prompt: "select", answer: "web" },
-      { prompt: "select", answer: "typescript" },
-      { prompt: "confirm", answer: true },
-      { prompt: "select", answer: "php" },
-      { prompt: "select", answer: "laravel" },
-      { prompt: "select", answer: "sqlite" },
-      { prompt: "select", answer: "laravel-native" },
-      { prompt: "multiselect", answer: [] },
-      { prompt: "confirm", answer: true },
-    );
+  it.each(["sqlite", "postgres", "mysql"] as const)(
+    "keeps React/Vite Laravel API native auth prompt choices aligned with --yes flags for %s",
+    async (database) => {
+      script.push(
+        { prompt: "select", answer: "web" },
+        { prompt: "select", answer: "typescript" },
+        { prompt: "confirm", answer: true },
+        { prompt: "select", answer: "php" },
+        { prompt: "select", answer: "laravel" },
+        { prompt: "select", answer: database },
+        { prompt: "select", answer: "laravel-native" },
+        { prompt: "multiselect", answer: [] },
+        { prompt: "confirm", answer: true },
+      );
 
-    const interactive = await runPrompts("laravel-api-app", parseArgs(["--frontend", "react"]));
-    const nonInteractive = resolveAnswers(
-      parseArgs([
-        "--yes",
-        "--frontend",
-        "react",
-        "--runtime",
-        "php",
-        "--backend",
-        "laravel",
-        "--db",
-        "sqlite",
-        "--auth",
-        "laravel-native",
-        "--extras",
+      const interactive = await runPrompts("laravel-api-app", parseArgs(["--frontend", "react"]));
+      const nonInteractive = resolveAnswers(
+        parseArgs([
+          "--yes",
+          "--frontend",
+          "react",
+          "--runtime",
+          "php",
+          "--backend",
+          "laravel",
+          "--db",
+          database,
+          "--auth",
+          "laravel-native",
+          "--extras",
+          "none",
+        ]),
+        interactive.projectName,
+        interactive.targetDir,
+      );
+
+      expect(interactive).toMatchObject({
+        frontend: nonInteractive.frontend,
+        language: nonInteractive.language,
+        fullStack: nonInteractive.fullStack,
+        backendRuntime: nonInteractive.backendRuntime,
+        backendFramework: nonInteractive.backendFramework,
+        orm: null,
+        database,
+        authentication: nonInteractive.authentication,
+        extras: nonInteractive.extras,
+        architecture: nonInteractive.architecture,
+      });
+      const authOptions = optionsSeen.find((entry) =>
+        entry.options.some((option) => option.value === "laravel-native"),
+      );
+      expect(authOptions?.options.map((option) => option.value)).toEqual([
         "none",
-      ]),
-      interactive.projectName,
-      interactive.targetDir,
-    );
+        "laravel-native",
+      ]);
+    },
+  );
 
-    expect(interactive).toMatchObject({
-      frontend: nonInteractive.frontend,
-      language: nonInteractive.language,
-      fullStack: nonInteractive.fullStack,
-      backendRuntime: nonInteractive.backendRuntime,
-      backendFramework: nonInteractive.backendFramework,
-      orm: null,
-      database: nonInteractive.database,
-      authentication: nonInteractive.authentication,
-      extras: nonInteractive.extras,
-      architecture: nonInteractive.architecture,
-    });
-    const authOptions = optionsSeen.find((entry) =>
-      entry.options.some((option) => option.value === "laravel-native"),
-    );
-    expect(authOptions?.options.map((option) => option.value)).toEqual(["none", "laravel-native"]);
-  });
+  it.each(["postgres", "mysql"] as const)(
+    "rejects an incompatible Inertia React database before presenting prompts: %s",
+    async (database) => {
+      await expect(
+        runPrompts("inertia-app", parseArgs(["--frontend", "inertia-react", "--db", database])),
+      ).rejects.toThrow(/Inertia React currently requires PHP \+ Laravel \+ SQLite/);
+      expect(calls).toEqual([]);
+    },
+  );
 
-  it("rejects an incompatible Inertia React database before presenting prompts", async () => {
-    await expect(
-      runPrompts("inertia-app", parseArgs(["--frontend", "inertia-react", "--db", "postgres"])),
-    ).rejects.toThrow(/Inertia React currently requires PHP \+ Laravel \+ SQLite/);
-    expect(calls).toEqual([]);
-  });
-
-  it("rejects an incompatible Livewire database before presenting prompts", async () => {
-    await expect(
-      runPrompts("livewire-app", parseArgs(["--frontend", "livewire", "--db", "postgres"])),
-    ).rejects.toThrow(/requires PHP \+ Laravel \+ SQLite/);
-    expect(calls).toEqual([]);
-  });
-
-  it("rejects an incompatible Laravel API auth database before presenting prompts", async () => {
-    await expect(
-      runPrompts(
-        "laravel-api-app",
-        parseArgs(["--frontend", "react", "--auth", "laravel-native", "--db", "postgres"]),
-      ),
-    ).rejects.toThrow(
-      /requires the separate PHP \+ Laravel API, TypeScript, Eloquent, and SQLite path/,
-    );
-    expect(calls).toEqual([]);
-  });
+  it.each(["postgres", "mysql"] as const)(
+    "rejects an incompatible Livewire database before presenting prompts: %s",
+    async (database) => {
+      await expect(
+        runPrompts("livewire-app", parseArgs(["--frontend", "livewire", "--db", database])),
+      ).rejects.toThrow(/requires PHP \+ Laravel \+ SQLite/);
+      expect(calls).toEqual([]);
+    },
+  );
 
   it("takes the frontend-only shortcut when full-stack is declined", async () => {
     script.push(

@@ -196,19 +196,24 @@ function expectedScenario(
       return database
     }
     case 'php-laravel-sanctum-spa-auth': {
+      const database = requiredDatabase(answers, capability)
       assert.equal(answers.backendRuntime, 'php', `"${capability.id}" must use PHP.`)
       assert.equal(answers.backendFramework, 'laravel', `"${capability.id}" must use Laravel.`)
       assertReactTypescriptApi(answers, capability)
       assert.equal(answers.fullStack, true, `"${capability.id}" must use a separate Laravel API.`)
       assert.equal(answers.orm, null, `"${capability.id}" must use Eloquent without a separate ORM choice.`)
-      assert.equal(answers.database, 'sqlite', `"${capability.id}" is verified only on SQLite.`)
+      assert(
+        database === 'sqlite' || database === 'postgres' || database === 'mysql',
+        `"${capability.id}" must use a supported Laravel SQL database.`,
+      )
+      assert.equal(answers.database, database, `"${capability.id}" must use its registered database.`)
       assert.equal(answers.authentication, 'laravel-native', `"${capability.id}" must select Laravel native auth.`)
       assert.equal(combination.flags.auth, 'laravel-native', `"${capability.id}" must pass --auth laravel-native.`)
       assert.equal(combination.module, undefined, `"${capability.id}" must not model auth as an add module.`)
       const manifest = buildManifest(answers, 'support-evidence', 'npm')
       assert.equal(manifest.authentication, 'laravel-native')
       assert.deepEqual(manifest.modules, [], `"${capability.id}" must keep auth separate from module history.`)
-      return 'laravel-native'
+      return `laravel-native-${database}`
     }
     case 'php-laravel-livewire-auth': {
       const authentication = combination.flags.auth

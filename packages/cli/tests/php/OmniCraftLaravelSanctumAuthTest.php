@@ -4,12 +4,18 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class OmniCraftLaravelSanctumAuthTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_generated_project_uses_the_selected_database_driver(): void
+    {
+        $this->assertSame(env('OMNICRAFT_EXPECTED_DB_DRIVER'), DB::connection()->getDriverName());
+    }
 
     private function spaHeaders(): array
     {

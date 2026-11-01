@@ -60,6 +60,27 @@ for (const { framework, orm, db } of combos) {
   })
 }
 
+// Laravel 12 Sanctum SPA auth uses the database-neutral server/client
+// overlays and a database-specific generated setup README. Runtime support
+// remains gated by the PHP auth integration job and support matrix evidence.
+for (const database of ['postgres', 'mysql'] as const) {
+  scaffold({
+    projectName: `smoke-laravel-sanctum-${database}`,
+    targetDir: '.',
+    projectType: 'web',
+    frontend: 'react',
+    language: 'typescript',
+    fullStack: true,
+    backendRuntime: 'php',
+    backendFramework: 'laravel',
+    orm: null,
+    database,
+    authentication: 'laravel-native',
+    extras: { tailwind: false, eslintPrettier: false, shadcn: false },
+    architecture: { kind: 'separate-frontend-api' },
+  })
+}
+
 // Also one frontend-only project
 scaffold({
   projectName: 'smoke-frontend-only',
@@ -147,7 +168,22 @@ for (const authentication of ['none', 'laravel-native'] as const) {
   console.log(`running create-next-app for ${name}...`)
   const { spawnSync } = await import('node:child_process')
   const cna = spawnSync(
-    ['npx', '--yes', 'create-next-app@16', name, '--ts', '--app', '--tailwind', '--no-src-dir', '--eslint', '--import-alias', '@/*', '--use-npm', '--skip-install', '--yes'].join(' '),
+    [
+      'npx',
+      '--yes',
+      'create-next-app@16',
+      name,
+      '--ts',
+      '--app',
+      '--tailwind',
+      '--no-src-dir',
+      '--eslint',
+      '--import-alias',
+      '@/*',
+      '--use-npm',
+      '--skip-install',
+      '--yes',
+    ].join(' '),
     { cwd: outRoot, stdio: 'inherit', shell: process.platform === 'win32' },
   )
   if (cna.status !== 0) {

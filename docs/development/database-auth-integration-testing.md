@@ -92,25 +92,30 @@ portable selects.
 
 The Laravel suite scaffolds the current Laravel 12 overlay, creates the Composer Laravel skeleton,
 installs/checks Composer dependencies in PHP 8.3, applies the generated migration, and runs Laravel
-feature tests for the selected PostgreSQL or MySQL connection and generated users API. The test asserts
-the active driver so a fallback to SQLite cannot pass. That multi-database lane checks the base public
-`None` API behavior; authenticated Laravel API coverage is a separate SQLite-only target below.
+feature tests for the selected SQLite, PostgreSQL, or MySQL connection and generated users API. The
+test asserts the active driver so a fallback to SQLite cannot pass. The existing base public `None`
+API behavior remains covered alongside the authenticated API target below.
 
 The separate `php-laravel-sanctum-spa-auth` target uses the built production CLI for the exact React/Vite
-TypeScript + Laravel 12 API + SQLite `None` and Laravel-native modes. It checks incompatible choices
-reject before writes, verifies `None` keeps anonymous `/api/users` CRUD public, and confirms the native
-manifest records auth separately from module history. It checks the generated dependency is the pinned
-Sanctum release and that Fortify, personal-access-token routes, traits, and migrations are absent. The
-generated native app is migrated, its client is built, and Laravel feature tests check hashed passwords,
-registration/login/logout, and protected routes. A live loopback HTTP test uses independent cookie jars to
-verify credentialed CORS preflight, the CSRF cookie/header requirement, session restoration after a server
-restart, per-account record isolation, cross-account read/delete rejection, and sign-out invalidation.
-It verifies that failed credentials return a generic 422 without framework exception details, count
-toward the shared IP-based registration/login throttle, and receive a 429 response once that limit is
-reached.
+TypeScript + Laravel 12 API + Eloquent tuple on SQLite, PostgreSQL, and MySQL. `None` retains the existing
+public SQLite API. For each database, it checks incompatible choices reject before writes, confirms the
+native manifest records auth separately from module history, verifies the generated database setting and
+actual active driver, and checks the generated README names the selected database. It checks the generated
+dependency is the pinned Sanctum release and that Fortify, personal-access-token routes, traits, and
+migrations are absent. Each generated native app is migrated and runs Laravel feature tests for hashed
+passwords, registration/login/logout, protected routes, and the selected database driver. Live loopback
+HTTP tests use independent cookie jars to verify credentialed CORS preflight, the CSRF cookie/header
+requirement, session restoration after a server restart, per-account record isolation, cross-account
+read/delete rejection, and sign-out invalidation. They verify failed credentials return a generic 422
+without framework exception details, count toward the shared IP-based registration/login throttle, and
+receive a 429 response once that limit is reached. Livewire and Inertia PostgreSQL/MySQL auth requests
+must reject before creating files; their integrated SQLite boundaries are unchanged.
 The generated docs require explicit production SPA origins, a shared session-cookie parent domain, and
-secure cookies over HTTPS. All accounts and records use synthetic test values; the job creates no
-external service or credential. The exact SQLite target passed hosted run [#41239882961](https://github.com/doofx0071/omnicraft/actions/runs/41239882961/job/124651400547), including both generated auth scenarios; the same run's [supported-stack release gate](https://github.com/doofx0071/omnicraft/actions/runs/41239882961/job/124657718885) passed.
+secure cookies over HTTPS. Laravel's session store remains file-based; changing the application database
+does not add database-backed or distributed sessions. All accounts and records use synthetic test values;
+the job creates no external service or credential. The hosted job uses the pinned PostgreSQL and MySQL
+images from the PHP integration infrastructure and is required by the supported-stack release gate. A
+tuple is Supported only after its generated-project checks and the exact final PR-head gate pass.
 
 The separate `php-laravel-inertia-react-auth-integration` target generates Laravel 13 + Inertia React
 through the production CLI using pinned official blank/authenticated React kits. Its `None` and

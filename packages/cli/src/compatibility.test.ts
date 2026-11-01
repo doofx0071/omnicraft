@@ -7,6 +7,8 @@ import {
   isRuntimeAllowedByFlags,
 } from "./compatibility.js";
 import { parseArgs } from "./args.js";
+import { validateStackFlags, resolveAnswers } from "./prefill.js";
+import { composeLayers } from "./scaffold/compose.js";
 
 const supportedExpressDrizzle = {
   frontend: "react",
@@ -121,37 +123,102 @@ describe("creation-time authentication compatibility", () => {
     expect(authenticationCompatibilityReason("laravel-native", context)).toBeNull();
   });
 
-  it("offers Laravel native auth for React/Vite TypeScript + Laravel API + SQLite only", () => {
-    const context = {
-      frontend: "react",
-      language: "typescript",
-      architecture: { kind: "separate-frontend-api" },
-      backendRuntime: "php",
-      backendFramework: "laravel",
-      orm: null,
-      database: "sqlite",
-    };
-    expect(compatibleAuthenticationSetups(context)).toEqual(["none", "laravel-native"]);
-    expect(authenticationCompatibilityReason("laravel-native", context)).toBeNull();
-    expect(
-      authenticationCompatibilityReason("laravel-native", { ...context, language: "javascript" }),
-    ).toMatch(/does not support language/);
-    expect(
-      authenticationCompatibilityReason("laravel-native", { ...context, language: null }),
-    ).toMatch(/does not support language/);
-    expect(
-      authenticationCompatibilityReason("laravel-native", { ...context, database: "postgres" }),
-    ).toMatch(/SQLite only/);
-    expect(
-      authenticationCompatibilityReason("laravel-native", {
-        ...context,
-        architecture: { kind: "frontend-only" },
-      }),
-    ).toMatch(/React\/Vite Laravel API architecture/);
-  });
+  it.each(["sqlite", "postgres", "mysql"])(
+    "offers Laravel native auth for React/Vite TypeScript + Laravel API + %s",
+    (database) => {
+      const context = {
+        frontend: "react",
+        language: "typescript",
+        architecture: { kind: "separate-frontend-api" },
+        backendRuntime: "php",
+        backendFramework: "laravel",
+        orm: null,
+        database,
+      };
+      expect(compatibleAuthenticationSetups(context)).toEqual(["none", "laravel-native"]);
+      expect(authenticationCompatibilityReason("laravel-native", context)).toBeNull();
+      expect(
+        authenticationCompatibilityReason("laravel-native", {
+          ...context,
+          language: "javascript",
+        }),
+      ).toMatch(/does not support language/);
+      expect(
+        authenticationCompatibilityReason("laravel-native", { ...context, language: null }),
+      ).toMatch(/does not support language/);
+      expect(
+        authenticationCompatibilityReason("laravel-native", {
+          ...context,
+          architecture: { kind: "frontend-only" },
+        }),
+      ).toMatch(/React\/Vite Laravel API architecture/);
+      const args = parseArgs([
+        "--yes",
+        "--frontend",
+        "react",
+        "--runtime",
+        "php",
+        "--backend",
+        "laravel",
+        "--db",
+        database,
+        "--auth",
+        "laravel-native",
+      ]);
+      expect(() => validateStackFlags(args)).not.toThrow();
+      const answers = resolveAnswers(args, `sanctum-${database}`, ".");
+      expect(answers.database).toBe(database);
+      expect(composeLayers(answers)).toContainEqual({
+        src: `root/fullstack-php/${database}-sanctum-spa-auth`,
+        dest: ".",
+      });
+    },
+  );
+
+  it.each(["postgres", "mysql"])(
+    "keeps integrated Livewire and Inertia auth SQLite-only for %s",
+    (database) => {
+      for (const [frontend, language] of [
+        ["livewire", undefined],
+        ["inertia-react", "typescript"],
+      ] as const) {
+        const context = {
+          frontend,
+          language: language ?? null,
+          architecture: { kind: "integrated-laravel" },
+          backendRuntime: "php",
+          backendFramework: "laravel",
+          orm: null,
+          database,
+        };
+        expect(compatibleAuthenticationSetups(context)).toEqual(["none"]);
+        expect(authenticationCompatibilityReason("laravel-native", context)).toMatch(
+          /integrated Laravel native authentication currently covers SQLite only/i,
+        );
+        const args = parseArgs([
+          "--yes",
+          "--frontend",
+          frontend,
+          ...(language ? ["--lang", language] : []),
+          "--runtime",
+          "php",
+          "--backend",
+          "laravel",
+          "--db",
+          database,
+          "--auth",
+          "laravel-native",
+        ]);
+        expect(() => validateStackFlags(args)).toThrow(/SQLite/);
+      }
+    },
+  );
 
   it.each([
-    [{ database: "postgres" }, /SQLite only/],
+    [
+      { database: "postgres" },
+      /integrated Laravel native authentication currently covers SQLite only/i,
+    ],
     [{ backendRuntime: "node" }, /PHP \+ Laravel/],
     [{ frontend: "vue" }, /integrated Livewire\/Inertia React or the React\/Vite Laravel API/],
     [

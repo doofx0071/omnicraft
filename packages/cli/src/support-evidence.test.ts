@@ -84,7 +84,7 @@ describe("support matrix evidence", () => {
     expect(LARAVEL_INERTIA_REACT_AUTH_SCENARIOS).toEqual(["none", "laravel-native"]);
   });
 
-  it("registers Laravel 12 API None and Sanctum SPA auth as a separate generated-project runtime target", () => {
+  it("registers Laravel 12 API None and database-specific Sanctum SPA auth scenarios as a separate generated-project runtime target", () => {
     const target = INTEGRATION_TARGETS["php-laravel-sanctum-spa-auth"];
     expect(target.script).toBe("scripts/php-laravel-sanctum-auth-e2e.ts");
     expect(target.workflowJob).toBe("php-laravel-sanctum-spa-auth-integration");
@@ -94,34 +94,59 @@ describe("support matrix evidence", () => {
     expect(integrationScenarios("php-laravel-sanctum-spa-auth")).toEqual(
       LARAVEL_SANCTUM_SPA_AUTH_SCENARIOS,
     );
-    expect(LARAVEL_SANCTUM_SPA_AUTH_SCENARIOS).toEqual(["none", "laravel-native"]);
+    expect(LARAVEL_SANCTUM_SPA_AUTH_SCENARIOS).toEqual([
+      "none-sqlite",
+      "laravel-native-sqlite",
+      "laravel-native-postgres",
+      "laravel-native-mysql",
+    ]);
   });
 
-  it("maps only the Laravel 12 API + SQLite native-auth tuple to Sanctum runtime evidence", () => {
-    const capability = SUPPORTED_CAPABILITIES.find(
-      ({ id }) => id === "laravel-api-sanctum-spa-auth-sqlite",
-    );
-    const combination = capability?.combinations[0];
+  it("registers only the evidence-backed Laravel 12 API + Sanctum database tuples as Supported", () => {
+    const databaseCases = [
+      {
+        database: "sqlite",
+        label: "SQLite",
+        scenario: "laravel-native-sqlite",
+      },
+      {
+        database: "postgres",
+        label: "PostgreSQL",
+        scenario: "laravel-native-postgres",
+      },
+      {
+        database: "mysql",
+        label: "MySQL",
+        scenario: "laravel-native-mysql",
+      },
+    ] as const;
 
-    expect(capability?.target).toBe("php-laravel-sanctum-spa-auth");
-    expect(capability?.scenarios).toEqual(["laravel-native"]);
-    expect(capability?.combinations).toHaveLength(1);
-    expect(combination?.flags).toMatchObject({
-      platform: "web",
-      lang: "typescript",
-      frontend: "react",
-      fullStack: true,
-      runtime: "php",
-      backend: "laravel",
-      db: "sqlite",
-      auth: "laravel-native",
-      extras: [],
-    });
-    expect(combination?.flags.orm).toBeUndefined();
-    expect(combination?.module).toBeUndefined();
-    expect(capability && registeredMatrixRowPrefix(capability)).toBe(
-      "| React + Vite + TypeScript + Laravel 12 API + Sanctum SPA sessions | Eloquent | SQLite | **Supported** |",
-    );
+    for (const { database, label, scenario } of databaseCases) {
+      const capability = SUPPORTED_CAPABILITIES.find(
+        ({ id }) => id === `laravel-api-sanctum-spa-auth-${database}`,
+      );
+      const combination = capability?.combinations[0];
+
+      expect(capability?.target).toBe("php-laravel-sanctum-spa-auth");
+      expect(capability?.scenarios).toEqual([scenario]);
+      expect(capability?.combinations).toHaveLength(1);
+      expect(combination?.flags).toMatchObject({
+        platform: "web",
+        lang: "typescript",
+        frontend: "react",
+        fullStack: true,
+        runtime: "php",
+        backend: "laravel",
+        db: database,
+        auth: "laravel-native",
+        extras: [],
+      });
+      expect(combination?.flags.orm).toBeUndefined();
+      expect(combination?.module).toBeUndefined();
+      expect(capability && registeredMatrixRowPrefix(capability)).toBe(
+        `| React + Vite + TypeScript + Laravel 12 API + Sanctum SPA sessions | Eloquent | ${label} | **Supported** |`,
+      );
+    }
   });
 
   it("registers Supabase Auth as a single generated-project runtime scenario", () => {

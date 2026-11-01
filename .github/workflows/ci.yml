@@ -423,7 +423,35 @@ jobs:
 
   php-laravel-sanctum-spa-auth-integration:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
+    services:
+      postgres:
+        image: postgres:17.11-alpine3.24
+        env:
+          POSTGRES_DB: omnicraft
+          POSTGRES_USER: omnicraft
+          POSTGRES_PASSWORD: omnicraft
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U omnicraft -d omnicraft"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      mysql:
+        image: mysql:8.4.13
+        env:
+          MYSQL_DATABASE: omnicraft
+          MYSQL_USER: omnicraft
+          MYSQL_PASSWORD: omnicraft
+          MYSQL_ROOT_PASSWORD: omnicraft-root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uomnicraft -pomnicraft --silent"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
     steps:
       - uses: actions/checkout@v4
 
@@ -435,8 +463,8 @@ jobs:
       - name: Set up PHP and Composer
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
-          extensions: mbstring, pdo_sqlite, sqlite3, xml, zip
+          php-version: "8.3"
+          extensions: mbstring, pdo_mysql, pdo_pgsql, pdo_sqlite, sqlite3, xml, zip
           tools: composer:2.10.3
           coverage: none
 
@@ -447,7 +475,18 @@ jobs:
         run: npx tsup
         working-directory: packages/cli
 
-      - name: Test generated Laravel 12 API None and Sanctum SPA auth projects on SQLite
+      - name: Test generated Laravel 12 API None on SQLite and Sanctum SPA auth on all databases
+        env:
+          OMNICRAFT_POSTGRES_HOST: 127.0.0.1
+          OMNICRAFT_POSTGRES_PORT: 5432
+          OMNICRAFT_POSTGRES_DATABASE: omnicraft
+          OMNICRAFT_POSTGRES_USERNAME: omnicraft
+          OMNICRAFT_POSTGRES_PASSWORD: omnicraft
+          OMNICRAFT_MYSQL_HOST: 127.0.0.1
+          OMNICRAFT_MYSQL_PORT: 3306
+          OMNICRAFT_MYSQL_DATABASE: omnicraft
+          OMNICRAFT_MYSQL_USERNAME: omnicraft
+          OMNICRAFT_MYSQL_PASSWORD: omnicraft
         run: npm run test:integration:php-sanctum-auth --workspace=create-omnicraft
 
   python-fastapi-integration:

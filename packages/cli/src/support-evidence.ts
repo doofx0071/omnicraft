@@ -63,9 +63,16 @@ export const NODE_RUNTIME_SCENARIOS = [
   { id: 'hono-raw-mysql', framework: 'hono', orm: 'none', database: 'mysql' },
 ] as const satisfies readonly NodeRuntimeScenario[]
 
-export const NEXTJS_DATABASE_SCENARIOS = ['sqlite', 'postgres', 'mysql'] as const satisfies readonly Extract<Database, 'sqlite' | 'postgres' | 'mysql'>[]
+export const NEXTJS_DATABASE_SCENARIOS = [
+  'sqlite',
+  'postgres',
+  'mysql',
+] as const satisfies readonly Extract<Database, 'sqlite' | 'postgres' | 'mysql'>[]
 export const FRONTEND_RUNTIME_SCENARIOS = ['react-js-frontend-only'] as const
-export const DOCKER_MODULE_SCENARIOS = ['postgres', 'mysql'] as const satisfies readonly Extract<Database, 'postgres' | 'mysql'>[]
+export const DOCKER_MODULE_SCENARIOS = ['postgres', 'mysql'] as const satisfies readonly Extract<
+  Database,
+  'postgres' | 'mysql'
+>[]
 export const MODULE_RUNTIME_SCENARIOS = [
   'add-testing-react-vite-ts',
   'add-testing-react-vite-js-frontend-only',
@@ -133,7 +140,15 @@ function allReactViteTestingCombinations(): SupportedCombination[] {
         for (const orm of CAPABILITY_REGISTRY.ormsByNodeBackend[backend]) {
           for (const database of AVAILABLE.db.node) {
             if (orm === 'prisma' && database !== 'postgres') continue
-            const combination = webStack('react', language, 'node', backend, orm, database, 'testing')
+            const combination = webStack(
+              'react',
+              language,
+              'node',
+              backend,
+              orm,
+              database,
+              'testing',
+            )
             combination.flags.extras = [...extras]
             combinations.push(combination)
           }
@@ -141,13 +156,29 @@ function allReactViteTestingCombinations(): SupportedCombination[] {
       }
 
       for (const database of AVAILABLE.db.python) {
-        const combination = webStack('react', language, 'python', 'fastapi', undefined, database, 'testing')
+        const combination = webStack(
+          'react',
+          language,
+          'python',
+          'fastapi',
+          undefined,
+          database,
+          'testing',
+        )
         combination.flags.extras = [...extras]
         combinations.push(combination)
       }
 
       for (const database of AVAILABLE.db.php) {
-        const combination = webStack('react', language, 'php', 'laravel', undefined, database, 'testing')
+        const combination = webStack(
+          'react',
+          language,
+          'php',
+          'laravel',
+          undefined,
+          database,
+          'testing',
+        )
         combination.flags.extras = [...extras]
         combinations.push(combination)
       }
@@ -169,7 +200,9 @@ export const REACT_VITE_TESTING_NONREJECTED_COMBINATIONS =
     (combination) => !REACT_VITE_TESTING_REJECTED_COMBINATIONS.includes(combination),
   )
 export const REACT_VITE_TESTING_FOLLOWUP_SCENARIOS = [
-  ...new Set(REACT_VITE_TESTING_FOLLOWUP_COMBINATIONS.map(({ flags }) => reactViteTestingGroupId(flags))),
+  ...new Set(
+    REACT_VITE_TESTING_FOLLOWUP_COMBINATIONS.map(({ flags }) => reactViteTestingGroupId(flags)),
+  ),
 ]
 export const NATIVE_PLATFORM_SCENARIOS = [
   'expo-ios-simulator',
@@ -178,16 +211,26 @@ export const NATIVE_PLATFORM_SCENARIOS = [
   'tauri-macos-desktop',
   'tauri-windows-desktop',
 ] as const
-export const LARAVEL_LIVEWIRE_AUTH_SCENARIOS = ['none', 'laravel-native'] as const satisfies readonly AuthenticationSetup[]
-export const LARAVEL_INERTIA_REACT_AUTH_SCENARIOS = ['none', 'laravel-native'] as const satisfies readonly AuthenticationSetup[]
-export const LARAVEL_SANCTUM_SPA_AUTH_SCENARIOS = ['none', 'laravel-native'] as const satisfies readonly AuthenticationSetup[]
+export const LARAVEL_LIVEWIRE_AUTH_SCENARIOS = [
+  'none',
+  'laravel-native',
+] as const satisfies readonly AuthenticationSetup[]
+export const LARAVEL_INERTIA_REACT_AUTH_SCENARIOS = [
+  'none',
+  'laravel-native',
+] as const satisfies readonly AuthenticationSetup[]
+export const LARAVEL_SANCTUM_SPA_AUTH_SCENARIOS = [
+  'none-sqlite',
+  'laravel-native-sqlite',
+  'laravel-native-postgres',
+  'laravel-native-mysql',
+] as const
 
 export const INTEGRATION_TARGETS = {
   'node-runtime': {
     script: 'scripts/node-stack-integration.ts',
     workflowJob: 'node-runtime-integration',
-    workflowCommand:
-      'npm run test:integration:node --workspace=create-omnicraft -- --scenario',
+    workflowCommand: 'npm run test:integration:node --workspace=create-omnicraft -- --scenario',
     scenarios: NODE_RUNTIME_SCENARIOS.map((scenario) => scenario.id),
   },
   'nextjs-runtime': {
@@ -205,7 +248,8 @@ export const INTEGRATION_TARGETS = {
   'docker-module': {
     script: 'scripts/docker-module-integration.ts',
     workflowJob: 'docker-module-integration',
-    workflowCommand: 'npm run test:integration:docker-module --workspace=create-omnicraft -- --database',
+    workflowCommand:
+      'npm run test:integration:docker-module --workspace=create-omnicraft -- --database',
     scenarios: DOCKER_MODULE_SCENARIOS,
   },
   'module-runtime': {
@@ -381,8 +425,10 @@ function phpStack(database: Database): SupportedCombination {
   return webStack('react', 'typescript', 'php', 'laravel', undefined, database)
 }
 
-function sanctumSpaAuthStack(): SupportedCombination {
-  const stack = phpStack('sqlite')
+function sanctumSpaAuthStack(
+  database: Extract<Database, 'sqlite' | 'postgres' | 'mysql'>,
+): SupportedCombination {
+  const stack = phpStack(database)
   return { ...stack, flags: { ...stack.flags, auth: 'laravel-native' } }
 }
 
@@ -477,7 +523,8 @@ function requireOneCombination(capability: SupportedCapability): SupportedCombin
 /** Renders the exact matrix label from the typed combination registered with its evidence. */
 export function registeredMatrixRowPrefix(capability: SupportedCapability): string {
   const combinations = capability.combinations
-  if (combinations.length === 0) throw new Error('A Supported matrix row must register a combination.')
+  if (combinations.length === 0)
+    throw new Error('A Supported matrix row must register a combination.')
   const first = combinations[0] as SupportedCombination
   const frontend = first.flags.frontend as Frontend
   const language = first.flags.lang
@@ -550,7 +597,9 @@ export function registeredMatrixRowPrefix(capability: SupportedCapability): stri
     case 'laravel-livewire-auth': {
       const authentication = requireOneCombination(capability).flags.auth
       if (authentication !== 'none' && authentication !== 'laravel-native') {
-        throw new Error(`Livewire auth row "${capability.id}" must select None or Laravel native auth.`)
+        throw new Error(
+          `Livewire auth row "${capability.id}" must select None or Laravel native auth.`,
+        )
       }
       const mode = authentication === 'none' ? 'None' : 'Laravel native/Fortify'
       label = `Laravel 13 + Livewire 4 (${mode}) | Eloquent | ${oneDatabase()}`
@@ -559,7 +608,9 @@ export function registeredMatrixRowPrefix(capability: SupportedCapability): stri
     case 'laravel-inertia-react-auth': {
       const authentication = requireOneCombination(capability).flags.auth
       if (authentication !== 'none' && authentication !== 'laravel-native') {
-        throw new Error(`Inertia React auth row "${capability.id}" must select None or Laravel native auth.`)
+        throw new Error(
+          `Inertia React auth row "${capability.id}" must select None or Laravel native auth.`,
+        )
       }
       const mode = authentication === 'none' ? 'None' : 'Laravel native/Fortify'
       label = `Laravel 13 + Inertia React (${mode}) | Eloquent | ${oneDatabase()}`
@@ -575,16 +626,16 @@ export function registeredMatrixRowPrefix(capability: SupportedCapability): stri
         flags.runtime !== 'php' ||
         flags.backend !== 'laravel' ||
         flags.orm !== undefined ||
-        flags.db !== 'sqlite' ||
+        flags.db === undefined ||
         flags.auth !== 'laravel-native' ||
         flags.extras.length !== 0 ||
         combination.module !== undefined
       ) {
         throw new Error(
-          `Sanctum SPA auth row "${capability.id}" must use React/Vite TypeScript + Laravel 12 API + SQLite with Laravel native auth.`,
+          `Sanctum SPA auth row "${capability.id}" must use React/Vite TypeScript + Laravel 12 API + a registered SQL database with Laravel native auth.`,
         )
       }
-      label = 'React + Vite + TypeScript + Laravel 12 API + Sanctum SPA sessions | Eloquent | SQLite'
+      label = `React + Vite + TypeScript + Laravel 12 API + Sanctum SPA sessions | Eloquent | ${DATABASE_LABELS[flags.db as Database]}`
       break
     }
     case 'auth-module':
@@ -824,8 +875,22 @@ export const SUPPORTED_CAPABILITIES = [
     id: 'laravel-api-sanctum-spa-auth-sqlite',
     matrixFormat: 'laravel-sanctum-spa-auth',
     target: 'php-laravel-sanctum-spa-auth',
-    scenarios: ['laravel-native'],
-    combinations: [sanctumSpaAuthStack()],
+    scenarios: ['laravel-native-sqlite'],
+    combinations: [sanctumSpaAuthStack('sqlite')],
+  },
+  {
+    id: 'laravel-api-sanctum-spa-auth-postgres',
+    matrixFormat: 'laravel-sanctum-spa-auth',
+    target: 'php-laravel-sanctum-spa-auth',
+    scenarios: ['laravel-native-postgres'],
+    combinations: [sanctumSpaAuthStack('postgres')],
+  },
+  {
+    id: 'laravel-api-sanctum-spa-auth-mysql',
+    matrixFormat: 'laravel-sanctum-spa-auth',
+    target: 'php-laravel-sanctum-spa-auth',
+    scenarios: ['laravel-native-mysql'],
+    combinations: [sanctumSpaAuthStack('mysql')],
   },
   {
     id: 'auth-express-drizzle-sqlite',
@@ -958,14 +1023,18 @@ export const SUPPORTED_CAPABILITIES = [
     matrixFormat: 'testing-module',
     target: 'module-runtime',
     scenarios: ['add-testing-fastapi-sqlite'],
-    combinations: [webStack('react', 'typescript', 'python', 'fastapi', undefined, 'sqlite', 'testing')],
+    combinations: [
+      webStack('react', 'typescript', 'python', 'fastapi', undefined, 'sqlite', 'testing'),
+    ],
   },
   {
     id: 'testing-module-react-vite-ts-laravel-sqlite',
     matrixFormat: 'testing-module',
     target: 'module-runtime',
     scenarios: ['add-testing-laravel-sqlite'],
-    combinations: [webStack('react', 'typescript', 'php', 'laravel', undefined, 'sqlite', 'testing')],
+    combinations: [
+      webStack('react', 'typescript', 'php', 'laravel', undefined, 'sqlite', 'testing'),
+    ],
   },
   {
     id: 'testing-module-react-vite-other-exact-paths',
