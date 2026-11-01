@@ -262,8 +262,12 @@ The current workflow:
     path on SQLite and the exact React/Vite TypeScript + Laravel 12 API + Sanctum SPA auth tuple on
     SQLite, PostgreSQL, and MySQL. It checks real generated-project driver selection and the complete
     auth lifecycle against each selected database. Integrated Laravel 13 Livewire/Inertia auth remains
-    SQLite-only. The job is required by the aggregate gate; PostgreSQL/MySQL auth rows stay unverified
-    until exact generated-project checks and the final PR-head release gate pass.
+    SQLite-only. Exact-head hosted run [#41311565918 on `d722b1d2`](https://github.com/doofx0071/omnicraft/actions/runs/41311565918)
+    passed the [generated Laravel job](https://github.com/doofx0071/omnicraft/actions/runs/41311565918/job/124862866936),
+    [support-evidence check](https://github.com/doofx0071/omnicraft/actions/runs/41311565918/job/124862866722),
+    and [supported-stack release gate](https://github.com/doofx0071/omnicraft/actions/runs/41311565918/job/124869365359).
+    PostgreSQL and MySQL Sanctum support is limited to the pinned database images and file-backed Laravel
+    sessions; it does not establish database-backed/distributed sessions or untested server versions.
 15. Runs hosted Ubuntu `supabase-auth-integration` on a disposable local Supabase CLI stack. It
     generates the React/Vite TypeScript frontend-only project through the production CLI, installs
     and builds it, applies the local migration, verifies explicit Data API grants and owner RLS,

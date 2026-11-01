@@ -879,6 +879,20 @@ export const SUPPORTED_CAPABILITIES = [
     combinations: [sanctumSpaAuthStack('sqlite')],
   },
   {
+    id: 'laravel-api-sanctum-spa-auth-postgres',
+    matrixFormat: 'laravel-sanctum-spa-auth',
+    target: 'php-laravel-sanctum-spa-auth',
+    scenarios: ['laravel-native-postgres'],
+    combinations: [sanctumSpaAuthStack('postgres')],
+  },
+  {
+    id: 'laravel-api-sanctum-spa-auth-mysql',
+    matrixFormat: 'laravel-sanctum-spa-auth',
+    target: 'php-laravel-sanctum-spa-auth',
+    scenarios: ['laravel-native-mysql'],
+    combinations: [sanctumSpaAuthStack('mysql')],
+  },
+  {
     id: 'auth-express-drizzle-sqlite',
     matrixFormat: 'auth-module',
     target: 'node-express-drizzle',
