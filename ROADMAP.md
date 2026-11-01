@@ -90,8 +90,10 @@ The release includes the exact supported combinations documented in the
 13 + Inertia React on SQLite, each with `None` or Fortify; creation-time Better Auth for React/Vite
 TypeScript + Express + Drizzle on SQLite, PostgreSQL, and MySQL; Supabase Auth for React/Vite
 TypeScript frontend-only apps using the Supabase Data API and user-scoped RLS; and Laravel 12 API
-Sanctum SPA sessions for React/Vite TypeScript + SQLite. No managed-provider, third-party JWT
-bridge, or other Laravel mode is implied by these rows. Deferred targets remain in the active
+Sanctum SPA sessions for React/Vite TypeScript + SQLite, PostgreSQL, and MySQL. PostgreSQL and MySQL
+auth evidence is limited to the pinned test images, and Laravel sessions remain file-based. No
+managed-provider, third-party JWT bridge, or other Laravel mode is implied by these rows. Deferred
+targets remain in the active
 [auth next-target plan](docs/plans/active/omnicraft-auth-provider-php-next-targets-plan.md).
 
 The `omnicraft add testing` evidence covers 260 compatible React/Vite paths, including six earlier

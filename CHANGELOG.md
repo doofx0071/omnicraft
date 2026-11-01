@@ -20,9 +20,11 @@ changes. Neither version was published to npm; this is the next npm version afte
 - A manual-setup Supabase Auth option for React/Vite TypeScript frontend-only apps. Generated
   notes use the Supabase Data API with explicit authenticated-role grants and per-user RLS policies;
   generated browser configuration contains placeholders and a publishable key only.
-- Opt-in Laravel 12 API authentication for React/Vite TypeScript + SQLite using Laravel's native
-  session guard and first-party Sanctum SPA cookie sessions. `None` keeps the existing API sample
-  public; native auth protects `/api/me` and `/api/users` and scopes sample records by owner.
+- Opt-in Laravel 12 API authentication for React/Vite TypeScript with Eloquent on SQLite,
+  PostgreSQL, or MySQL using Laravel's native session guard and first-party Sanctum SPA cookie
+  sessions. PostgreSQL and MySQL evidence is bounded to the pinned test images; sessions remain
+  file-based. `None` keeps the existing API sample public; native auth protects `/api/me` and
+  `/api/users` and scopes sample records by owner.
 - Exact runtime evidence for 254 additional compatible React/Vite `omnicraft add testing` paths.
   The 52 JavaScript + shadcn paths reject before writes because their templates lack required path
   aliases. These module results do not imply backend or database support.
