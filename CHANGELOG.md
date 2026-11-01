@@ -6,21 +6,41 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [1.0.5] — 2026-11-01
+
+This release consolidates the previously tagged v1.0.3 and repository-only v1.0.4 candidate
+changes. Neither version was published to npm; this is the next npm version after v1.0.2.
+
 ### Added
 
-- Added a manual-setup Supabase Auth option for React/Vite TypeScript frontend-only apps. Generated
+- Laravel 13 + Livewire 4 and Laravel 13 + Inertia React integrated apps, both with SQLite and
+  either no authentication or Laravel-native Fortify authentication.
+- Creation-time Better Auth for the exact React/Vite TypeScript + Express + Drizzle combinations
+  listed in the support matrix, and a shared authentication catalog with `omnicraft add auth`.
+- A manual-setup Supabase Auth option for React/Vite TypeScript frontend-only apps. Generated
   notes use the Supabase Data API with explicit authenticated-role grants and per-user RLS policies;
   generated browser configuration contains placeholders and a publishable key only.
-- Added opt-in Laravel 12 API authentication for React/Vite TypeScript + SQLite using Laravel's
-  native session guard and first-party Sanctum SPA cookie sessions. `None` keeps the existing API
-  sample public; native auth protects `/api/me` and `/api/users` and scopes sample records by owner.
+- Opt-in Laravel 12 API authentication for React/Vite TypeScript + SQLite using Laravel's native
+  session guard and first-party Sanctum SPA cookie sessions. `None` keeps the existing API sample
+  public; native auth protects `/api/me` and `/api/users` and scopes sample records by owner.
+- Exact runtime evidence for 254 additional compatible React/Vite `omnicraft add testing` paths.
+  The 52 JavaScript + shadcn paths reject before writes because their templates lack required path
+  aliases. These module results do not imply backend or database support.
 
 ### Fixed
 
 - Reset Laravel's stock SQLite file after the Composer starter migration so Laravel 12 API projects
   apply the selected OmniCraft migration schema instead of retaining stale starter columns.
 
-## [1.0.4] — 2026-10-31
+### Verification and limits
+
+- Expo Android-emulator and iOS-simulator generated-app checks and Tauri Linux, macOS, and Windows
+  build/launch checks are recorded in the support matrix. Expo and Tauri remain Scaffold-verified;
+  physical Android and iOS device paths remain Selectable — unverified.
+- Authentication and stack claims are limited to the exact combinations and CI evidence in the
+  [stack support matrix](docs/templates/stack-support-matrix.md).
+
+## [1.0.4] — candidate scope consolidated into v1.0.5 (not published separately)
 
 ### Added
 
@@ -30,7 +50,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 - Generated-project checks for both Inertia React auth modes, including the auth lifecycle and
   pre-write rejection of incompatible combinations.
 
-## [1.0.3] — 2026-10-31
+## [1.0.3] — candidate scope consolidated into v1.0.5 (tagged, not published to npm)
 
 ### Added
 
