@@ -1,8 +1,9 @@
 # System overview
 
-OmniCraft is the `create-omnicraft` npm package. The current repository baseline is v1.0.3; npm
-publication is tracked separately. The CLI is interactive by default and can compose web, backend,
-database, extra, and native-platform layers. Exact support and verification vary by combination; see the
+OmniCraft is the `create-omnicraft` npm package. `packages/cli/package.json` is the authoritative
+source version; npm publication status is tracked separately in the [roadmap](../../ROADMAP.md).
+The CLI is interactive by default and can compose web, backend, database, extra, and native-platform
+layers. Exact support and verification vary by combination; see the
 [support matrix](../templates/stack-support-matrix.md).
 
 ## One-run flow
@@ -41,30 +42,36 @@ Laravel 12 API/data scaffold and the separate React/Vite client plus API paths. 
 native client that talks to a separately run backend; OmniCraft does not scaffold that backend in the
 same native project.
 
+Authentication is an optional stack-filtered setup, separate from `omnicraft add` module history.
+`None` adds no authentication layer; selected authentication is recorded in the generated manifest's
+`authentication` field. Creation-time Better Auth and `omnicraft add auth` share the same catalog and
+compatibility rules. The support matrix is the source of truth for exact authentication combinations
+and their evidence.
+
 ## Components and responsibilities
 
 | Component | Files | Responsibility |
 | --- | --- | --- |
 | Entry/orchestration | `src/index.ts` | Argument validation, TTY guard, generator execution, scaffold/install ordering, and the single cancellation/error path. |
 | CLI surface | `src/args.ts` | Positional project name, flags, and `HELP_TEXT`. The README options block mirrors this text. |
-| Capability choices | `src/prefill.ts` (`AVAILABLE`), `src/compatibility.ts`, and `src/prompts/run-prompts.ts` | Dimension choices, cross-option constraints, flag validation, `--yes` defaults, interactive choices, composition guards, and Better Auth compatibility. |
+| Capability choices | `src/capabilities.ts`, `src/compatibility.ts`, `src/prefill.ts`, and `src/prompts/run-prompts.ts` | Typed dimension and module choices, cross-option constraints, flag validation, `--yes` defaults, interactive choices, and composition/auth guards. |
 | Project types | `src/types.ts` | Type unions and `Answers` shape. Some union values are future values and do not make a choice selectable. |
 | Composition | `src/scaffold/compose.ts` | Pure mapping from `Answers` to ordered layers and template variables; routes Next.js and native adapters separately. |
 | Engine | `src/scaffold/engine.ts` | Recursive template copy, token render, underscore dotfile restoration, protected-name checks, and `package.json` merge. Later template layers overwrite earlier files except manifests, which merge. |
 | Renderer | `src/scaffold/renderer.ts` | `{{token}}` replacement, unresolved-token detection, dotfile rename, binary-file detection. Vue `.vue` files are exempt from the unresolved-token scan. |
 | Manifest merge | `src/scaffold/merge.ts` | Recursive `package.json` merge; later scalars and arrays replace earlier values. |
 | Remote templates | `src/config.ts`, `src/scaffold/remote.ts` | `--latest` downloads the release tag matching the CLI version, not the mutable `main` branch. |
-| Module injector | `src/add.ts`, `src/modules/` | `omnicraft add` loads project metadata, checks module compatibility/conflicts, applies patches, and updates the manifest. Current module coverage is summarized in the support matrix. |
+| Module injector | `src/add.ts`, `src/modules/` | `omnicraft add` loads project metadata, checks module compatibility/conflicts, applies patches, and records modules separately from active authentication. Current module coverage is summarized in the support matrix. |
 | Process helpers | `src/exec.ts` | Captured and visible subprocess execution; Windows command-shell rules are in [coding standards](../development/coding-standards.md). |
 | Templates | `packages/cli/templates/` | Embedded generated-project files published with the CLI. See the [template contract](../templates/template-contract.md). |
-| Tests | `src/**/*.test.ts` | 234 tests across 17 files in the current local suite. See the [testing strategy](../development/testing-strategy.md). |
+| Tests | `src/**/*.test.ts` | Unit and contract coverage for CLI behavior; generated-project coverage is recorded separately in the [testing strategy](../development/testing-strategy.md) and support matrix. |
 | Smoke generation | `scripts/smoke-e2e.ts` | Lists 19 layer-composition paths, including two Inertia React root overlays and a network-backed `create-next-app` step; it does not cover native projects or install/boot every generated app. |
 
 ## Cross-cutting behavior and limits
 
-1. **Capability accuracy.** `AVAILABLE` lists individual choices; `compatibility.ts` shares the
-   cross-option rules used by prompts, flag validation, composition, and the Better Auth guard. The
-   support matrix records selectable combinations and their exact verification evidence.
+1. **Capability accuracy.** `capabilities.ts` lists selectable dimension values and module IDs;
+   `compatibility.ts` shares cross-option rules across prompts, flag validation, composition, and
+   authentication guards. The support matrix records exact combinations and their verification evidence.
 2. **Layer overrides.** Repeated files such as framework routes, env files, Vite config, CSS, and
    `.env.example` are intentional. A later layer replaces earlier template output; `package.json`
    objects deep-merge.
@@ -80,7 +87,6 @@ same native project.
 6. **Terminal restoration.** `restoreTerminal()` is registered on exit, SIGINT, and uncaught exceptions
    because Clack uses raw terminal mode.
 7. **CI evidence.** CI scaffolds the smoke list and runs dedicated generated-project integrations for
-   the exact supported rows. The Inertia React integration generates both official starter modes,
-   runs Composer and npm setup, checks SQLite migrations, typechecks/builds React assets, and runs
-   Laravel feature tests. See the [testing strategy](../development/testing-strategy.md) and
+   exact supported rows, including the Supabase Auth, Laravel Sanctum, Livewire, and Inertia auth
+   scenarios. See the [testing strategy](../development/testing-strategy.md) and
    [support matrix](../templates/stack-support-matrix.md) for exact evidence and boundaries.
