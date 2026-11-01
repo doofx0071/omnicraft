@@ -21,7 +21,9 @@ npm run dev
 
 Open http://localhost:5173 to register or sign in. The browser session stays in Laravel's cookie
 session; the client initializes CSRF protection through `/sanctum/csrf-cookie` and sends the decoded
-`X-XSRF-TOKEN` header on mutations.
+`X-XSRF-TOKEN` header on mutations. SQLite stores users and application records. Laravel's generated
+session store remains file-based; this scaffold does not configure database-backed or distributed
+sessions.
 
 ## Authentication API
 
@@ -55,5 +57,7 @@ provider secret, or service-role key is generated.
 See the [Laravel 12 Sanctum SPA authentication documentation](https://laravel.com/framework/docs/12.x/sanctum#spa-authentication)
 for the framework's cookie, CSRF, stateful-domain, and deployment requirements.
 
-This path is limited to React/Vite + TypeScript, Laravel 12 API, and SQLite. It is separate from the
-integrated Laravel 13 Livewire and Inertia React applications.
+This generated project uses SQLite. The CLI also supports PostgreSQL and MySQL for the same
+React/Vite + TypeScript + Laravel 12 API session-auth path; their generated READMEs name the selected
+database. Integrated Laravel 13 Livewire and Inertia React applications use separate auth choices and
+remain SQLite-only.

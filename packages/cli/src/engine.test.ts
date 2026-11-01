@@ -69,6 +69,7 @@ function makeInertiaReactAnswers(authentication: "none" | "laravel-native" = "no
 
 function makeLaravelApiAuthAnswers(
   authentication: "none" | "laravel-native" = "laravel-native",
+  database: "sqlite" | "postgres" | "mysql" = "sqlite",
 ): Answers {
   return makeAnswers({
     frontend: "react",
@@ -77,7 +78,7 @@ function makeLaravelApiAuthAnswers(
     backendRuntime: "php",
     backendFramework: "laravel",
     orm: null,
-    database: "sqlite",
+    database,
     authentication,
     extras: { tailwind: false, eslintPrettier: false, shadcn: false },
     architecture: { kind: "separate-frontend-api" },
@@ -142,21 +143,26 @@ describe("official-generator layer order", () => {
     expect(plan.afterComposer.map(({ src }) => src)).toEqual(["server/php/laravel"]);
   });
 
-  it("applies the Laravel API auth overlay after Composer and the client auth layer last", () => {
-    const answers = makeLaravelApiAuthAnswers();
-    const layers = composeLayers(answers);
-    const plan = planLayerApplication(layers, answers.architecture);
+  it.each(["sqlite", "postgres", "mysql"] as const)(
+    "applies the Laravel API auth overlay and database-specific README for %s",
+    (database) => {
+      const answers = makeLaravelApiAuthAnswers("laravel-native", database);
+      const layers = composeLayers(answers);
+      const plan = planLayerApplication(layers, answers.architecture);
 
-    expect(plan.afterComposer.map(({ src }) => src)).toEqual([
-      "server/php/laravel",
-      "server/php/laravel-sanctum-spa",
-    ]);
-    expect(layers.map(({ src }) => src)).toContain("root/fullstack-php/sqlite-sanctum-spa-auth");
-    expect(layers.map(({ src }) => src)).toContain("auth/laravel-sanctum-spa-react-vite");
-    expect(layers.find(({ src }) => src === "auth/laravel-sanctum-spa-react-vite")?.dest).toBe(
-      "client",
-    );
-  });
+      expect(plan.afterComposer.map(({ src }) => src)).toEqual([
+        "server/php/laravel",
+        "server/php/laravel-sanctum-spa",
+      ]);
+      expect(layers.map(({ src }) => src)).toContain(
+        `root/fullstack-php/${database}-sanctum-spa-auth`,
+      );
+      expect(layers.map(({ src }) => src)).toContain("auth/laravel-sanctum-spa-react-vite");
+      expect(layers.find(({ src }) => src === "auth/laravel-sanctum-spa-react-vite")?.dest).toBe(
+        "client",
+      );
+    },
+  );
 
   it("applies only OmniCraft root setup after the selected Livewire starter kit", () => {
     for (const authentication of ["none", "laravel-native"] as const) {
@@ -263,61 +269,74 @@ describe("composition compatibility", () => {
     ).toThrow(/Better Auth creation currently requires TypeScript/);
   });
 
-  it("rejects Laravel API auth before returning layers when the architecture or database is incompatible", () => {
-    expect(() => composeLayers(makeLaravelApiAuthAnswers())).not.toThrow();
+  it("accepts the approved API databases and rejects an incompatible frontend", () => {
+    for (const database of ["sqlite", "postgres", "mysql"] as const) {
+      expect(() =>
+        composeLayers(makeLaravelApiAuthAnswers("laravel-native", database)),
+      ).not.toThrow();
+    }
     expect(() => composeLayers(makeLaravelApiAuthAnswers("none"))).not.toThrow();
     expect(() =>
       composeLayers(
         makeAnswers({
           ...makeLaravelApiAuthAnswers(),
-          database: "postgres",
+          frontend: "vue",
         }),
       ),
-    ).toThrow(/SQLite only/);
+    ).toThrow(
+      /Laravel native authentication currently requires integrated Livewire\/Inertia React or the React\/Vite Laravel API/,
+    );
   });
 
-  it("scaffolds only the Laravel Sanctum SPA auth overlays for the API mode", () => {
-    const dir = makeTempDir("laravel-sanctum-spa");
-    scaffoldInto(dir, makeLaravelApiAuthAnswers());
+  it.each(["sqlite", "postgres", "mysql"] as const)(
+    "scaffolds the Laravel Sanctum SPA overlays and database-specific README for %s",
+    (database) => {
+      const dir = makeTempDir(`laravel-sanctum-spa-${database}`);
+      scaffoldInto(dir, makeLaravelApiAuthAnswers("laravel-native", database));
 
-    const apiRoutes = readFileSync(join(dir, "server/routes/api.php"), "utf8");
-    const serverBootstrap = readFileSync(join(dir, "server/bootstrap/app.php"), "utf8");
-    const controller = readFileSync(
-      join(dir, "server/app/Http/Controllers/AuthController.php"),
-      "utf8",
-    );
-    const userController = readFileSync(
-      join(dir, "server/app/Http/Controllers/UserController.php"),
-      "utf8",
-    );
-    const clientApi = readFileSync(join(dir, "client/src/lib/api.ts"), "utf8");
-    const clientApp = readFileSync(join(dir, "client/src/App.tsx"), "utf8");
-    const corsConfig = readFileSync(join(dir, "server/config/cors.php"), "utf8");
-    const environmentExample = readFileSync(join(dir, "server/.env.example"), "utf8");
-    const readme = readFileSync(join(dir, "README.md"), "utf8");
+      const apiRoutes = readFileSync(join(dir, "server/routes/api.php"), "utf8");
+      const serverBootstrap = readFileSync(join(dir, "server/bootstrap/app.php"), "utf8");
+      const controller = readFileSync(
+        join(dir, "server/app/Http/Controllers/AuthController.php"),
+        "utf8",
+      );
+      const userController = readFileSync(
+        join(dir, "server/app/Http/Controllers/UserController.php"),
+        "utf8",
+      );
+      const clientApi = readFileSync(join(dir, "client/src/lib/api.ts"), "utf8");
+      const clientApp = readFileSync(join(dir, "client/src/App.tsx"), "utf8");
+      const corsConfig = readFileSync(join(dir, "server/config/cors.php"), "utf8");
+      const environmentExample = readFileSync(join(dir, "server/.env.example"), "utf8");
+      const readme = readFileSync(join(dir, "README.md"), "utf8");
 
-    expect(serverBootstrap).toContain("$middleware->statefulApi();");
-    expect(apiRoutes).toContain("Route::middleware('auth:sanctum')");
-    expect(apiRoutes).toContain("Route::post('/auth/register'");
-    expect(apiRoutes).toContain("Route::post('/auth/login'");
-    expect(apiRoutes).toContain("Route::post('/auth/logout'");
-    expect(controller).toContain("$request->session()->regenerate();");
-    expect(controller).toContain("$request->session()->invalidate();");
-    expect(controller).toContain("Hash::make($validated['password'])");
-    expect(userController).toContain("$request->user()->apiUsers()");
-    expect(clientApi).toContain("X-XSRF-TOKEN");
-    expect(clientApi).toContain('credentials: "include"');
-    expect(clientApp).toContain("Sign out");
-    expect(corsConfig).toContain("'supports_credentials' => true");
-    expect(corsConfig).toContain("'allowed_origins' => $allowedOrigins");
-    expect(corsConfig).not.toContain("'allowed_origins' => ['*']");
-    expect(environmentExample).toContain(
-      "CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173",
-    );
-    expect(readme).toContain("does not issue personal access tokens");
-    expect(readme).toContain("SANCTUM_STATEFUL_DOMAINS");
-    expect(existsSync(join(dir, "client/README.md"))).toBe(false);
-  });
+      expect(serverBootstrap).toContain("$middleware->statefulApi();");
+      expect(apiRoutes).toContain("Route::middleware('auth:sanctum')");
+      expect(apiRoutes).toContain("Route::post('/auth/register'");
+      expect(apiRoutes).toContain("Route::post('/auth/login'");
+      expect(apiRoutes).toContain("Route::post('/auth/logout'");
+      expect(controller).toContain("$request->session()->regenerate();");
+      expect(controller).toContain("$request->session()->invalidate();");
+      expect(controller).toContain("Hash::make($validated['password'])");
+      expect(userController).toContain("$request->user()->apiUsers()");
+      expect(clientApi).toContain("X-XSRF-TOKEN");
+      expect(clientApi).toContain('credentials: "include"');
+      expect(clientApp).toContain("Sign out");
+      expect(corsConfig).toContain("'supports_credentials' => true");
+      expect(corsConfig).toContain("'allowed_origins' => $allowedOrigins");
+      expect(corsConfig).not.toContain("'allowed_origins' => ['*']");
+      expect(environmentExample).toContain(
+        "CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173",
+      );
+      expect(readme).toContain("does not issue personal access tokens");
+      expect(readme).toContain("SANCTUM_STATEFUL_DOMAINS");
+      expect(readme).toContain(
+        database === "postgres" ? "PostgreSQL" : database === "mysql" ? "MySQL" : "SQLite",
+      );
+      expect(readme).toContain("session store remains file-based");
+      expect(existsSync(join(dir, "client/README.md"))).toBe(false);
+    },
+  );
 
   it("scaffolds None without Better Auth files or dependencies", () => {
     const dir = makeTempDir("auth-none");

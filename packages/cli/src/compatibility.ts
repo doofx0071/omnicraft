@@ -10,7 +10,12 @@ import type {
   ProjectArchitecture,
   ProjectType,
 } from "./types.js";
-import { AUTHENTICATION_CATALOG, AVAILABLE, CAPABILITY_REGISTRY } from "./capabilities.js";
+import {
+  AUTHENTICATION_CATALOG,
+  AVAILABLE,
+  CAPABILITY_REGISTRY,
+  type AuthenticationRequirements,
+} from "./capabilities.js";
 
 export const RUNTIME_BACKENDS = AVAILABLE.backend;
 export const RUNTIME_DATABASES = AVAILABLE.db;
@@ -37,7 +42,7 @@ export function authenticationCompatibilityReason(
   const definition = AUTHENTICATION_CATALOG[setup];
   if (definition.category === "none") return null;
 
-  const supported = definition.requirements;
+  const supported: AuthenticationRequirements | null = definition.requirements;
   if (!supported) {
     throw new Error(`Authentication setup "${setup}" is missing its stack requirements.`);
   }
@@ -90,8 +95,11 @@ export function authenticationCompatibilityReason(
       ? `architecture "${context.architecture.kind}" is not covered yet`
       : "Laravel native authentication currently requires integrated Livewire/Inertia React or the React/Vite Laravel API architecture.";
   }
+  const supportedDatabases =
+    supported.databasesByArchitecture?.[context.architecture.kind as ProjectArchitecture["kind"]] ??
+    supported.databases;
   if (
-    !(supported.databases as readonly (Database | null)[]).includes(
+    !(supportedDatabases as readonly (Database | null)[]).includes(
       context.database as Database | null,
     )
   ) {
@@ -100,7 +108,9 @@ export function authenticationCompatibilityReason(
     }
     return setup === "better-auth"
       ? `Better Auth currently supports SQLite, PostgreSQL, and MySQL; ${context.database ?? "no database"} is not covered yet.`
-      : `Laravel native authentication currently covers SQLite only; ${context.database ?? "no database"} is not covered yet.`;
+      : context.architecture.kind === "integrated-laravel"
+        ? `Integrated Laravel native authentication currently covers SQLite only; ${context.database ?? "no database"} is not covered yet.`
+        : `Laravel 12 API native authentication currently covers SQLite, PostgreSQL, and MySQL; ${context.database ?? "no database"} is not covered yet.`;
   }
   return null;
 }
@@ -271,10 +281,13 @@ export function validateFlagCompatibility(args: ParsedArgs): void {
       (args.backend !== undefined && backend !== "laravel") ||
       (args.lang !== undefined && args.lang.trim().toLowerCase() !== "typescript") ||
       args.orm !== undefined ||
-      (args.db !== undefined && args.db.trim().toLowerCase() !== "sqlite");
+      (args.db !== undefined &&
+        !(
+          AUTHENTICATION_CATALOG["laravel-native"].requirements.databases as readonly string[]
+        ).includes(args.db.trim().toLowerCase()));
     if (conflicts) {
       throw new Error(
-        "Laravel native authentication for React currently requires the separate PHP + Laravel API, TypeScript, Eloquent, and SQLite path; omit incompatible flags.",
+        "Laravel native authentication for React requires the separate PHP + Laravel API, TypeScript, and Eloquent with SQLite, PostgreSQL, or MySQL; omit incompatible flags.",
       );
     }
   }

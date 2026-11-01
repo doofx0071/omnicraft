@@ -17,7 +17,7 @@ type CapabilityOption<T extends string> = {
   hint?: string;
 };
 
-type AuthenticationRequirements = {
+export type AuthenticationRequirements = {
   frontend: Frontend | readonly Frontend[];
   language: Language | null | readonly (Language | null)[];
   backendRuntime: BackendRuntime | null;
@@ -25,6 +25,9 @@ type AuthenticationRequirements = {
   orm: Orm | null;
   architecture: ProjectArchitecture["kind"] | readonly ProjectArchitecture["kind"][];
   databases: readonly (Database | null)[];
+  databasesByArchitecture?: Partial<
+    Record<ProjectArchitecture["kind"], readonly (Database | null)[]>
+  >;
 };
 
 type AuthenticationCatalogEntry = CapabilityOption<AuthenticationSetup> & {
@@ -78,7 +81,7 @@ export const AUTHENTICATION_CATALOG = {
     value: "laravel-native",
     label: "Laravel native auth",
     available: true,
-    hint: "Fortify for integrated Laravel or Sanctum SPA sessions for the Laravel API; SQLite only",
+    hint: "Sanctum SPA sessions for the Laravel 12 API on SQLite, PostgreSQL, or MySQL (new database runtime evidence pending); integrated Laravel auth remains SQLite-only",
     category: "framework-native",
     requirements: {
       frontend: ["livewire", "inertia-react", "react"],
@@ -87,7 +90,11 @@ export const AUTHENTICATION_CATALOG = {
       backendFramework: "laravel",
       orm: null,
       architecture: ["integrated-laravel", "separate-frontend-api"],
-      databases: ["sqlite"],
+      databases: ["sqlite", "postgres", "mysql"],
+      databasesByArchitecture: {
+        "integrated-laravel": ["sqlite"],
+        "separate-frontend-api": ["sqlite", "postgres", "mysql"],
+      },
     },
   },
 } as const satisfies Record<AuthenticationSetup, AuthenticationCatalogEntry>;

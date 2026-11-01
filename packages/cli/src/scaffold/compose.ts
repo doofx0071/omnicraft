@@ -132,7 +132,10 @@ export function composeLayers(answers: Answers): Layer[] {
     answers.authentication === "laravel-native" &&
     answers.architecture.kind === "separate-frontend-api"
   ) {
-    layers.push({ src: "root/fullstack-php/sqlite-sanctum-spa-auth", dest: "." });
+    if (!answers.database) {
+      throw new Error("Laravel Sanctum SPA authentication requires a selected database.");
+    }
+    layers.push({ src: `root/fullstack-php/${answers.database}-sanctum-spa-auth`, dest: "." });
     layers.push({ src: "auth/laravel-sanctum-spa-react-vite", dest: clientDest });
   }
 

@@ -84,7 +84,7 @@ describe("support matrix evidence", () => {
     expect(LARAVEL_INERTIA_REACT_AUTH_SCENARIOS).toEqual(["none", "laravel-native"]);
   });
 
-  it("registers Laravel 12 API None and Sanctum SPA auth as a separate generated-project runtime target", () => {
+  it("registers Laravel 12 API None and database-specific Sanctum SPA auth scenarios as a separate generated-project runtime target", () => {
     const target = INTEGRATION_TARGETS["php-laravel-sanctum-spa-auth"];
     expect(target.script).toBe("scripts/php-laravel-sanctum-auth-e2e.ts");
     expect(target.workflowJob).toBe("php-laravel-sanctum-spa-auth-integration");
@@ -94,17 +94,22 @@ describe("support matrix evidence", () => {
     expect(integrationScenarios("php-laravel-sanctum-spa-auth")).toEqual(
       LARAVEL_SANCTUM_SPA_AUTH_SCENARIOS,
     );
-    expect(LARAVEL_SANCTUM_SPA_AUTH_SCENARIOS).toEqual(["none", "laravel-native"]);
+    expect(LARAVEL_SANCTUM_SPA_AUTH_SCENARIOS).toEqual([
+      "none-sqlite",
+      "laravel-native-sqlite",
+      "laravel-native-postgres",
+      "laravel-native-mysql",
+    ]);
   });
 
-  it("maps only the Laravel 12 API + SQLite native-auth tuple to Sanctum runtime evidence", () => {
+  it("keeps only the proven Laravel 12 API + SQLite native-auth tuple Supported until new DB evidence passes", () => {
     const capability = SUPPORTED_CAPABILITIES.find(
       ({ id }) => id === "laravel-api-sanctum-spa-auth-sqlite",
     );
     const combination = capability?.combinations[0];
 
     expect(capability?.target).toBe("php-laravel-sanctum-spa-auth");
-    expect(capability?.scenarios).toEqual(["laravel-native"]);
+    expect(capability?.scenarios).toEqual(["laravel-native-sqlite"]);
     expect(capability?.combinations).toHaveLength(1);
     expect(combination?.flags).toMatchObject({
       platform: "web",

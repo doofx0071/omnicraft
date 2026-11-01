@@ -195,16 +195,8 @@ describe("validateStackFlags", () => {
 
   it.each([
     [
-      ["--frontend", "react", "--auth", "laravel-native", "--db", "postgres"],
-      /requires the separate PHP \+ Laravel API, TypeScript, Eloquent, and SQLite path/,
-    ],
-    [
-      ["--frontend", "react", "--auth", "laravel-native", "--db", "mysql"],
-      /requires the separate PHP \+ Laravel API, TypeScript, Eloquent, and SQLite path/,
-    ],
-    [
       ["--frontend", "react", "--auth", "laravel-native", "--lang", "javascript"],
-      /requires the separate PHP \+ Laravel API, TypeScript, Eloquent, and SQLite path/,
+      /Laravel native authentication for React requires the separate PHP \+ Laravel API/,
     ],
     [
       ["--frontend", "react", "--auth", "laravel-native", "--backend", "express"],
@@ -212,7 +204,7 @@ describe("validateStackFlags", () => {
     ],
     [
       ["--frontend", "react", "--auth", "laravel-native", "--runtime", "node"],
-      /requires the separate PHP \+ Laravel API, TypeScript, Eloquent, and SQLite path/,
+      /Laravel native authentication for React requires the separate PHP \+ Laravel API/,
     ],
     [
       ["--frontend", "react", "--auth", "laravel-native", "--no-full-stack"],

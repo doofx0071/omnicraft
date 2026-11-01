@@ -67,7 +67,11 @@ describe("capability registry", () => {
         backendFramework: "laravel",
         orm: null,
         architecture: ["integrated-laravel", "separate-frontend-api"],
-        databases: ["sqlite"],
+        databases: ["sqlite", "postgres", "mysql"],
+        databasesByArchitecture: {
+          "integrated-laravel": ["sqlite"],
+          "separate-frontend-api": ["sqlite", "postgres", "mysql"],
+        },
       },
     });
     expect(CAPABILITY_REGISTRY.authentication.map(({ value }) => value)).toEqual([

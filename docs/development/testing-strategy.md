@@ -26,7 +26,7 @@ npm run test:integration:python   # FastAPI + SQLite, Python 3.12
 npm run test:integration:php      # Laravel 12: SQLite, PostgreSQL, MySQL, pinned PHP/Composer image
 npm run test:integration:php-livewire # production CLI: Laravel 13 + Livewire, None/Fortify, SQLite
 npm run test:integration:php-inertia  # production CLI: Laravel 13 + Inertia React, None/Fortify, SQLite
-npm run test:integration:php-sanctum-auth # production CLI: Laravel 12 API, None/Sanctum SPA, SQLite
+npm run test:integration:php-sanctum-auth # production CLI: Laravel 12 API, None on SQLite; Sanctum SPA on SQLite/PostgreSQL/MySQL
 npm run test:integration:supabase-auth # production CLI + disposable local Supabase Auth/Data API/RLS
 ```
 
@@ -51,18 +51,19 @@ if that sample route exists. PostgreSQL, MySQL, Better Auth, JavaScript, extras,
 runtime flags must reject before creating a target directory. This job is a required dependency of
 `supported-stack-release-gate`.
 
-The `php-laravel-sanctum-spa-auth-integration` job generates both the unchanged public Laravel 12 API
-(`None`) and the opt-in React/Vite + Laravel 12 Sanctum SPA mode through the production CLI. It verifies
-pre-write rejection for non-SQLite databases, JavaScript, frontend-only selection, and incompatible
-runtimes; checks the auth manifest stays separate from `modules`; installs the pinned Sanctum package
-without Fortify or personal access token scaffolding; migrates SQLite; builds the generated React client;
-and runs generated Laravel feature tests. A live local HTTP run checks credentialed CORS preflight, CSRF
-enforcement, account registration/login, cookie-session restoration after a server restart, anonymous
-rejection, per-account record isolation, and sign-out invalidation. The None project runs public
-`/api/users` CRUD. It also verifies invalid credentials produce generic 422 responses without
-framework exception details and exercise the shared 10-request/15-minute throttle using a fresh
-anonymous cookie jar after the successful tenth attempt. This target
-is required by `supported-stack-release-gate`; it covers only the exact SQLite modes above.
+The `php-laravel-sanctum-spa-auth-integration` job keeps the public Laravel 12 API (`None`) on SQLite
+and generates the opt-in React/Vite + TypeScript + Laravel 12 Sanctum SPA project on SQLite, PostgreSQL,
+and MySQL through the production CLI. It verifies pre-write rejection for JavaScript, frontend-only
+selection, incompatible runtimes, and PostgreSQL/MySQL auth on the integrated Livewire and Inertia modes.
+For each API database it checks that the generated README and environment name the selected driver, the
+runtime driver is actually active, the auth manifest stays separate from `modules`, and the pinned
+Sanctum dependency is present without Fortify or personal access token scaffolding. It migrates each
+generated server, builds the React client, and runs Laravel feature tests. Live HTTP checks cover
+credentialed CORS preflight, CSRF enforcement, registration/login, cookie-session restoration after a
+server restart, anonymous rejection, per-account record isolation, and sign-out invalidation. The None
+project runs public `/api/users` CRUD. Each auth database also checks generic 422 failures and the shared
+10-request/15-minute throttle. Laravel sessions remain file-based; the database extension does not add
+database-backed or distributed sessions. This job remains required by `supported-stack-release-gate`.
 
 On Windows, `npm run test:integration:php-inertia --workspace=create-omnicraft` passed for both
 SQLite modes, including migrations, Inertia typecheck and asset build, auth lifecycle tests, and
@@ -106,24 +107,24 @@ install/setup, boot, database-operation, and failure checks.
 
 The current suite covers:
 
-| File                                                | Coverage                                                                                                                                                                                                                                                                                                                                 |
-| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/args.test.ts`                                  | Flag parsing, Livewire/Inertia React auth help text, and help/README option parity.                                                                                                                                                                                                                                                      |
-| `src/validators.test.ts`                            | Project-name normalization and npm-name validation.                                                                                                                                                                                                                                                                                      |
-| `src/renderer.test.ts`                              | Token substitution, unresolved-token detection, dotfile renaming, and binary detection.                                                                                                                                                                                                                                                  |
-| `src/merge.test.ts`                                 | `package.json` deep merge semantics.                                                                                                                                                                                                                                                                                                     |
-| `src/prefill.test.ts`                               | Available flag values, runtime-scoped databases/frameworks, Prisma/PostgreSQL validation, authentication flag preflight, and `--yes` answer resolution.                                                                                                                                                                                  |
-| `src/update-check.test.ts`                          | Version comparison, mocked registry fetch, offline behavior, and cache.                                                                                                                                                                                                                                                                  |
-| `src/prompts/run-prompts.test.ts`                   | Scripted prompt flow, frontend-only branch, unavailable-option retry, cancellation, and invalid names.                                                                                                                                                                                                                                   |
-| `src/next-steps.test.ts`                            | Integrated Next.js commands/endpoints, container startup for PostgreSQL, and Laravel Livewire/Inertia React commands.                                                                                                                                                                                                                    |
-| `src/exec.test.ts`                                  | Fixed-command output, timeout handling, and stopping a child process.                                                                                                                                                                                                                                                                    |
-| `src/scaffold/laravel-env.test.ts`                  | Keeps inherited `DB_*` settings from redirecting Laravel's initial SQLite migration.                                                                                                                                                                                                                                                     |
-| `src/engine.test.ts`                                | Selected generated files, layer overrides, manifests, env files, token scans, protected-path examples, selected engine combinations, creation-time auth compatibility, the no-auth `None` scaffold, and both Livewire and Inertia React starter overlays.                                                                                |
-| `src/compatibility.test.ts`, `src/manifest.test.ts` | Exact creation-time auth choices and constraints, plus manifest separation between active authentication and `modules`.                                                                                                                                                                                                                  |
-| `src/capabilities.test.ts`                          | Available prompt/flag choices derive from the typed capability registry; the auth catalog records setup categories and requirements; the module menu matches its registered module IDs.                                                                                                                                                  |
-| `src/add-run.test.ts`                               | Module dry-run, success, idempotency, creation-time auth application, collisions, unsupported stacks, missing patch anchors, and rollback after a failed write.                                                                                                                                                                          |
+| File                                                | Coverage                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/args.test.ts`                                  | Flag parsing, Livewire/Inertia React auth help text, and help/README option parity.                                                                                                                                                                                                                                                                                                       |
+| `src/validators.test.ts`                            | Project-name normalization and npm-name validation.                                                                                                                                                                                                                                                                                                                                       |
+| `src/renderer.test.ts`                              | Token substitution, unresolved-token detection, dotfile renaming, and binary detection.                                                                                                                                                                                                                                                                                                   |
+| `src/merge.test.ts`                                 | `package.json` deep merge semantics.                                                                                                                                                                                                                                                                                                                                                      |
+| `src/prefill.test.ts`                               | Available flag values, runtime-scoped databases/frameworks, Prisma/PostgreSQL validation, authentication flag preflight, and `--yes` answer resolution.                                                                                                                                                                                                                                   |
+| `src/update-check.test.ts`                          | Version comparison, mocked registry fetch, offline behavior, and cache.                                                                                                                                                                                                                                                                                                                   |
+| `src/prompts/run-prompts.test.ts`                   | Scripted prompt flow, frontend-only branch, unavailable-option retry, cancellation, and invalid names.                                                                                                                                                                                                                                                                                    |
+| `src/next-steps.test.ts`                            | Integrated Next.js commands/endpoints, container startup for PostgreSQL, and Laravel Livewire/Inertia React commands.                                                                                                                                                                                                                                                                     |
+| `src/exec.test.ts`                                  | Fixed-command output, timeout handling, and stopping a child process.                                                                                                                                                                                                                                                                                                                     |
+| `src/scaffold/laravel-env.test.ts`                  | Keeps inherited `DB_*` settings from redirecting Laravel's initial SQLite migration.                                                                                                                                                                                                                                                                                                      |
+| `src/engine.test.ts`                                | Selected generated files, layer overrides, manifests, env files, token scans, protected-path examples, selected engine combinations, creation-time auth compatibility, the no-auth `None` scaffold, and both Livewire and Inertia React starter overlays.                                                                                                                                 |
+| `src/compatibility.test.ts`, `src/manifest.test.ts` | Exact creation-time auth choices and constraints, plus manifest separation between active authentication and `modules`.                                                                                                                                                                                                                                                                   |
+| `src/capabilities.test.ts`                          | Available prompt/flag choices derive from the typed capability registry; the auth catalog records setup categories and requirements; the module menu matches its registered module IDs.                                                                                                                                                                                                   |
+| `src/add-run.test.ts`                               | Module dry-run, success, idempotency, creation-time auth application, collisions, unsupported stacks, missing patch anchors, and rollback after a failed write.                                                                                                                                                                                                                           |
 | `src/support-evidence.test.ts`                      | Every Supported row resolves through selectable values, prompt/flag/composition, module and creation-time auth guards, renders from its exact combination, and maps to the matching scenario, script, job, and aggregate release check. The Supabase Auth target is included only for its verified React/Vite TypeScript frontend-only path; other managed providers remain unselectable. |
-| `src/modules/auth.test.ts`                          | Better Auth compatibility and secret setup guidance.                                                                                                                                                                                                                                                                                     |
+| `src/modules/auth.test.ts`                          | Better Auth compatibility and secret setup guidance.                                                                                                                                                                                                                                                                                                                                      |
 
 The engine fixtures cover Express + Drizzle with PostgreSQL/SQLite/MySQL, Express + Prisma + PostgreSQL,
 Fastify + Drizzle with PostgreSQL/SQLite/MySQL, Fastify + Prisma + PostgreSQL, FastAPI with
@@ -257,12 +258,12 @@ The current workflow:
     checks Composer/npm dependencies, runs migrations and Laravel feature tests, and enforces pre-write
     rejection of incompatible flags. The job is required by the aggregate gate; the support matrix
     contains only exact modes with passing generated-project and hosted evidence.
-14. Runs hosted Ubuntu `php-laravel-sanctum-spa-auth-integration` for React/Vite TypeScript + Laravel
-    12 API + SQLite. It generates both `None` and Laravel-native projects through the production CLI,
-    checks pre-write rejection and public `None` behavior, then exercises registration, login, CSRF,
-    session restoration, protected routes, per-user ownership, and logout. This job is required by the
-    aggregate gate; only the SQLite native-auth tuple is Supported. The exact PR head `3d5fd3c` passed
-    this job and the release gate in [run #41239882961](https://github.com/doofx0071/omnicraft/actions/runs/41239882961).
+14. Runs hosted Ubuntu `php-laravel-sanctum-spa-auth-integration` for the public Laravel 12 API `None`
+    path on SQLite and the exact React/Vite TypeScript + Laravel 12 API + Sanctum SPA auth tuple on
+    SQLite, PostgreSQL, and MySQL. It checks real generated-project driver selection and the complete
+    auth lifecycle against each selected database. Integrated Laravel 13 Livewire/Inertia auth remains
+    SQLite-only. The job is required by the aggregate gate; PostgreSQL/MySQL auth rows stay unverified
+    until exact generated-project checks and the final PR-head release gate pass.
 15. Runs hosted Ubuntu `supabase-auth-integration` on a disposable local Supabase CLI stack. It
     generates the React/Vite TypeScript frontend-only project through the production CLI, installs
     and builds it, applies the local migration, verifies explicit Data API grants and owner RLS,
