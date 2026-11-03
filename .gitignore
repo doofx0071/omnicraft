@@ -7,7 +7,15 @@ coverage/
 .env.local
 .vite/
 smoke-out/
+.tmp/
 .zcode/
+
+# CLI artifact junk: smoke-e2e scaffold output dirs, mangled temp-tag
+# extraction paths (lowercased machine path turned into a dirname),
+# repo clones left behind by fetch experiments
+packages/cli/smoke-*/
+packages/cli/cusers*/
+packages/cli/doofx0071-omnicraft/
 
 # locally generated test projects (own git repos)
 packages/cli/planmo-v3/
