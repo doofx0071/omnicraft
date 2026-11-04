@@ -1,5 +1,6 @@
 import * as p from "@clack/prompts";
-import { HELP_TEXT, parseArgs } from "./args.js";
+import { HELP_TEXT, parseAddArgs, parseArgs } from "./args.js";
+import type { ParsedAddArgs } from "./args.js";
 import { CancelledError } from "./cancel.js";
 import { applyModuleToProject, runAdd } from "./add-run.js";
 import {
@@ -61,11 +62,25 @@ async function main(): Promise<void> {
   // everything else (or no args) is the create flow.
   const argv = process.argv.slice(2);
   if (argv[0] === "add") {
-    const addArgs = argv.slice(1).filter((arg) => !arg.startsWith("--"));
-    const dryRun = argv.includes("--dry-run");
-    const [moduleName, targetArg] = addArgs;
+    let addArgs: ParsedAddArgs;
     try {
-      await runAdd(moduleName, targetArg, dryRun);
+      addArgs = parseAddArgs(argv.slice(1));
+    } catch (err) {
+      p.log.error((err as Error).message);
+      process.exitCode = 1;
+      return;
+    }
+    // Picking a module is an interactive select — without a module argument a
+    // non-TTY run cannot answer it, so refuse like the create flow does.
+    if (!addArgs.moduleName && !process.stdin.isTTY) {
+      p.log.error(
+        "omnicraft add is interactive when no module is given and needs a real terminal.\nPass a module name: omnicraft add <module> [target] [--dry-run]",
+      );
+      process.exitCode = 1;
+      return;
+    }
+    try {
+      await runAdd(addArgs.moduleName, addArgs.target, addArgs.dryRun);
     } catch (err) {
       if (err instanceof CancelledError) {
         p.cancel(err.message);

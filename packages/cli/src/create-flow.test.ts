@@ -49,4 +49,18 @@ describe("create flow in non-TTY mode", () => {
     },
     120_000,
   );
+
+  it(
+    "refuses a bare interactive `add` without a TTY instead of hanging",
+    () => {
+      const result = runCommand("node", [TSX_CLI, CLI_ENTRY, "add"], process.cwd(), {
+        timeoutMs: 60_000,
+        env: { ...process.env, NO_UPDATE_NOTIFIER: "1" },
+      });
+
+      expect(result.exitCode).toBe(1);
+      expect(result.output).toContain("needs a real terminal");
+    },
+    90_000,
+  );
 });
