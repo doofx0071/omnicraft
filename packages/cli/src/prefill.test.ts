@@ -114,8 +114,23 @@ describe("validateStackFlags", () => {
     ],
     [["--backend", "hono", "--orm", "prisma"], /Prisma is not available for Hono/],
     [["--frontend", "vue", "--extras", "shadcn"], /shadcn\/ui is only available/],
+    [
+      ["--extras", "shadcn", "--runtime", "python"],
+      /shadcn\/ui requires a Node\.js backend/,
+    ],
+    [["--extras", "shadcn", "--runtime", "php"], /shadcn\/ui requires a Node\.js backend/],
   ])("rejects incompatible flags: %j", (argv, message) => {
     expect(() => validateStackFlags(parseArgs(argv))).toThrow(message);
+  });
+
+  it("accepts shadcn on the Node-family stacks", () => {
+    expect(() => validateStackFlags(parseArgs(["--extras", "shadcn"]))).not.toThrow();
+    expect(() =>
+      validateStackFlags(parseArgs(["--extras", "shadcn", "--runtime", "node"])),
+    ).not.toThrow();
+    expect(() =>
+      validateStackFlags(parseArgs(["--extras", "shadcn", "--no-full-stack"])),
+    ).not.toThrow();
   });
 
   it("accepts the native TypeScript selection", () => {

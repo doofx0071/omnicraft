@@ -3,6 +3,7 @@ import type {
   Answers,
   AuthenticationSetup,
   BackendFramework,
+  BackendRuntime,
   Database,
   Frontend,
   Language,
@@ -158,14 +159,27 @@ export function supportsShadcn(
   projectType: ProjectType,
   frontend: Frontend,
   architecture: Answers["architecture"],
+  backendRuntime: BackendRuntime | null,
 ): boolean {
   return (
     projectType === "web" &&
     frontend === "react" &&
     architecture.kind !== "integrated-fullstack" &&
     architecture.kind !== "integrated-laravel" &&
-    architecture.kind !== "native-app"
+    architecture.kind !== "native-app" &&
+    // The `npx shadcn init/add` step lives only in the Node install branch
+    // (see index.ts) — a python/php separate-API client would import
+    // `@/components/ui/*` that nothing ever generates. Frontend-only React
+    // counts as the Node family; python and php stacks are rejected.
+    (architecture.kind === "frontend-only" || backendRuntime === "node")
   );
+}
+
+/** The clear rejection reason for shadcn on a non-Node backend runtime. */
+function shadcnRuntimeRejectionReason(runtime: "python" | "php"): string {
+  return runtime === "python"
+    ? "shadcn/ui requires a Node.js backend; the shadcn CLI step runs only in the Node install flow and FastAPI is not covered yet."
+    : "shadcn/ui requires a Node.js backend; the shadcn CLI step runs only in the Node install flow and Laravel is not covered yet.";
 }
 
 /** Rejects cross-option flag combinations before prompts or scaffold writes. */
@@ -253,10 +267,15 @@ export function validateFlagCompatibility(args: ParsedArgs): void {
     );
   }
 
-  if (extras.includes("shadcn") && frontend && frontend !== "react") {
-    throw new Error(
-      "shadcn/ui is only available for React/Vite web projects; choose --frontend react or omit shadcn.",
-    );
+  if (extras.includes("shadcn")) {
+    if (frontend && frontend !== "react") {
+      throw new Error(
+        "shadcn/ui is only available for React/Vite web projects; choose --frontend react or omit shadcn.",
+      );
+    }
+    if (runtime === "python" || runtime === "php") {
+      throw new Error(`${shadcnRuntimeRejectionReason(runtime)} Omit shadcn or use --runtime node.`);
+    }
   }
 
   if (runtime === "node" && backend === "hono" && orm === "prisma") {
@@ -549,9 +568,18 @@ export function validateAnswerCompatibility(answers: Answers): void {
   }
   if (
     answers.extras.shadcn &&
-    !supportsShadcn(answers.projectType, answers.frontend, answers.architecture)
+    !supportsShadcn(
+      answers.projectType,
+      answers.frontend,
+      answers.architecture,
+      answers.backendRuntime,
+    )
   ) {
-    throw new Error("shadcn/ui is only available for React/Vite web projects.");
+    throw new Error(
+      answers.backendRuntime === "python" || answers.backendRuntime === "php"
+        ? shadcnRuntimeRejectionReason(answers.backendRuntime)
+        : "shadcn/ui is only available for React/Vite web projects on a Node.js stack or frontend-only.",
+    );
   }
 
   if (answers.frontend === "nextjs") {

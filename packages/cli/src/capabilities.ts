@@ -230,7 +230,7 @@ export const CAPABILITY_REGISTRY = {
       value: "shadcn",
       label: "shadcn/ui",
       available: true,
-      hint: "Component library (includes Tailwind) — runs shadcn CLI",
+      hint: "Component library (includes Tailwind) — Node-family stacks only; runs shadcn CLI",
     },
   ] as const satisfies readonly CapabilityOption<"tailwind" | "eslint" | "shadcn">[],
   modules: [

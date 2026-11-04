@@ -96,21 +96,34 @@ export function composeLayers(answers: Answers): Layer[] {
 
   // Next.js ships Tailwind wired by create-next-app (turbopack loader) —
   // the Vite tailwind extra (and the vite-config-based shadcn setup) is
-  // only for Vite clients. The vite.config.ts override is per-framework
-  // (each client's plugin differs).
+  // only for Vite clients. The vite config override is per-framework and
+  // per-language (each client's plugin differs; a JS client must receive a
+  // vite.config.js or Vite would keep resolving its own config instead).
   if (answers.extras.tailwind && !integrated) {
-    layers.push({ src: `extras/tailwind/vite-${answers.frontend}`, dest: clientDest });
+    const tailwindVariant =
+      answers.frontend === "react" && answers.language === "javascript"
+        ? "vite-react-js"
+        : `vite-${answers.frontend}`;
+    layers.push({ src: `extras/tailwind/${tailwindVariant}`, dest: clientDest });
     layers.push({ src: "extras/tailwind/css", dest: `${clientDest}/src` });
   }
-  if (answers.extras.eslintPrettier) {
+  // create-next-app already provides ESLint (eslint.config.mjs) with its
+  // fixed generator defaults — shipping the extras layer's eslint.config.js
+  // alongside it would shadow the generated config on the integrated path.
+  if (answers.extras.eslintPrettier && !integrated) {
     layers.push({ src: "extras/eslint", dest: "." });
   }
-  // shadcn builds on Tailwind: pre-provisions the `@/` alias (tsconfig/vite)
-  // and the shadcn-based App; `npx shadcn init/add` run post-scaffold (see
-  // index.ts) to pull the pinned preset and components. React+Vite only —
-  // the generated components and vite alias assume that stack.
+  // shadcn builds on Tailwind: pre-provisions the `@/` alias (tsconfig or
+  // jsconfig + vite) and the shadcn-based App; `npx shadcn init/add` run
+  // post-scaffold (see index.ts) to pull the pinned preset and components.
+  // React+Vite only — the generated components and vite alias assume that
+  // stack. Language selects the variant so a JS client gets App.jsx and a
+  // vite.config.js it actually resolves.
   if (answers.extras.shadcn && answers.frontend === "react" && !integrated) {
-    layers.push({ src: "extras/shadcn", dest: clientDest });
+    layers.push({
+      src: answers.language === "javascript" ? "extras/shadcn-js" : "extras/shadcn",
+      dest: clientDest,
+    });
   }
 
   const rootPrefix = integrated

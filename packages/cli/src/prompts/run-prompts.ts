@@ -468,7 +468,8 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
         options: extraChoices
           .filter(
             (choice) =>
-              choice.value !== "shadcn" || supportsShadcn(projectType, frontend, architecture),
+              choice.value !== "shadcn" ||
+              supportsShadcn(projectType, frontend, architecture, backendRuntime),
           )
           .map(({ value, label, hint }) => ({ value, label, hint })),
       }),
