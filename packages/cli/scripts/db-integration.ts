@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url'
 import type { StartedMySqlContainer } from '@testcontainers/mysql'
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql'
 import { runCommand, startCommand, type StartedCommand } from '../src/exec.js'
+import { ensureDockerAvailable as ensureDockerEngineAvailable } from './lib/dwait.js'
 import { saveManifest } from '../src/add.js'
 import { applyModuleToProject, runAdd } from '../src/add-run.js'
 import { CLI_VERSION, TEMPLATES_ROOT } from '../src/config.js'
@@ -194,15 +195,7 @@ async function startDatabase(
 }
 
 async function ensureDockerAvailable(): Promise<void> {
-  const result = runCommand('docker', ['info'], process.cwd(), {
-    timeoutMs: 15_000,
-    maxBuffer: 1_000_000,
-  })
-  if (!result.ok) {
-    throw new Error(
-      'Docker Engine/Desktop is required for PostgreSQL and MySQL tests. Start Docker and retry.',
-    )
-  }
+  await ensureDockerEngineAvailable('the PostgreSQL and MySQL tests')
 }
 
 function ensureTestcontainersNodeVersion(): void {

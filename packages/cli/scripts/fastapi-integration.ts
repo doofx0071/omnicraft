@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql'
 import { runCommand, startCommand, type StartedCommand } from '../src/exec.js'
+import { ensureDockerAvailable as ensureDockerEngineAvailable } from './lib/dwait.js'
 import { saveManifest } from '../src/add.js'
 import { CLI_VERSION, TEMPLATES_ROOT } from '../src/config.js'
 import { buildManifest } from '../src/manifest.js'
@@ -224,13 +225,7 @@ async function verifyCrud(origin: string, database: TestDatabase): Promise<void>
 }
 
 async function ensureDockerAvailable(): Promise<void> {
-  const result = runCommand('docker', ['info'], process.cwd(), {
-    timeoutMs: 15_000,
-    maxBuffer: 1_000_000,
-  })
-  if (!result.ok) {
-    throw new Error('Docker Engine/Desktop is required for FastAPI PostgreSQL integration tests.')
-  }
+  await ensureDockerEngineAvailable('the FastAPI PostgreSQL integration tests')
 }
 
 async function runDatabaseCase(database: TestDatabase): Promise<void> {
