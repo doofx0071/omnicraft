@@ -21,13 +21,13 @@ import { createEnvFiles } from "./scaffold/env.js";
 import { applyLayers } from "./scaffold/engine.js";
 import { createLaravelSqliteMigrationEnv } from "./scaffold/laravel-env.js";
 import { gitInit } from "./scaffold/git.js";
-import { runCommand, runCommandVisible } from "./exec.js";
+import { assertGeneratorOutput, runCommand, runCommandVisible } from "./exec.js";
 import { detectPackageManager, installDependencies } from "./scaffold/pkg-manager.js";
 import { fetchRemoteTemplates } from "./scaffold/remote.js";
 import { validateStackFlags } from "./prefill.js";
 import { checkForUpdate } from "./update-check.js";
-import { copyFileSync, existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 /**
  * The prompt library drives the console in raw mode; if the process exits
@@ -174,6 +174,7 @@ async function main(): Promise<void> {
           "create-expo-app failed — see the output above. Check your connection and that Node ≥ 20 is installed.",
         );
       }
+      assertGeneratorOutput(answers.targetDir, "package.json", "create-expo-app");
       applyLayers(templatesRoot, layers, variables, answers.targetDir);
       spinner.stop("Expo app created and configured");
     } else {
@@ -184,7 +185,7 @@ async function main(): Promise<void> {
         [
           "--yes",
           "create-tauri-app@latest",
-          basename(answers.targetDir),
+          answers.targetDir,
           "--template",
           "react-ts",
           "--manager",
@@ -200,6 +201,7 @@ async function main(): Promise<void> {
         spinner.stop("create-tauri-app failed");
         throw new Error("create-tauri-app failed — see the output above. Check your connection.");
       }
+      assertGeneratorOutput(answers.targetDir, "package.json", "create-tauri-app");
       applyLayers(templatesRoot, layers, variables, answers.targetDir);
       spinner.stop("Tauri app created and configured");
     }
@@ -298,6 +300,7 @@ async function main(): Promise<void> {
           `Could not retrieve the pinned Laravel Inertia React starter kit — check PHP, Composer, and your connection.\n${starterCreated.output.split("\n").slice(-10).join("\n")}`,
         );
       }
+      assertGeneratorOutput(answers.targetDir, "server/composer.json", "composer create-project");
       applyLayers(templatesRoot, layerPlan.afterOfficialGenerator, variables, answers.targetDir);
       const serverDir = join(answers.targetDir, "server");
       const sqliteFile = join(serverDir, "database", "database.sqlite");
@@ -364,6 +367,7 @@ async function main(): Promise<void> {
           `Could not retrieve the pinned Laravel Livewire starter kit — check your connection and Node.js.\n${cloned.output.split("\n").slice(-10).join("\n")}`,
         );
       }
+      assertGeneratorOutput(answers.targetDir, "server/composer.json", "the Laravel Livewire starter clone");
       applyLayers(templatesRoot, layerPlan.afterOfficialGenerator, variables, answers.targetDir);
       const serverDir = join(answers.targetDir, "server");
       const sqliteFile = join(serverDir, "database", "database.sqlite");
@@ -438,7 +442,10 @@ async function main(): Promise<void> {
         [
           "--yes",
           CNA_PACKAGE,
-          answers.projectName,
+          // Pass the absolute target path: npm 11 npx re-resolves the working
+          // directory to the nearest package.json prefix, so a bare project
+          // name can make create-next-app write its skeleton elsewhere.
+          answers.targetDir,
           "--ts",
           "--app",
           "--tailwind",
@@ -450,8 +457,8 @@ async function main(): Promise<void> {
           "--skip-install",
           "--yes",
         ],
-        // create-next-app refuses to write into an existing non-empty dir —
-        // scaffold into the (fresh) target and move the app up.
+        // create-next-app refuses to write into an existing non-empty dir, but
+        // the empty target itself is fine — it fills exactly that directory.
         dirname(answers.targetDir),
         64 * 1024 * 1024,
       );
@@ -461,12 +468,7 @@ async function main(): Promise<void> {
           `create-next-app failed — see the output above. You can retry manually:\n  npx ${CNA_PACKAGE} ${answers.projectName} --ts --app --tailwind --no-src-dir --import-alias @/\\* --use-npm --skip-install --yes`,
         );
       }
-      const created = join(dirname(answers.targetDir), answers.projectName);
-      if (created !== answers.targetDir && !existsSync(answers.targetDir)) {
-        // cna created <parent>/<name>; move it to the requested target when
-        // they differ (nested/renamed target paths).
-        renameSync(created, answers.targetDir);
-      }
+      assertGeneratorOutput(answers.targetDir, "package.json", "create-next-app");
       applyLayers(templatesRoot, layerPlan.afterOfficialGenerator, variables, answers.targetDir);
       spinner.stop("Next.js application created and configured");
     } else {
@@ -505,6 +507,7 @@ async function main(): Promise<void> {
           `composer create-project failed — is Composer installed?\n${composer.output.split("\n").slice(-10).join("\n")}`,
         );
       }
+      assertGeneratorOutput(answers.targetDir, "server/composer.json", "composer create-project");
       applyLayers(templatesRoot, layerPlan.afterComposer, variables, answers.targetDir);
       const serverDir = join(answers.targetDir, "server");
       if (answers.database === "sqlite" && answers.architecture.kind === "separate-frontend-api") {

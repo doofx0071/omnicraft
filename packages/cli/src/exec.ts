@@ -1,4 +1,6 @@
 import { spawn, spawnSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 
 const IS_WIN = process.platform === 'win32'
 const DEFAULT_MAX_BUFFER = 16 * 1024 * 1024
@@ -34,6 +36,27 @@ export function quoteWin32Token(token: string): string {
  */
 export function joinWin32Command(command: string, args: string[]): string {
   return [command, ...args].map(quoteWin32Token).join(' ')
+}
+
+/**
+ * npm 11 `npx` re-resolves its working directory to the nearest package.json
+ * prefix, so an official generator can silently write its skeleton elsewhere
+ * while still exiting 0. Every generator run must prove its output landed in
+ * the target directory before OmniCraft overlays templates on top of it —
+ * otherwise the overlay applies to an empty dir and the user gets a
+ * half-generated project recorded as a success.
+ */
+export function assertGeneratorOutput(
+  targetDir: string,
+  marker: string,
+  generator: string,
+): void {
+  if (!existsSync(join(targetDir, marker))) {
+    throw new Error(
+      `${generator} reported success but its output is missing from "${targetDir}". ` +
+        `npm may have re-resolved the working directory — look for a stray skeleton next to the nearest package.json, remove it, and retry.`,
+    )
+  }
 }
 
 export interface ExecResult {

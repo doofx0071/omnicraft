@@ -1,8 +1,14 @@
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { joinWin32Command, quoteWin32Token, runCommand, startCommand } from './exec.js'
+import {
+  assertGeneratorOutput,
+  joinWin32Command,
+  quoteWin32Token,
+  runCommand,
+  startCommand,
+} from './exec.js'
 
 describe('exec helpers', () => {
   it('captures a fixed command result and applies its timeout', () => {
@@ -77,5 +83,36 @@ describe('win32 command quoting', () => {
 
     expect(result.ok).toBe(true)
     expect(result.output).toBe('a&b|c')
+  })
+})
+
+describe('assertGeneratorOutput', () => {
+  const tempDirs: string[] = []
+  function makeTempDir(): string {
+    const dir = mkdtempSync(join(tmpdir(), 'omnicraft-genout-'))
+    tempDirs.push(dir)
+    return dir
+  }
+
+  afterAll(() => {
+    for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('passes when the generator skeleton landed in the target', () => {
+    const dir = makeTempDir()
+    writeFileSync(join(dir, 'package.json'), '{}')
+
+    expect(() => assertGeneratorOutput(dir, 'package.json', 'create-next-app')).not.toThrow()
+  })
+
+  it('fails with a clear error when the skeleton landed elsewhere', () => {
+    const dir = makeTempDir()
+
+    expect(() => assertGeneratorOutput(dir, 'package.json', 'create-next-app')).toThrow(
+      /create-next-app reported success but its output is missing from/,
+    )
+    expect(() =>
+      assertGeneratorOutput(dir, 'server/composer.json', 'composer create-project'),
+    ).toThrow(/composer create-project reported success/)
   })
 })

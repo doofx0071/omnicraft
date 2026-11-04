@@ -10,6 +10,7 @@ import { createEnvFiles } from '../src/scaffold/env.js'
 import { applyLayers } from '../src/scaffold/engine.js'
 import { composeLayers, templateVariables } from '../src/scaffold/compose.js'
 import { TEMPLATES_ROOT, CLI_VERSION } from '../src/config.js'
+import { joinWin32Command } from '../src/exec.js'
 import { buildManifest } from '../src/manifest.js'
 import { saveManifest } from '../src/add.js'
 import type { Answers } from '../src/types.js'
@@ -167,45 +168,53 @@ for (const authentication of ['none', 'laravel-native'] as const) {
   mkdirSync(dir, { recursive: true })
   console.log(`running create-next-app for ${name}...`)
   const { spawnSync } = await import('node:child_process')
-  const cna = spawnSync(
-    [
-      'npx',
-      '--yes',
-      'create-next-app@16',
-      name,
-      '--ts',
-      '--app',
-      '--tailwind',
-      '--no-src-dir',
-      '--eslint',
-      '--import-alias',
-      '@/*',
-      '--use-npm',
-      '--skip-install',
-      '--yes',
-    ].join(' '),
-    { cwd: outRoot, stdio: 'inherit', shell: process.platform === 'win32' },
-  )
-  if (cna.status !== 0) {
-    console.error(`create-next-app failed for ${name} — skipping overlay (run manually to verify)`)
+  // Pass the absolute target dir: npm 11 npx re-resolves cwd to the nearest
+  // package.json prefix, so a bare name can land the skeleton in the repo tree.
+  const cnaArgs = [
+    '--yes',
+    'create-next-app@16',
+    dir,
+    '--ts',
+    '--app',
+    '--tailwind',
+    '--no-src-dir',
+    '--eslint',
+    '--import-alias',
+    '@/*',
+    '--use-npm',
+    '--skip-install',
+    '--yes',
+  ]
+  const cna =
+    process.platform === 'win32'
+      ? spawnSync(joinWin32Command('npx', cnaArgs), {
+          cwd: outRoot,
+          stdio: 'inherit',
+          shell: true,
+        })
+      : spawnSync('npx', cnaArgs, { cwd: outRoot, stdio: 'inherit' })
+  const skeletonOk = cna.status === 0
+  if (skeletonOk) {
+    console.log(`create-next-app skeleton landed in ${dir}`)
   } else {
-    const answers: Answers = {
-      projectName: name,
-      targetDir: dir,
-      projectType: 'web',
-      frontend: 'nextjs',
-      language: 'typescript',
-      fullStack: true,
-      backendRuntime: null,
-      backendFramework: null,
-      orm: 'none',
-      database: 'sqlite',
-      authentication: 'none',
-      extras: { tailwind: true, eslintPrettier: true, shadcn: false },
-      architecture: { kind: 'integrated-fullstack', framework: 'nextjs' },
-    }
-    applyLayers(TEMPLATES_ROOT, composeLayers(answers), templateVariables(answers), dir)
-    createEnvFiles(dir)
-    console.log(`scaffolded (next overlay) ${dir}`)
+    console.error(`create-next-app failed for ${name} — recording overlay-only output (run manually to verify)`)
   }
+  const answers: Answers = {
+    projectName: name,
+    targetDir: dir,
+    projectType: 'web',
+    frontend: 'nextjs',
+    language: 'typescript',
+    fullStack: true,
+    backendRuntime: null,
+    backendFramework: null,
+    orm: 'none',
+    database: 'sqlite',
+    authentication: 'none',
+    extras: { tailwind: true, eslintPrettier: true, shadcn: false },
+    architecture: { kind: 'integrated-fullstack', framework: 'nextjs' },
+  }
+  applyLayers(TEMPLATES_ROOT, composeLayers(answers), templateVariables(answers), dir)
+  createEnvFiles(dir)
+  console.log(`scaffolded ${skeletonOk ? '(next overlay on CNA skeleton)' : '(next overlay only)'} ${dir}`)
 }
