@@ -139,4 +139,57 @@ describe('buildNextSteps', () => {
       expect(result.details).not.toContain('localhost:5173')
     },
   )
+
+  it.each([
+    { backendRuntime: 'node', backendFramework: 'express', orm: 'drizzle', databases: ['postgres', 'sqlite', 'mysql'] },
+    { backendRuntime: 'python', backendFramework: 'fastapi', orm: null, databases: ['sqlite', 'postgres'] },
+    { backendRuntime: 'php', backendFramework: 'laravel', orm: null, databases: ['sqlite', 'postgres', 'mysql'] },
+  ] as const)(
+    'labels the full-stack database detail after the actual $backendRuntime target',
+    ({ backendRuntime, backendFramework, orm, databases }) => {
+      for (const database of databases) {
+        const result = buildNextSteps(
+          makeAnswers({ backendRuntime, backendFramework, orm, database }),
+          'pnpm',
+        )
+
+        const label = database === 'postgres' ? 'PostgreSQL' : database === 'mysql' ? 'MySQL' : 'SQLite'
+        if (backendRuntime === 'php') {
+          expect(result.details).toContain(`database → ${label} (php artisan migrate)`)
+          continue
+        }
+
+        if (database === 'sqlite') {
+          expect(result.details).toContain('SQLite file at server/data/app.db')
+        } else {
+          // FastAPI/Express + PostgreSQL must not be told about the SQLite file.
+          expect(result.details).toContain(`database → ${label}`)
+          expect(result.details).not.toContain('server/data/app.db')
+          expect(result.details).not.toContain('SQLite')
+        }
+
+        if (backendRuntime === 'node') {
+          expect(result.details).toContain(`(GUI: pnpm run db:studio)`)
+        }
+        if (backendRuntime === 'python') {
+          expect(result.details).toContain(`(migrations: pnpm run db:migrate)`)
+        }
+      }
+    },
+  )
+
+  it('interpolates the detected package manager into the database detail', () => {
+    for (const pm of ['npm', 'pnpm', 'yarn', 'bun'] as const) {
+      const node = buildNextSteps(makeAnswers({ database: 'postgres' }), pm)
+      expect(node.details).toContain(`(GUI: ${pm} run db:studio)`)
+      if (pm !== 'npm') expect(node.details).not.toContain('(GUI: npm run db:studio)')
+
+      const python = buildNextSteps(
+        makeAnswers({ backendRuntime: 'python', backendFramework: 'fastapi', orm: null, database: 'sqlite' }),
+        pm,
+      )
+      expect(python.details).toContain(`(migrations: ${pm} run db:migrate)`)
+      if (pm !== 'npm') expect(python.details).not.toContain('(migrations: npm run db:migrate)')
+    }
+  })
 })

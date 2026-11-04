@@ -95,10 +95,12 @@ export function buildNextSteps(answers: Answers, pm: PackageManager): NextSteps 
   steps.push(`${pm} run dev`);
 
   if (answers.fullStack) {
-    const studio = `npm run db:studio`;
+    const studio = `${pm} run db:studio`;
     const dbLine =
       answers.backendRuntime === "python"
-        ? `  database → SQLite file at server/data/app.db (migrations: npm run db:migrate)`
+        ? answers.database === "sqlite"
+          ? `  database → SQLite file at server/data/app.db (migrations: ${pm} run db:migrate)`
+          : `  database → ${DATABASE_LABELS[answers.database!]} (migrations: ${pm} run db:migrate)`
         : answers.backendRuntime === "php"
           ? `  database → ${DATABASE_LABELS[answers.database!]} (php artisan migrate)`
           : answers.database === "sqlite"
