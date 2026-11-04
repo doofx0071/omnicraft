@@ -53,6 +53,18 @@ export const LARAVEL_LIVEWIRE_STARTER_KITS = {
   'laravel-native': 'laravel/livewire-starter-kit#143e0c1e574e122ebe7e294e5342b7bf251df799',
 } as const
 
+/**
+ * Node.js version ladder the official Livewire starter kits' Vite Plus
+ * tooling runs on. Each rung applies to its exact major only; anything above
+ * the last rung's major is fully supported. php-livewire-auth-e2e asserts the
+ * running CLI against this ladder before generating projects.
+ */
+export const LARAVEL_LIVEWIRE_NODE_VERSION_LADDER = [
+  { major: 22, minor: 18 },
+  { major: 24, minor: 11 },
+  { major: 26, minor: 0 },
+] as const
+
 /** Official Laravel 13 Inertia React starter kits pinned to reviewed upstream commits. */
 export const LARAVEL_INERTIA_REACT_STARTER_KITS = {
   none: 'laravel/blank-react-starter-kit:dev-main#804562bb06cbfa68f459e4916ab81ad4fbf0a835',
