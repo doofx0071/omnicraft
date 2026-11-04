@@ -5,7 +5,9 @@ import {
   compatibleAuthenticationSetups,
   isFrontendAllowedByFlags,
   isRuntimeAllowedByFlags,
+  validateAnswerCompatibility,
 } from "./compatibility.js";
+import type { Answers } from "./types.js";
 import { parseArgs } from "./args.js";
 import { validateStackFlags, resolveAnswers } from "./prefill.js";
 import { composeLayers } from "./scaffold/compose.js";
@@ -262,5 +264,67 @@ describe("creation-time authentication compatibility", () => {
     expect(isFrontendAllowedByFlags("livewire", args)).toBe(false);
     expect(isRuntimeAllowedByFlags("php", args)).toBe(true);
     expect(isRuntimeAllowedByFlags("node", args)).toBe(false);
+  });
+});
+
+describe("shadcn stack restriction", () => {
+  function shadcnAnswers(overrides: Partial<Answers> = {}): Answers {
+    return {
+      projectName: "demo-app",
+      targetDir: ".",
+      projectType: "web",
+      frontend: "react",
+      language: "typescript",
+      fullStack: true,
+      backendRuntime: "node",
+      backendFramework: "express",
+      orm: "drizzle",
+      database: "sqlite",
+      authentication: "none",
+      extras: { tailwind: true, eslintPrettier: true, shadcn: true },
+      architecture: { kind: "separate-frontend-api" },
+      ...overrides,
+    };
+  }
+
+  it.each([
+    { backendRuntime: "python", backendFramework: "fastapi", expected: /FastAPI is not covered yet/ },
+    { backendRuntime: "php", backendFramework: "laravel", expected: /Laravel is not covered yet/ },
+  ] as const)(
+    "rejects shadcn on the $backendRuntime separate-API stack before composing layers",
+    ({ backendRuntime, backendFramework, expected }) => {
+      const answers = shadcnAnswers({
+        backendRuntime,
+        backendFramework,
+        orm: null,
+        database: "sqlite",
+      });
+      expect(() => validateAnswerCompatibility(answers)).toThrow(expected);
+      // composeLayers validates the same answers, so a composition run fails
+      // for the python/php shadcn tuples too.
+      expect(() => composeLayers(answers)).toThrow(/shadcn\/ui requires a Node\.js backend/);
+    },
+  );
+
+  it("accepts shadcn on the Node-family stacks", () => {
+    expect(() => validateAnswerCompatibility(shadcnAnswers())).not.toThrow();
+    expect(() =>
+      validateAnswerCompatibility(
+        shadcnAnswers({
+          fullStack: false,
+          backendRuntime: null,
+          backendFramework: null,
+          orm: null,
+          database: null,
+          architecture: { kind: "frontend-only" },
+        }),
+      ),
+    ).not.toThrow();
+  });
+
+  it("keeps the React/Vite restriction for non-Node reasons", () => {
+    expect(() => validateAnswerCompatibility(shadcnAnswers({ frontend: "vue" }))).toThrow(
+      /shadcn\/ui is only available/,
+    );
   });
 });

@@ -599,6 +599,39 @@ describe("runPrompts flow", () => {
     expect(extras?.options.map((option) => option.value)).toEqual(["tailwind", "eslint"]);
   });
 
+  it("omits shadcn from the extras for the python runtime", async () => {
+    script.push(
+      { prompt: "select", answer: "web" },
+      { prompt: "select", answer: "react" },
+      { prompt: "select", answer: "typescript" },
+      { prompt: "select", answer: "fastapi" },
+      { prompt: "select", answer: "sqlite" },
+      { prompt: "multiselect", answer: [] },
+      { prompt: "confirm", answer: true },
+    );
+
+    await runPrompts("fastapi-app", parseArgs(["--runtime", "python"]));
+    const extras = optionsSeen.find((entry) => entry.prompt === "multiselect");
+    expect(extras?.options.map((option) => option.value)).toEqual(["tailwind", "eslint"]);
+  });
+
+  it("omits shadcn from the extras for the php runtime", async () => {
+    script.push(
+      { prompt: "select", answer: "web" },
+      { prompt: "select", answer: "react" },
+      { prompt: "select", answer: "typescript" },
+      { prompt: "select", answer: "laravel" },
+      { prompt: "select", answer: "sqlite" },
+      { prompt: "select", answer: "none" },
+      { prompt: "multiselect", answer: [] },
+      { prompt: "confirm", answer: true },
+    );
+
+    await runPrompts("laravel-app", parseArgs(["--runtime", "php"]));
+    const extras = optionsSeen.find((entry) => entry.prompt === "multiselect");
+    expect(extras?.options.map((option) => option.value)).toEqual(["tailwind", "eslint"]);
+  });
+
   it("restricts an explicit shadcn choice to the React frontend", async () => {
     script.push(
       { prompt: "select", answer: "web" },
