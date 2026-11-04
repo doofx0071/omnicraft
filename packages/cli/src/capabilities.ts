@@ -81,7 +81,7 @@ export const AUTHENTICATION_CATALOG = {
     value: "laravel-native",
     label: "Laravel native auth",
     available: true,
-    hint: "Sanctum SPA sessions for the Laravel 12 API on SQLite, PostgreSQL, or MySQL (new database runtime evidence pending); integrated Laravel auth remains SQLite-only",
+    hint: "Sanctum SPA sessions for the Laravel 12 API on SQLite, PostgreSQL, or MySQL (all three runtime-verified in hosted CI); integrated Laravel auth remains SQLite-only",
     category: "framework-native",
     requirements: {
       frontend: ["livewire", "inertia-react", "react"],

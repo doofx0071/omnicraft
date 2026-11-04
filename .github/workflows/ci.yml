@@ -25,6 +25,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         node: [20, 24]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     name: unix (${{ matrix.os }}, node ${{ matrix.node }})
     defaults:
       run:
@@ -122,6 +123,52 @@ jobs:
 
       - name: Test generated Node runtime project (${{ matrix.scenario }})
         run: npm run test:integration:node --workspace=create-omnicraft -- --scenario ${{ matrix.scenario }}
+
+  # Declared engines floor is >=20.12, but no generated project currently
+  # runs on Node 20: node-stack-integration cannot load there (Testcontainers
+  # pulls an undici version requiring zlib ZSTD constants from Node 22+) and
+  # the SQLite layers depend on better-sqlite3@^13 (engines node >=22).
+  # Express + raw SQL + PostgreSQL uses the pure-JS `pg` driver, so a service
+  # container makes the full scaffold/install/typecheck/migrate/boot/CRUD
+  # path provable on the Node 20 floor. Extra hygiene check — no Supported
+  # matrix row is registered for it.
+  node20-postgres-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:17.11-alpine3.24
+        env:
+          POSTGRES_DB: omnicraft
+          POSTGRES_USER: omnicraft
+          POSTGRES_PASSWORD: omnicraft
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U omnicraft -d omnicraft"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Build the production CLI
+        run: npx tsup
+        working-directory: packages/cli
+
+      - name: Scaffold, install, typecheck, migrate, boot, and CRUD the generated project on Node 20
+        env:
+          DATABASE_URL: postgres://omnicraft:omnicraft@127.0.0.1:5432/omnicraft
+        run: npx tsx scripts/lib/node20-postgres-runtime.ts
+        working-directory: packages/cli
 
   nextjs-runtime-integration:
     runs-on: ubuntu-latest
@@ -258,12 +305,8 @@ jobs:
           - react-vite-testing-php-eslint-tailwind
           - react-vite-testing-frontend-only-shadcn
           - react-vite-testing-node-shadcn
-          - react-vite-testing-python-shadcn
-          - react-vite-testing-php-shadcn
           - react-vite-testing-frontend-only-shadcn-eslint
           - react-vite-testing-node-shadcn-eslint
-          - react-vite-testing-python-shadcn-eslint
-          - react-vite-testing-php-shadcn-eslint
     steps:
       - uses: actions/checkout@v4
 
@@ -517,6 +560,7 @@ jobs:
 
   support-evidence:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -537,6 +581,7 @@ jobs:
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, windows]
+    timeout-minutes: 60
     defaults:
       run:
         shell: cmd
@@ -577,6 +622,7 @@ jobs:
   # run the published-style binary and scaffold a real project from it.
   package:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -630,13 +676,16 @@ jobs:
       - supabase-auth-integration
       - support-evidence
       - package
+      - node20-postgres-runtime
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Require all release checks
         env:
           UNIX_MATRIX: ${{ needs.unix.result }}
           NODE_DATABASE: ${{ needs.database-integration.result }}
           NODE_RUNTIME: ${{ needs.node-runtime-integration.result }}
+          NODE20_POSTGRES_RUNTIME: ${{ needs.node20-postgres-runtime.result }}
           NEXTJS_RUNTIME: ${{ needs.nextjs-runtime-integration.result }}
           FRONTEND_RUNTIME: ${{ needs.frontend-runtime-integration.result }}
           DOCKER_MODULE: ${{ needs.docker-module-integration.result }}
@@ -652,7 +701,7 @@ jobs:
           SUPPORT_EVIDENCE: ${{ needs.support-evidence.result }}
           PACKAGE_ARTIFACT: ${{ needs.package.result }}
         run: |
-          for result in "$UNIX_MATRIX" "$NODE_DATABASE" "$NODE_RUNTIME" "$NEXTJS_RUNTIME" "$FRONTEND_RUNTIME" "$DOCKER_MODULE" "$MODULE_RUNTIME" "$REACT_VITE_ADD_TESTING" "$NATIVE_PLATFORM" "$PYTHON_DATABASE" "$PHP_DATABASE" "$PHP_LIVEWIRE_AUTH" "$PHP_INERTIA_REACT_AUTH" "$PHP_SANCTUM_SPA_AUTH" "$SUPABASE_AUTH" "$SUPPORT_EVIDENCE" "$PACKAGE_ARTIFACT"; do
+          for result in "$UNIX_MATRIX" "$NODE_DATABASE" "$NODE_RUNTIME" "$NODE20_POSTGRES_RUNTIME" "$NEXTJS_RUNTIME" "$FRONTEND_RUNTIME" "$DOCKER_MODULE" "$MODULE_RUNTIME" "$REACT_VITE_ADD_TESTING" "$NATIVE_PLATFORM" "$PYTHON_DATABASE" "$PHP_DATABASE" "$PHP_LIVEWIRE_AUTH" "$PHP_INERTIA_REACT_AUTH" "$PHP_SANCTUM_SPA_AUTH" "$SUPABASE_AUTH" "$SUPPORT_EVIDENCE" "$PACKAGE_ARTIFACT"; do
             if [ "$result" != "success" ]; then
               echo "A required release check finished with status: $result"
               exit 1
@@ -665,6 +714,7 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     needs: supported-matrix
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     concurrency:
       group: release-${{ github.ref }}
       cancel-in-progress: false

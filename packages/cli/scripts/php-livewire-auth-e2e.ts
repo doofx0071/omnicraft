@@ -12,6 +12,7 @@ import {
 import { tmpdir } from 'node:os'
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { LARAVEL_LIVEWIRE_NODE_VERSION_LADDER } from '../src/config.js'
 import { integrationScenarios } from '../src/support-evidence.js'
 import type { AuthenticationSetup } from '../src/types.js'
 import { runCommand } from '../src/exec.js'
@@ -43,14 +44,17 @@ function assertSupportedNodeForLivewire(): void {
   const [majorText, minorText] = process.versions.node.split('.')
   const major = Number(majorText)
   const minor = Number(minorText)
+  const ladder = LARAVEL_LIVEWIRE_NODE_VERSION_LADDER
+  const rung = ladder.find((entry) => entry.major === major)
   const supported =
-    major > 26 ||
-    major === 26 ||
-    (major === 24 && minor >= 11) ||
-    (major === 22 && minor >= 18)
+    major > ladder[ladder.length - 1].major ||
+    (rung !== undefined && minor >= rung.minor)
+  const required = ladder.map(({ major: rungMajor, minor: rungMinor }) =>
+    rungMinor === 0 ? `${rungMajor}+` : `${rungMajor}.${rungMinor}+`,
+  )
   assert(
     supported,
-    `The official Livewire starter's Vite Plus tooling requires Node 22.18+, 24.11+, or 26+; got ${process.version}.`,
+    `The official Livewire starter's Vite Plus tooling requires Node ${required.slice(0, -1).join(', ')}, or ${required[required.length - 1]}; got ${process.version}.`,
   )
 }
 

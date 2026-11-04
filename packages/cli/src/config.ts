@@ -34,6 +34,16 @@ export const TEMPLATES_ROOT = fileURLToPath(new URL('../templates/', import.meta
 export const CNA_PACKAGE = 'create-next-app@16'
 
 /**
+ * Official generators pinned to exact versions, like every other external
+ * input: two runs of the same CLI version must produce identical projects
+ * and exercise the same generator behavior. Bump deliberately and re-verify
+ * the hosted evidence for the affected paths.
+ */
+export const CREATE_EXPO_APP_PACKAGE = 'create-expo-app@5.0.0'
+export const SHADCN_PACKAGE = 'shadcn@4.23.0'
+export const PRETTIER_PACKAGE = 'prettier@3.9.10'
+
+/**
  * Laravel Livewire generator inputs are pinned to reviewed official starter-kit commits.
  * The blank kit has no auth routes; the authenticated kit uses Laravel Fortify.
  */
@@ -42,6 +52,18 @@ export const LARAVEL_LIVEWIRE_STARTER_KITS = {
   none: 'laravel/blank-livewire-starter-kit#75cf9e5cfbc18161027774fc025a1ead81eddcea',
   'laravel-native': 'laravel/livewire-starter-kit#143e0c1e574e122ebe7e294e5342b7bf251df799',
 } as const
+
+/**
+ * Node.js version ladder the official Livewire starter kits' Vite Plus
+ * tooling runs on. Each rung applies to its exact major only; anything above
+ * the last rung's major is fully supported. php-livewire-auth-e2e asserts the
+ * running CLI against this ladder before generating projects.
+ */
+export const LARAVEL_LIVEWIRE_NODE_VERSION_LADDER = [
+  { major: 22, minor: 18 },
+  { major: 24, minor: 11 },
+  { major: 26, minor: 0 },
+] as const
 
 /** Official Laravel 13 Inertia React starter kits pinned to reviewed upstream commits. */
 export const LARAVEL_INERTIA_REACT_STARTER_KITS = {

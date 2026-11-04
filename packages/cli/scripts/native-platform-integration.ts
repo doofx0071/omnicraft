@@ -7,7 +7,7 @@ import { runCommand, startCommand } from '../src/exec.js'
 import { composeLayers, templateVariables } from '../src/scaffold/compose.js'
 import { createEnvFiles } from '../src/scaffold/env.js'
 import { applyLayers } from '../src/scaffold/engine.js'
-import { CLI_VERSION, TEMPLATES_ROOT } from '../src/config.js'
+import { CLI_VERSION, CREATE_EXPO_APP_PACKAGE, TEMPLATES_ROOT } from '../src/config.js'
 import { buildManifest } from '../src/manifest.js'
 import { saveManifest } from '../src/add.js'
 import type { Answers } from '../src/types.js'
@@ -591,7 +591,7 @@ async function runExpoIosSimulator(): Promise<void> {
       'npx',
       [
         '--yes',
-        'create-expo-app@latest',
+        CREATE_EXPO_APP_PACKAGE,
         projectRoot,
         '--template',
         'default@sdk-58',
@@ -752,7 +752,7 @@ async function runExpoAndroidEmulator(): Promise<void> {
       'npx',
       [
         '--yes',
-        'create-expo-app@latest',
+        CREATE_EXPO_APP_PACKAGE,
         projectRoot,
         '--template',
         'default@sdk-58',
