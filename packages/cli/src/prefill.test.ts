@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasStackFlags, resolveAnswers, validateStackFlags } from "./prefill.js";
+import { resolveAnswers, validateStackFlags } from "./prefill.js";
 import { hasFullStackFlags } from "./compatibility.js";
 import { parseArgs } from "./args.js";
 
@@ -521,11 +521,18 @@ describe("resolveAnswers", () => {
   });
 });
 
-describe("hasStackFlags", () => {
-  it("detects any stack flag", () => {
-    expect(hasStackFlags(parseArgs(["--yes"]))).toBe(false);
-    expect(hasStackFlags(parseArgs(["--no-full-stack"]))).toBe(true);
-    expect(hasStackFlags(parseArgs(["--orm", "drizzle"]))).toBe(true);
-    expect(hasStackFlags(parseArgs(["--extras", "none"]))).toBe(true);
+describe("hasFullStackFlags", () => {
+  // prefill's former hasStackFlags (which also counted --extras and the
+  // --full-stack/--no-full-stack switch) had no production call sites and was
+  // folded into this compatibility predicate. It must only report flags that
+  // imply a full-stack architecture, because it decides whether the
+  // "Full-stack?" prompt can be skipped — extras and an explicit
+  // --no-full-stack answer other prompts and must not force that branch.
+  it("detects only flags that imply a full-stack architecture", () => {
+    expect(hasFullStackFlags(parseArgs(["--yes"]))).toBe(false);
+    expect(hasFullStackFlags(parseArgs(["--no-full-stack"]))).toBe(false);
+    expect(hasFullStackFlags(parseArgs(["--extras", "none"]))).toBe(false);
+    expect(hasFullStackFlags(parseArgs(["--orm", "drizzle"]))).toBe(true);
+    expect(hasFullStackFlags(parseArgs(["--runtime", "python"]))).toBe(true);
   });
 });

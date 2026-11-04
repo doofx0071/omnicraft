@@ -68,20 +68,6 @@ export function validateStackFlags(args: ParsedArgs): void {
   validateFlagCompatibility(args);
 }
 
-/** True when at least one prompt would be answered by a flag. */
-export function hasStackFlags(args: ParsedArgs): boolean {
-  return (
-    args.fullStack !== undefined ||
-    args.runtime !== undefined ||
-    args.frontend !== undefined ||
-    args.backend !== undefined ||
-    args.db !== undefined ||
-    args.orm !== undefined ||
-    args.auth !== undefined ||
-    args.extras !== undefined
-  );
-}
-
 /**
  * Builds complete answers from flags + defaults — used for `--yes` runs where
  * no prompt may appear. Defaults match the interactive flow's initial values.

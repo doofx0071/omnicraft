@@ -63,6 +63,38 @@ export function isProtectedPath(relativePath: string): boolean {
 }
 
 /**
+ * Directories that template layers never write into: dependency trees and
+ * build output. They are pruned from the collision walk so previewing a
+ * project that already carries node_modules/dist stays fast and quiet.
+ */
+const PRUNED_DIRECTORY_NAMES = new Set(['node_modules', 'dist'])
+
+function isPrunedDirectoryName(name: string): boolean {
+  return PRUNED_DIRECTORY_NAMES.has(name) || name.startsWith('.')
+}
+
+/**
+ * Recursively collects the files under `absoluteRoot` as '/'-separated paths
+ * relative to the layer root, restoring dotfile names segment by segment.
+ * Directories listed in PRUNED_DIRECTORY_NAMES and dot-directories
+ * (.git, .vite, …) are skipped; dotfiles themselves (.env, .gitignore) are
+ * still collected. Only files are listed — intermediate directories cannot
+ * be "overwritten" and would only add noise to the preview.
+ */
+function collectLayerFiles(absoluteRoot: string, relativeRoot: string, into: Set<string>): void {
+  for (const entry of readdirSync(absoluteRoot, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (isPrunedDirectoryName(entry.name)) continue
+      const childRoot = relativeRoot === '' ? entry.name : `${relativeRoot}/${entry.name}`
+      collectLayerFiles(join(absoluteRoot, entry.name), childRoot, into)
+    } else {
+      const relative = relativeRoot === '' ? entry.name : `${relativeRoot}/${entry.name}`
+      into.add(relative.split('/').map((segment) => restoreDotfileName(segment)).join('/'))
+    }
+  }
+}
+
+/**
  * Lists files that exist in `dir` which template layers would overwrite —
  * used to show an explicit collision summary before any write happens.
  * Protected files (.env*, .git) are flagged separately so they can be
@@ -74,9 +106,11 @@ export function findCollisions(dir: string, layerDirs: string[]): { collisions: 
     for (const layerRoot of layerDirs) {
       const abs = join(dir, layerRoot)
       if (!existsSync(abs)) continue
-      for (const entry of readdirSync(abs, { recursive: true, encoding: 'utf8' })) {
-        existing.add(join(layerRoot, String(entry).split(/[\\/]/).map((s) => restoreDotfileName(s)).join('/')))
-      }
+      const normalizedRoot = String(layerRoot)
+        .split(/[\\/]/)
+        .filter((segment) => segment.length > 0 && segment !== '.')
+        .join('/')
+      collectLayerFiles(abs, normalizedRoot, existing)
     }
   }
   const collisions: string[] = []

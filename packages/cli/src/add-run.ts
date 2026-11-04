@@ -23,7 +23,9 @@ export type ModuleApplyResult =
 function applyChangesTransactionally(targetDir: string, changes: Map<string, string>): void {
   const targetRoot = resolve(targetDir)
   const targetPrefix = targetRoot.endsWith(sep) ? targetRoot : `${targetRoot}${sep}`
-  const snapshots = new Map<string, string | null>()
+  // Snapshots are raw Buffers: a patch target could hold binary data (fonts,
+  // images, sqlite files), and a utf8 round-trip would restore it corrupted.
+  const snapshots = new Map<string, Buffer | null>()
   const directoriesMissingBeforeWrite = new Set<string>()
   for (const relativePath of changes.keys()) {
     const absolutePath = resolve(targetRoot, relativePath)
@@ -32,7 +34,7 @@ function applyChangesTransactionally(targetDir: string, changes: Map<string, str
     }
     snapshots.set(
       absolutePath,
-      existsSync(absolutePath) ? readFileSync(absolutePath, 'utf8') : null,
+      existsSync(absolutePath) ? readFileSync(absolutePath) : null,
     )
     let parent = dirname(absolutePath)
     while (parent.startsWith(targetPrefix) && !existsSync(parent)) {

@@ -13,8 +13,29 @@ describe('compareVersions', () => {
     expect(compareVersions('0.1.0', '0.2.0')).toBeLessThan(0)
   })
 
-  it('ignores prerelease suffixes', () => {
-    expect(compareVersions('0.2.0-rc.1', '0.2.0')).toBe(0)
+  it('ranks a prerelease below its own base version (semver rule: prerelease < stable)', () => {
+    expect(compareVersions('1.0.5-beta.1', '1.0.5')).toBeLessThan(0)
+    expect(compareVersions('1.0.5', '1.0.5-beta.1')).toBeGreaterThan(0)
+    expect(compareVersions('1.0.5', '1.0.5')).toBe(0)
+  })
+
+  it('ranks a prerelease of a higher base above the older stable (follows semver)', () => {
+    // 1.0.6-beta.1 > 1.0.5: the numeric base wins before prerelease is considered.
+    expect(compareVersions('1.0.6-beta.1', '1.0.5')).toBeGreaterThan(0)
+    expect(compareVersions('1.0.5', '1.0.6-beta.1')).toBeLessThan(0)
+  })
+
+  it('orders prerelease identifiers per semver precedence', () => {
+    expect(compareVersions('1.0.5-beta.1', '1.0.5-beta.2')).toBeLessThan(0)
+    expect(compareVersions('1.0.5-alpha', '1.0.5-beta')).toBeLessThan(0)
+    expect(compareVersions('1.0.5-beta', '1.0.5-beta.1')).toBeLessThan(0) // fewer identifiers sorts lower
+    expect(compareVersions('1.0.5-1', '1.0.5-alpha')).toBeLessThan(0) // numeric < alphanumeric
+    expect(compareVersions('1.0.5-beta.1', '1.0.5-beta.1')).toBe(0)
+  })
+
+  it('ignores build metadata', () => {
+    expect(compareVersions('1.0.5+build.7', '1.0.5')).toBe(0)
+    expect(compareVersions('1.0.5-beta.1+build.7', '1.0.5-beta.1')).toBe(0)
   })
 })
 
@@ -41,6 +62,16 @@ describe('checkForUpdate', () => {
       cacheFile: join(freshCacheDir(), 'cache.json'),
     })
     expect(latest).toBeNull()
+  })
+
+  it('notifies a prerelease install when the stable base is published', async () => {
+    const fetchFn = (async () =>
+      ({ ok: true, json: async () => ({ version: '1.0.5' }) })) as unknown as typeof fetch
+    const latest = await checkForUpdate('1.0.5-beta.1', {
+      fetchFn,
+      cacheFile: join(freshCacheDir(), 'cache.json'),
+    })
+    expect(latest).toBe('1.0.5')
   })
 
   it('fails silently on network errors', async () => {
