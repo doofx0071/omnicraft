@@ -11,12 +11,12 @@ React + TypeScript UI).
 
 ## Commands
 
-| Command                    | What it does                                        |
-| -------------------------- | --------------------------------------------------- |
-| `npm install`              | Install UI dependencies                             |
-| `npm run tauri dev`        | Run the desktop app with hot reload                 |
-| `npm run tauri build`      | Produce the installable bundle (needs Rust)         |
-| `npm run dev`              | Run only the web UI in a browser (fast UI work)     |
+| Command               | What it does                                    |
+| --------------------- | ----------------------------------------------- |
+| `npm install`         | Install UI dependencies                         |
+| `npm run tauri dev`   | Run the desktop app with hot reload             |
+| `npm run tauri build` | Produce the installable bundle (needs Rust)     |
+| `npm run dev`         | Run only the web UI in a browser (fast UI work) |
 
 ## Pairing with a backend
 
