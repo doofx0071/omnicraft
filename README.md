@@ -170,8 +170,8 @@ packages/cli/
 ├── src/
 │   ├── prompts/        # the interactive question flow
 │   ├── scaffold/       # engine: layer composition, rendering, install
-│   ├── config.ts       # template repo + paths (edit TEMPLATE_REPO.owner!)
-│   └── templates/      # embedded template tree — the published artifact
+│   └── config.ts       # template repo + paths (edit TEMPLATE_REPO.owner!)
+├── templates/          # embedded template tree — the published artifact
 └── scripts/smoke-e2e.ts
 ```
 
