@@ -307,6 +307,7 @@ describe("support matrix evidence", () => {
       "node-prisma-sqlite-mysql",
       "integrated-laravel-postgres-mysql",
       "shadcn-frontend-limits",
+      "shadcn-runtime-limits",
       "auth-module-fastify-hono",
       "testing-module-vue-express-drizzle-sqlite",
       "testing-module-svelte-express-drizzle-sqlite",

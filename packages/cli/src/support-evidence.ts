@@ -1117,6 +1117,10 @@ export const NEXTJS_EXTRAS_GUARD_MESSAGE =
   'Next.js always includes Tailwind and ESLint from create-next-app; use --extras tailwind,eslint or omit --extras.'
 export const SHADCN_FRONTEND_GUARD_MESSAGE =
   'shadcn/ui is only available for React/Vite web projects; choose --frontend react or omit shadcn.'
+export const SHADCN_PYTHON_RUNTIME_GUARD_MESSAGE =
+  'shadcn/ui requires a Node.js backend; the shadcn CLI step runs only in the Node install flow and FastAPI is not covered yet. Omit shadcn or use --runtime node.'
+export const SHADCN_PHP_RUNTIME_GUARD_MESSAGE =
+  'shadcn/ui requires a Node.js backend; the shadcn CLI step runs only in the Node install flow and Laravel is not covered yet. Omit shadcn or use --runtime node.'
 export const LARAVEL_LIVEWIRE_DATABASE_GUARD_MESSAGE =
   'Laravel Livewire currently requires PHP + Laravel + SQLite and does not use a separate frontend, language, ORM, or extras; omit those flags.'
 export const LARAVEL_INERTIA_REACT_DATABASE_GUARD_MESSAGE =
@@ -1407,6 +1411,40 @@ export const REJECTED_MODULE_CAPABILITIES = [
           extras: ['tailwind', 'shadcn'],
         },
         NATIVE_WEB_FLAGS_GUARD_MESSAGE,
+      ),
+    ],
+  },
+  {
+    id: 'shadcn-runtime-limits',
+    target: undefined,
+    rowLabel: 'shadcn/ui — FastAPI or Laravel API backends',
+    guard: 'flag-preflight',
+    combinations: [
+      rejectedCombination(
+        {
+          platform: 'web',
+          lang: 'typescript',
+          frontend: 'react',
+          fullStack: true,
+          runtime: 'python',
+          backend: 'fastapi',
+          db: 'postgres',
+          extras: ['tailwind', 'shadcn'],
+        },
+        SHADCN_PYTHON_RUNTIME_GUARD_MESSAGE,
+      ),
+      rejectedCombination(
+        {
+          platform: 'web',
+          lang: 'typescript',
+          frontend: 'react',
+          fullStack: true,
+          runtime: 'php',
+          backend: 'laravel',
+          db: 'sqlite',
+          extras: ['tailwind', 'shadcn'],
+        },
+        SHADCN_PHP_RUNTIME_GUARD_MESSAGE,
       ),
     ],
   },
