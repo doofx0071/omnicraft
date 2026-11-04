@@ -1,5 +1,3 @@
-import { Platform } from "react-native";
-
 /**
  * API client for the mobile app.
  *
@@ -26,11 +24,7 @@ export interface User {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const url = BASE_URL + path;
-  if (Platform.OS === "web") {
-    // Expo web build — same-origin requests are fine, keep the path as-is.
-  }
-  const res = await fetch(BASE_URL === "" ? path : url, {
+  const res = await fetch(BASE_URL + path, {
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     ...options,
   });

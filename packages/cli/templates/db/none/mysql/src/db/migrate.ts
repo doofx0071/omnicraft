@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { readFileSync, readdirSync } from "node:fs";
 import { basename } from "node:path";
+import type * as mysql from "mysql2/promise";
 import { pool } from "./index.js";
 
 /**
@@ -41,8 +42,6 @@ export async function migrate(): Promise<void> {
     }
   }
 }
-
-import type * as mysql from "mysql2/promise";
 
 migrate()
   .then(() => pool.end())
