@@ -861,6 +861,11 @@ describe("frontend expansion (v0.4)", () => {
     // no vite artifacts (cna wires tailwind via turbopack)
     expect(existsSync(join(dir, "vite.config.ts"))).toBe(false);
     expect(existsSync(join(dir, "docker-compose.yml"))).toBe(false); // sqlite
+
+    // create-next-app ships its own eslint.config.mjs — the eslint extra is
+    // gated off the integrated path so no eslint.config.js shadows it
+    expect(composeLayers(nextAnswers).map(({ src }) => src)).not.toContain("extras/eslint");
+    expect(existsSync(join(dir, "eslint.config.js"))).toBe(false);
   });
 
   it("scaffolds the next postgres variant with compose file", () => {

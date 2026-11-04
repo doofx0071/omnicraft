@@ -106,7 +106,10 @@ export function composeLayers(answers: Answers): Layer[] {
     layers.push({ src: `extras/tailwind/${tailwindVariant}`, dest: clientDest });
     layers.push({ src: "extras/tailwind/css", dest: `${clientDest}/src` });
   }
-  if (answers.extras.eslintPrettier) {
+  // create-next-app already provides ESLint (eslint.config.mjs) with its
+  // fixed generator defaults — shipping the extras layer's eslint.config.js
+  // alongside it would shadow the generated config on the integrated path.
+  if (answers.extras.eslintPrettier && !integrated) {
     layers.push({ src: "extras/eslint", dest: "." });
   }
   // shadcn builds on Tailwind: pre-provisions the `@/` alias (tsconfig or
