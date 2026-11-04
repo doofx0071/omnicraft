@@ -62,7 +62,8 @@ dependencies, applies the generated Alembic migration, boots Uvicorn, and checks
 duplicate and invalid input handling, and missing-record behavior with synthetic Testcontainers
 credentials. The PHP/Laravel suite runs PostgreSQL and MySQL cases.
 
-The separate `node-runtime-integration` target covers 15 exact paths: Express + Prisma/PostgreSQL and
+The separate `node-runtime-integration` target covers 20 exact paths: Express + Prisma/PostgreSQL,
+Express + Drizzle + SQLite paired with the Vue, Svelte, and JavaScript React client/API variants, and
 Express + raw SQL on SQLite/PostgreSQL/MySQL; Fastify + Drizzle on SQLite/PostgreSQL/MySQL, Prisma on
 PostgreSQL, and raw SQL on SQLite/PostgreSQL/MySQL; and Hono + Drizzle and raw SQL on
 SQLite/PostgreSQL/MySQL. It installs each generated project, builds/typechecks the client and API,

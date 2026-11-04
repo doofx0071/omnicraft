@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "build": "npm run build -w create-omnicraft",
+    "demo": "node scripts/make-demo.mjs",
     "dev": "npm run dev -w create-omnicraft",
     "test": "npm run test -w create-omnicraft"
   },

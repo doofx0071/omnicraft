@@ -91,10 +91,11 @@ bundle and missing-asset response. TypeScript client paths ran typecheck. The sa
 Vue, Svelte, and Next.js module requests reject before module files, dependencies, scripts, or manifests
 change. This is module-path evidence only; backend and database claims remain tied to their own rows.
 
-The later exhaustive [runtime-evidence run #40918121708](https://github.com/doofx0071/omnicraft/actions/runs/40918121708)
-checked the remaining 306 compatible React/Vite tuples: 254 passed for the testing module and 52
-JavaScript + shadcn tuples reject before writes because their template paths lack shadcn's required
-aliases. The additional module evidence does not establish backend or database support.
+The later exhaustive [runtime-evidence run #40903557153 (attempt 2)](https://github.com/doofx0071/omnicraft/actions/runs/40903557153)
+on commit `ccd48955` checked the remaining 306 compatible React/Vite tuples: 254 passed for the
+testing module and 52 JavaScript + shadcn tuples reject before writes because their template paths
+lack shadcn's required aliases. The additional module evidence does not establish backend or database
+support.
 
 The Fastify/Hono runtime slice passed all 15 Node runtime scenarios and the release gate on
 [run #40612114736](https://github.com/doofx0071/omnicraft/actions/runs/40612114736), commit
@@ -125,6 +126,7 @@ The current suite covers:
 | `src/add-run.test.ts`                               | Module dry-run, success, idempotency, creation-time auth application, collisions, unsupported stacks, missing patch anchors, and rollback after a failed write.                                                                                                                                                                                                                           |
 | `src/support-evidence.test.ts`                      | Every Supported row resolves through selectable values, prompt/flag/composition, module and creation-time auth guards, renders from its exact combination, and maps to the matching scenario, script, job, and aggregate release check. The Supabase Auth target is included only for its verified React/Vite TypeScript frontend-only path; other managed providers remain unselectable. |
 | `src/modules/auth.test.ts`                          | Better Auth compatibility and secret setup guidance.                                                                                                                                                                                                                                                                                                                                      |
+| `src/supabase-busy-action.test.ts`                  | The generated Supabase Auth busy-action helper always clears busy state and reports errors from rejected requests without unhandled rejections.                                                                                                                                                                                                                                           |
 
 The engine fixtures cover Express + Drizzle with PostgreSQL/SQLite/MySQL, Express + Prisma + PostgreSQL,
 Fastify + Drizzle with PostgreSQL/SQLite/MySQL, Fastify + Prisma + PostgreSQL, FastAPI with
@@ -142,7 +144,7 @@ and iOS device paths remain Selectable — unverified. The support matrix record
 keeping the broader Expo and Tauri rows Scaffold-verified. `omnicraft add testing` is Supported for the
 six original and 254 additional exact React/Vite module paths listed in the
 [support matrix](../templates/stack-support-matrix.md). Runs [#40880427361](https://github.com/doofx0071/omnicraft/actions/runs/40880427361)
-and [#40918121708](https://github.com/doofx0071/omnicraft/actions/runs/40918121708) passed generated
+and [#40903557153 (attempt 2)](https://github.com/doofx0071/omnicraft/actions/runs/40903557153) passed generated
 installation, sample-test execution, client build, Vite preview, bundle, and missing-asset checks. The
 52 JavaScript + shadcn tuples reject before writes because their template paths lack required aliases;
 Vue, Svelte, and Next.js `add testing` paths also reject before module writes. The module tests exercise
@@ -156,15 +158,16 @@ Run with:
 npx tsx scripts/smoke-e2e.ts <out-dir>
 ```
 
-The script currently produces 20 project paths when `create-next-app` succeeds: 13 backend/database
-entries, two Inertia React auth-mode root overlays, React frontend-only with None and Supabase Auth,
+The script currently produces 22 project paths when `create-next-app` succeeds: 13 backend/database
+entries, the two Laravel 12 Sanctum SPA scaffolds (PostgreSQL and MySQL), two Inertia React auth-mode
+root overlays, React frontend-only with None and Supabase Auth,
 Vue and Svelte paired with Express + Drizzle + SQLite, and Next.js integrated full-stack + SQLite. It does not include Expo or
 Tauri. The Next.js script step runs the
 external `create-next-app` command and logs/skips the overlay if that command fails, so an overall
 successful script exit does not guarantee Next.js was generated.
 
 This level copies and renders template files; it does not install or boot each generated application.
-The smoke command succeeded for all 19 paths on the Windows checkout. The dedicated Inertia React
+The smoke command succeeded for all 22 paths on the Windows checkout. The dedicated Inertia React
 integration separately generates both complete projects through the production CLI.
 
 ### Level 3 — Generated-project verification
@@ -232,7 +235,8 @@ The current workflow:
    and Next.js `add testing` cases assert pre-write rejection and unchanged manifests/packages; the 52
    JavaScript + shadcn tuples reject because the template lacks required aliases. The original six
    paths passed run [#40880427361](https://github.com/doofx0071/omnicraft/actions/runs/40880427361)
-   and the 254 additional paths passed run [#40918121708](https://github.com/doofx0071/omnicraft/actions/runs/40918121708).
+   and the 254 additional paths passed run [#40903557153 (attempt 2)](https://github.com/doofx0071/omnicraft/actions/runs/40903557153)
+   on commit `ccd48955`.
    The support-evidence check and strict release gate passed in the latter run. See the [support matrix](../templates/stack-support-matrix.md)
    for exact path-level evidence. This module test does not establish backend/database behavior.
 10. Runs `native-platform-integration` for Expo iOS (`macos-26`), Expo Android (`ubuntu-24.04`), Tauri

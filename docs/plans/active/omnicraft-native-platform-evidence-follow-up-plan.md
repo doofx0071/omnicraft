@@ -49,7 +49,7 @@ Android, physical devices, macOS desktop, and Windows desktop untested.
       gate pass on implementation commit `983c5164bf9989adbe19712b13cc4e8659ef5bda`.
 - [x] The support matrix records only observed platform-specific evidence and keeps Expo and Tauri
       `Scaffold-verified`; physical-device coverage remains explicitly unverified.
-- [x] The PR is open against the current PR #51 head and remains unmerged.
+- [x] The PR (opened against the PR #51 head) merged to `main`.
 - [x] This plan remains active until physical-device evidence is available; close it only after that
       pending scope has evidence or is explicitly split into a separately owned follow-up.
 

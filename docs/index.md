@@ -61,10 +61,12 @@ For the current CI coverage and repository-recorded manual results, see the per-
 - [Completed: post-masterplan audit](plans/completed/omnicraft-post-masterplan-audit.md) — release, compatibility, support evidence, and explicit deferrals.
 - [Completed: testing infrastructure](plans/completed/omnicraft-testing-infrastructure-plan.md) — database/auth integration coverage and the ten-row CI release gate.
 - [Completed: existing-stack runtime evidence](plans/completed/omnicraft-stack-runtime-evidence-plan.md) — generated-project runtime checks, scoped native evidence, and capability-to-matrix consistency closeout.
+- [Completed: auth provider and PHP stack expansion](plans/completed/omnicraft-auth-provider-php-stack-expansion-plan.md) — the broad expansion proposal, closed as split: the delivered slices (create-time auth catalog, Laravel 13 + Livewire 4 on SQLite) hold matrix evidence and the unfinished scope moved to the active follow-up.
 - [Completed: auth provider and PHP expansion follow-up](plans/completed/omnicraft-auth-provider-php-stack-expansion-follow-up-plan.md) — exact Supabase Auth frontend-only and Laravel 12 API Sanctum SPA SQLite evidence; deferred expansion remains separate.
 - Current release status is summarized in [ROADMAP.md](../ROADMAP.md); active implementation plans live under `docs/plans/active/`.
 - [Active auth provider and PHP next-target plan](plans/active/omnicraft-auth-provider-php-next-targets-plan.md) — records deferred providers, JWT/data models, and Laravel mode/database targets; each requires owner approval.
 - [Active codebase audit remediation plan](plans/active/omnicraft-codebase-audit-remediation-plan.md) — P0/P1 defects from the full codebase scan (engine, scaffold, CLI surface, evidence, release process) and their fix workstreams.
+- [Active native platform evidence follow-up plan](plans/active/omnicraft-native-platform-evidence-follow-up-plan.md) — Android-emulator and Tauri macOS/Windows hosted checks recorded without changing the `Scaffold-verified` matrix rows; physical-device paths keep it active.
 - [Auth provider and Laravel mode decision audit](research/auth-provider-laravel-decision-audit.md) — owner choices, deferred auth models, and mode boundaries.
 
 ## Related non-doc directories
