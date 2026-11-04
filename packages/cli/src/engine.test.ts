@@ -319,6 +319,11 @@ describe("composition compatibility", () => {
       expect(controller).toContain("$request->session()->invalidate();");
       expect(controller).toContain("Hash::make($validated['password'])");
       expect(userController).toContain("$request->user()->apiUsers()");
+      // response-shape parity: Laravel serializes camelCase createdAt like
+      // the node/fastapi users routes (contract rule 6)
+      expect(userController).toContain("'createdAt' => $user->created_at?->toISOString()");
+      expect(clientApi).toContain("createdAt: string;");
+      expect(clientApi).not.toContain("created_at");
       expect(clientApi).toContain("X-XSRF-TOKEN");
       expect(clientApi).toContain('credentials: "include"');
       expect(clientApp).toContain("Sign out");
