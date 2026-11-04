@@ -721,6 +721,79 @@ describe("shadcn extra layer", () => {
     expect(app).not.toContain("{{projectName}}");
   });
 });
+describe("react JavaScript extras variants", () => {
+  it("composes the JS vite-config variants for a JavaScript React client", () => {
+    const jsLayers = composeLayers(
+      makeAnswers({
+        language: "javascript",
+        extras: { tailwind: true, eslintPrettier: true, shadcn: false },
+      }),
+    ).map(({ src }) => src);
+    expect(jsLayers).toContain("extras/tailwind/vite-react-js");
+    expect(jsLayers).not.toContain("extras/tailwind/vite-react");
+
+    const tsLayers = composeLayers(makeAnswers()).map(({ src }) => src);
+    expect(tsLayers).toContain("extras/tailwind/vite-react");
+    expect(tsLayers).not.toContain("extras/tailwind/vite-react-js");
+  });
+
+  it("scaffolds react-js + tailwind into vite.config.js with no stray TS config", () => {
+    const dir = makeTempDir("react-js-tailwind");
+    scaffoldInto(
+      dir,
+      makeAnswers({
+        language: "javascript",
+        extras: { tailwind: true, eslintPrettier: true, shadcn: false },
+      }),
+    );
+
+    const viteConfig = readFileSync(join(dir, "client", "vite.config.js"), "utf8");
+    expect(viteConfig).toContain("tailwindcss()");
+    // Vite resolves vite.config.js first — shipping a .ts override would be
+    // ignored (unstyled output) and leave a stray config in the project.
+    expect(existsSync(join(dir, "client", "vite.config.ts"))).toBe(false);
+    expect(readFileSync(join(dir, "client", "src", "index.css"), "utf8")).toContain(
+      '@import "tailwindcss"',
+    );
+    const clientPkg = readJson(join(dir, "client", "package.json"));
+    expect(clientPkg.devDependencies).toHaveProperty("@tailwindcss/vite");
+    expect(clientPkg.devDependencies).toHaveProperty("tailwindcss");
+  });
+
+  it("scaffolds react-js + shadcn with App.jsx and the alias the shadcn CLI needs", () => {
+    const dir = makeTempDir("react-js-shadcn");
+    scaffoldInto(
+      dir,
+      makeAnswers({
+        language: "javascript",
+        extras: { tailwind: true, eslintPrettier: true, shadcn: true },
+      }),
+    );
+
+    const viteConfig = readFileSync(join(dir, "client", "vite.config.js"), "utf8");
+    expect(viteConfig).toContain("tailwindcss()");
+    expect(viteConfig).toContain("./src");
+    expect(existsSync(join(dir, "client", "vite.config.ts"))).toBe(false);
+
+    // main.jsx imports ./App — the JSX variant must replace the base App and
+    // no TSX sibling may ship alongside it.
+    const app = readFileSync(join(dir, "client", "src", "App.jsx"), "utf8");
+    expect(app).toContain("@/components/ui/button");
+    expect(app).toContain('const APP_TITLE = "demo-app"');
+    expect(app).not.toContain("{{projectName}}");
+    expect(existsSync(join(dir, "client", "src", "App.tsx"))).toBe(false);
+
+    // shadcn init detects its path alias from jsconfig/tsconfig paths.
+    const jsconfig = readJson(join(dir, "client", "jsconfig.json")) as {
+      compilerOptions: { paths: unknown };
+    };
+    expect(jsconfig.compilerOptions.paths).toEqual({ "@/*": ["./src/*"] });
+    expect(readFileSync(join(dir, "client", "src", "index.css"), "utf8")).toContain(
+      '@import "tailwindcss"',
+    );
+  });
+});
+
 describe("frontend expansion (v0.4)", () => {
   it("scaffolds a vue client with the vue tailwind variant", () => {
     const dir = makeTempDir("vue-client");
