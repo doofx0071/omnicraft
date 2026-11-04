@@ -35,15 +35,19 @@ export function assertNoUnresolvedTokens(
   if (unique.length > 0) throw new UnresolvedTokenError(file, unique)
 }
 
-const DOTFILE_RENAME_RE = /^_/ // _gitignore -> .gitignore
-
 /**
- * npm refuses to publish `.gitignore`-style files it considers special, so
- * templates ship them with a leading underscore and the engine restores the
- * dot prefix on copy.
+ * npm refuses to publish the dotfiles it treats as special, so templates ship
+ * exactly these names with a leading underscore and the engine restores the
+ * dot prefix on copy. The set is exhaustive on purpose: a generic `/^_/`
+ * rename would corrupt template files that legitimately start with an
+ * underscore — Python's `__init__.py` was copied as `._init__.py` into every
+ * generated FastAPI project. Extend this set only when a template needs a new
+ * npm-hostile dotfile (see the template contract).
  */
+const DOTFILE_RESTORES = new Set(['_gitignore', '_prettierignore', '_env.example', '_github'])
+
 export function restoreDotfileName(name: string): string {
-  if (DOTFILE_RENAME_RE.test(name)) return `.${name.slice(1)}`
+  if (DOTFILE_RESTORES.has(name)) return `.${name.slice(1)}`
   return name
 }
 

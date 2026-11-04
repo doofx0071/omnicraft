@@ -515,6 +515,35 @@ describe("full-stack combos", () => {
 });
 
 describe("python + php runtimes", () => {
+  it("preserves the FastAPI package __init__.py files byte-for-byte", () => {
+    const dir = makeTempDir("fastapi-init-py");
+    scaffoldInto(
+      dir,
+      makeAnswers({
+        backendRuntime: "python",
+        backendFramework: "fastapi",
+        orm: null,
+        database: "sqlite",
+      }),
+    );
+
+    // A generic `_` -> `.` dotfile rename corrupted these into `._init__.py`
+    // and broke pytest import modes, mypy, find_packages, and `python -m app`.
+    const initFiles = [
+      ["server/app/__init__.py", "server/python/fastapi/base/app/__init__.py"],
+      ["server/app/routes/__init__.py", "server/python/fastapi/base/app/routes/__init__.py"],
+    ] as const;
+    for (const [generated, template] of initFiles) {
+      expect(existsSync(join(dir, ...generated.split("/")))).toBe(true);
+      expect(existsSync(join(dir, ...generated.replace("__init__.py", "._init__.py").split("/")))).toBe(
+        false,
+      );
+      expect(readFileSync(join(dir, ...generated.split("/")))).toEqual(
+        readFileSync(join(TEMPLATES_ROOT, ...template.split("/"))),
+      );
+    }
+  });
+
   it("scaffolds fastapi + sqlite", () => {
     const dir = makeTempDir("fastapi-sqlite");
     scaffoldInto(

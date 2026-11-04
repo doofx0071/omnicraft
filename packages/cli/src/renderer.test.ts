@@ -19,9 +19,17 @@ describe('renderString', () => {
 })
 
 describe('restoreDotfileName', () => {
-  it('restores npm-publishable dotfiles', () => {
+  it('restores the documented npm-hostile dotfiles', () => {
     expect(restoreDotfileName('_gitignore')).toBe('.gitignore')
     expect(restoreDotfileName('_prettierignore')).toBe('.prettierignore')
+    expect(restoreDotfileName('_env.example')).toBe('.env.example')
+    expect(restoreDotfileName('_github')).toBe('.github')
+  })
+
+  it('leaves underscore-prefixed template files alone', () => {
+    expect(restoreDotfileName('__init__.py')).toBe('__init__.py')
+    expect(restoreDotfileName('_internal.py')).toBe('_internal.py')
+    expect(restoreDotfileName('_data')).toBe('_data')
   })
 
   it('leaves normal names alone', () => {
