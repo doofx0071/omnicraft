@@ -28,7 +28,9 @@ the authoring contract. The tree layout is in the [repository structure](../arch
    directories (`_github/`) use the underscore form; the engine restores the dot on copy.
 2. **Tokens only from the documented set.** Current templates use `{{projectName}}`,
    `{{clientPackageName}}`, `{{serverPackageName}}`, `{{databaseName}}`, `{{backendFramework}}`, and
-   `{{orm}}`. `templateVariables` also contains `dbConfig`, but no current template references it.
+   `{{orm}}`. `templateVariables` also contains `dbConfig`, the Laravel-only multi-line DB env block
+   rendered by the PHP overlay `.env.example` files (`server/php/laravel/`,
+   `server/php/laravel-sanctum-spa/`).
    Unknown expressions in non-`.vue` text files make generation fail with `UnresolvedTokenError`;
    `.vue` files are excluded because Vue uses `{{ }}` for interpolation. Document any new variable here
    and in the [template engine guide](../architecture/template-engine.md).

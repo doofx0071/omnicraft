@@ -111,7 +111,7 @@ future safety work.
 | `{{databaseName}}`      | name with dashes → underscores                             | Postgres/MySQL DB identifiers, compose                                |
 | `{{backendFramework}}`  | `express` \| `fastify` \| `hono` \| `fastapi` \| `laravel` | generated README tables                                               |
 | `{{orm}}`               | `drizzle` \| `prisma` \| `none` \| empty when null         | generated README tables                                               |
-| `{{dbConfig}}`          | Laravel-only multi-line DB env block                       | Available from `templateVariables`; no current template references it |
+| `{{dbConfig}}`          | Laravel-only multi-line DB env block                       | PHP overlay `.env.example` files (`server/php/laravel/`, `server/php/laravel-sanctum-spa/`) |
 
 The current template tree uses `projectName`, `clientPackageName`, `serverPackageName`, `databaseName`,
 `backendFramework`, and `orm`. Vue `.vue` files also contain `{{ error }}` as Vue mustache syntax; the
