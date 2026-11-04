@@ -4,6 +4,38 @@ const IS_WIN = process.platform === 'win32'
 const DEFAULT_MAX_BUFFER = 16 * 1024 * 1024
 const MAX_CAPTURED_OUTPUT = 1024 * 1024
 
+/**
+ * Characters cmd.exe treats as operators or expands on the win32 spawn path
+ * (whitespace included — it separates argv tokens). A token containing any of
+ * these must be double-quoted.
+ */
+const WIN32_META_RE = /[\s"&|<>^()!%]/
+
+/**
+ * Quotes one token of a win32 command string for cmd.exe: tokens containing
+ * whitespace or cmd.exe metacharacters are double-quoted and embedded double
+ * quotes are doubled (the CRT convention every child inherits through cmd).
+ *
+ * Callers still pass hardcoded literals only; this is defense-in-depth so
+ * user-derived paths (a target dir under a spaced cwd like `John Doe`, or an
+ * absolute generator target) cannot split into extra tokens or execute as
+ * cmd.exe operators.
+ */
+export function quoteWin32Token(token: string): string {
+  if (!WIN32_META_RE.test(token)) return token
+  return `"${token.replaceAll('"', '""')}"`
+}
+
+/**
+ * Joins a command and its args into the single string win32 spawns run
+ * through cmd.exe (`spawn`/`spawnSync` with `shell: true` must not receive a
+ * separate args array — Node 24 deprecates that combination, DEP0190, and
+ * .cmd shims like npm.cmd cannot spawn without a shell anyway).
+ */
+export function joinWin32Command(command: string, args: string[]): string {
+  return [command, ...args].map(quoteWin32Token).join(' ')
+}
+
 export interface ExecResult {
   ok: boolean
   output: string
@@ -33,7 +65,8 @@ export interface StartedCommand {
  * On Windows the command is passed to cmd.exe as a single string without a
  * separate args array — Node 24 deprecates args arrays with shell:true
  * (DEP0190), and .cmd shims like npm.cmd cannot be spawned without a shell.
- * Safe because every caller passes hardcoded literals, never user input.
+ * joinWin32Command quotes tokens so a spaced cwd or absolute target path
+ * cannot split into extra tokens or run as cmd.exe operators.
  */
 export function runCommand(
   command: string,
@@ -44,7 +77,7 @@ export function runCommand(
   const options =
     typeof optionsOrMaxBuffer === 'number' ? { maxBuffer: optionsOrMaxBuffer } : optionsOrMaxBuffer
   const result = IS_WIN
-    ? spawnSync([command, ...args].join(' '), {
+    ? spawnSync(joinWin32Command(command, args), {
         shell: true,
         cwd,
         env: options.env,
@@ -80,7 +113,7 @@ export function startCommand(
   options: StartCommandOptions = {},
 ): StartedCommand {
   const child = IS_WIN
-    ? spawn([command, ...args].join(' '), {
+    ? spawn(joinWin32Command(command, args), {
         shell: true,
         cwd,
         env: options.env,
@@ -179,7 +212,7 @@ export function runCommandVisible(
 ): Promise<boolean> {
   return new Promise((resolveResult) => {
     const child = IS_WIN
-      ? spawn([command, ...args].join(' '), {
+      ? spawn(joinWin32Command(command, args), {
           shell: true,
           cwd,
           env: options.env,
