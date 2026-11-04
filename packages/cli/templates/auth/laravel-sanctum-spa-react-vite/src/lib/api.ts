@@ -8,7 +8,7 @@ export interface ApiUser {
   id: number;
   name: string;
   email: string;
-  created_at: string;
+  createdAt: string;
 }
 
 function readCookie(name: string): string | null {

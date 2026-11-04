@@ -1,3 +1,5 @@
+import "dotenv/config";
+import { readFileSync, readdirSync } from "node:fs";
 import { db } from "./index.js";
 
 /**
@@ -34,7 +36,5 @@ export function migrate(): void {
     console.log(`✅ applied ${file}`);
   }
 }
-
-import { readFileSync, readdirSync } from "node:fs";
 
 migrate();

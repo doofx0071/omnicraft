@@ -2,11 +2,11 @@
 
 Full-stack app scaffolded by [OmniCraft](https://github.com/doofx0071/omnicraft) ⚡
 
-| Layer    | Tech                                    |
-| -------- | --------------------------------------- |
-| Client   | React + Vite + TypeScript               |
-| Server   | Python — FastAPI + SQLAlchemy + Alembic |
-| Database | SQLite                                  |
+| Layer    | Tech                                            |
+| -------- | ----------------------------------------------- |
+| Client   | {{clientFramework}} + Vite + {{clientLanguage}} |
+| Server   | Python — FastAPI + SQLAlchemy + Alembic         |
+| Database | SQLite                                          |
 
 ## Getting started
 
@@ -28,7 +28,7 @@ Open http://localhost:5173 — the demo page lists, creates and deletes users th
 ## Project layout
 
 ```
-├── client/                  # React + Vite app (proxies /api to the server)
+├── client/                  # {{clientFramework}} + Vite app (proxies /api to the server)
 │   └── src/lib/api.ts       # typed fetch wrapper — add your API calls here
 ├── server/                  # FastAPI app (managed with uv)
 │   ├── alembic/             # migrations — db:migrate autogenerates one
