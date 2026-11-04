@@ -294,6 +294,31 @@ describe("omnicraft add", () => {
     expect(loadManifest(tempRoot).modules).toEqual([]);
   });
 
+  it("restores a binary patch target byte-for-byte when a filesystem write fails mid-apply", async () => {
+    createAuthProject();
+    // PNG magic + both auth patch anchors for index.ts as ASCII + bytes that
+    // are invalid UTF-8: a utf8 snapshot would normalize those to U+FFFD and
+    // the rollback would restore a corrupted file, so the snapshot must stay
+    // a Buffer.
+    const binaryTarget = Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      Buffer.from(
+        '\nimport { apiRouter } from "./routes/index.js";\napp.use(express.json());\n',
+        "utf8",
+      ),
+      Buffer.from([0xff, 0x80, 0x7f, 0xfe, 0x00]),
+    ]);
+    writeFileSync(join(tempRoot, "server/src/index.ts"), binaryTarget);
+    write("client", "blocks the auth client directory\n");
+    expect(readFileSync(join(tempRoot, "server/src/index.ts")).equals(binaryTarget)).toBe(true);
+
+    await expect(runAdd("auth", tempRoot, false)).rejects.toThrow();
+
+    const restored = readFileSync(join(tempRoot, "server/src/index.ts"));
+    expect(restored.equals(binaryTarget)).toBe(true);
+    expect(loadManifest(tempRoot).modules).toEqual([]);
+  });
+
   it("adds the testing module to the selected frontend-only target", async () => {
     saveManifest(tempRoot, manifest("react", { kind: "frontend-only" }));
     write("package.json", JSON.stringify({ name: "demo-app" }, null, 2));
