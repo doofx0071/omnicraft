@@ -58,12 +58,6 @@ export interface Answers {
   architecture: ProjectArchitecture
 }
 
-export const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
-  web: 'Web App',
-  mobile: 'Mobile App',
-  desktop: 'Desktop App',
-}
-
 export const FRONTEND_LABELS: Record<Frontend, string> = {
   react: 'React',
   nextjs: 'Next.js',
@@ -102,33 +96,4 @@ export const DATABASE_LABELS: Record<Database, string> = {
   mysql: 'MySQL',
   sqlite: 'SQLite',
   mongodb: 'MongoDB',
-}
-
-export function describeStack(answers: Answers): string[] {
-  const lines: string[] = []
-  lines.push(`Type:       ${PROJECT_TYPE_LABELS[answers.projectType]}`)
-  lines.push(
-    `Frontend:   ${FRONTEND_LABELS[answers.frontend]}${answers.language ? ` (${answers.language})` : ''}`,
-  )
-  if (answers.architecture.kind === 'integrated-laravel') {
-    lines.push('Backend:    PHP — Laravel')
-    lines.push(`Database:   ${DATABASE_LABELS[answers.database!]} (Eloquent)`)
-    lines.push(
-      `UI:         ${answers.architecture.mode === 'livewire' ? 'Livewire' : 'Inertia React'}`,
-    )
-  } else if (answers.fullStack) {
-    lines.push(
-      `Backend:    ${BACKEND_RUNTIME_LABELS[answers.backendRuntime!]} + ${BACKEND_FRAMEWORK_LABELS[answers.backendFramework!]}`,
-    )
-    lines.push(
-      `Database:   ${DATABASE_LABELS[answers.database!]} (${ORM_LABELS[answers.orm!]})`,
-    )
-  } else {
-    lines.push('Backend:    none (frontend only)')
-  }
-  const extras: string[] = []
-  if (answers.extras.tailwind) extras.push('Tailwind CSS')
-  if (answers.extras.eslintPrettier) extras.push('ESLint + Prettier')
-  lines.push(`Extras:     ${extras.length > 0 ? extras.join(', ') : 'none'}`)
-  return lines
 }
