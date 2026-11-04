@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { db } from "./index.js";
 
 // Idempotent seed: clears and re-inserts the sample rows.
