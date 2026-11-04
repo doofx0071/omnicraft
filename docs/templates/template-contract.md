@@ -27,8 +27,10 @@ the authoring contract. The tree layout is in the [repository structure](../arch
 1. **`_`-prefix for dotfiles.** Anything npm won't publish (`_gitignore`, `_prettierignore`) and whole
    directories (`_github/`) use the underscore form; the engine restores the dot on copy.
 2. **Tokens only from the documented set.** Current templates use `{{projectName}}`,
-   `{{clientPackageName}}`, `{{serverPackageName}}`, `{{databaseName}}`, `{{backendFramework}}`, and
-   `{{orm}}`. `templateVariables` also contains `dbConfig`, but no current template references it.
+   `{{clientPackageName}}`, `{{serverPackageName}}`, `{{databaseName}}`, `{{backendFramework}}`,
+   `{{orm}}`, `{{clientFramework}}` (display name of the chosen frontend: React, Vue, Svelte, …), and
+   `{{clientLanguage}}` (TypeScript or JavaScript; empty when the flow has no JS/TS language choice).
+   `templateVariables` also contains `dbConfig`, but no current template references it.
    Unknown expressions in non-`.vue` text files make generation fail with `UnresolvedTokenError`;
    `.vue` files are excluded because Vue uses `{{ }}` for interpolation. Document any new variable here
    and in the [template engine guide](../architecture/template-engine.md).

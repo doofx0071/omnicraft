@@ -2,11 +2,11 @@
 
 Full-stack app scaffolded by [OmniCraft](https://github.com/doofx0071/omnicraft) ⚡
 
-| Layer    | Tech                              |
-| -------- | --------------------------------- |
-| Client   | React + Vite + TypeScript         |
-| Server   | {{backendFramework}} + TypeScript |
-| Database | MySQL + {{orm}}                   |
+| Layer    | Tech                                            |
+| -------- | ----------------------------------------------- |
+| Client   | {{clientFramework}} + Vite + {{clientLanguage}} |
+| Server   | {{backendFramework}} + TypeScript               |
+| Database | MySQL + {{orm}}                                 |
 
 ## Getting started
 
@@ -29,7 +29,7 @@ Open http://localhost:5173 — the demo page lists, creates and deletes users th
 ## Project layout
 
 ```
-├── client/                  # React + Vite app (proxies /api to the server)
+├── client/                  # {{clientFramework}} + Vite app (proxies /api to the server)
 │   └── src/lib/api.ts       # typed fetch wrapper — add your API calls here
 ├── server/                  # {{backendFramework}} API
 │   └── src/

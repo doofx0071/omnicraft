@@ -740,6 +740,37 @@ describe("frontend expansion (v0.4)", () => {
     );
   });
 
+  it("renders the fullstack root README with the chosen client framework and language", () => {
+    const cases = [
+      { frontend: "react", language: "typescript", client: "React + Vite + TypeScript" },
+      { frontend: "react", language: "javascript", client: "React + Vite + JavaScript" },
+      { frontend: "vue", language: "typescript", client: "Vue + Vite + TypeScript" },
+      { frontend: "svelte", language: "typescript", client: "Svelte + Vite + TypeScript" },
+    ] as const;
+    for (const { frontend, language, client } of cases) {
+      const dir = makeTempDir(`readme-${frontend}-${language}`);
+      scaffoldInto(dir, makeAnswers({ frontend, language }));
+      const readme = readFileSync(join(dir, "README.md"), "utf8");
+      expect(readme).toContain(client);
+      expect(readme).toContain(`# ${client.split(" + ")[0]} + Vite app`);
+      // the row must describe THIS compose, not a hardcoded React default
+      expect(readme).not.toContain("{{clientFramework}}");
+      expect(readme).not.toContain("{{clientLanguage}}");
+      if (frontend !== "react") expect(readme).not.toContain("React + Vite");
+    }
+  });
+
+  it("renders the frontend-only README with the chosen framework (react-js)", () => {
+    const dir = makeTempDir("readme-frontend-only-js");
+    scaffoldInto(
+      dir,
+      makeAnswers({ frontend: "react", language: "javascript", fullStack: false }),
+    );
+    const readme = readFileSync(join(dir, "README.md"), "utf8");
+    expect(readme).toContain("React app scaffolded by");
+    expect(readme).not.toContain("{{clientFramework}}");
+  });
+
   it("scaffolds the next overlay + sqlite db layer for integrated fullstack", () => {
     const dir = makeTempDir("next-overlay");
 
@@ -839,6 +870,8 @@ describe("layer composition edge cases", () => {
         expect(content).not.toContain("{{clientPackageName}}");
         expect(content).not.toContain("{{serverPackageName}}");
         expect(content).not.toContain("{{databaseName}}");
+        expect(content).not.toContain("{{clientFramework}}");
+        expect(content).not.toContain("{{clientLanguage}}");
       } catch {
         // non-utf8 file — skip
       }

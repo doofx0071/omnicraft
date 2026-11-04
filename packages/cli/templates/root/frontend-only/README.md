@@ -1,6 +1,6 @@
 # {{projectName}}
 
-React app scaffolded by [OmniCraft](https://github.com/doofx0071/omnicraft) ⚡
+{{clientFramework}} app scaffolded by [OmniCraft](https://github.com/doofx0071/omnicraft) ⚡
 
 ## Getting started
 

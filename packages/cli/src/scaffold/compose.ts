@@ -1,4 +1,5 @@
 import type { Answers } from "../types.js";
+import { FRONTEND_LABELS } from "../types.js";
 import type { Layer } from "./engine.js";
 import { validateAnswerCompatibility } from "../compatibility.js";
 
@@ -176,6 +177,15 @@ export function templateVariables(answers: Answers): Record<string, string> {
     databaseName,
     backendFramework: answers.backendFramework ?? "",
     orm: answers.orm ?? "",
+    // Display names for the client layer, so root READMEs can describe the
+    // client truthfully across react/vue/svelte and TS/JS.
+    clientFramework: FRONTEND_LABELS[answers.frontend],
+    clientLanguage:
+      answers.language === "javascript"
+        ? "JavaScript"
+        : answers.language === "typescript"
+          ? "TypeScript"
+          : "",
     authSetup:
       answers.authentication === "laravel-native"
         ? answers.architecture.kind === "integrated-laravel"
