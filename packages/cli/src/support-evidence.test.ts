@@ -252,16 +252,25 @@ describe("support matrix evidence", () => {
   it("enumerates every remaining compatible React/Vite add-testing path by exact runtime group", () => {
     const combinations = REACT_VITE_TESTING_FOLLOWUP_COMBINATIONS;
     const exactKeys = combinations.map(({ flags }) => JSON.stringify(flags));
-    expect(combinations).toHaveLength(306);
-    expect(REACT_VITE_TESTING_NONREJECTED_COMBINATIONS).toHaveLength(254);
-    expect(REACT_VITE_TESTING_REJECTED_COMBINATIONS).toHaveLength(52);
+    expect(combinations).toHaveLength(286);
+    expect(REACT_VITE_TESTING_NONREJECTED_COMBINATIONS).toHaveLength(244);
+    expect(REACT_VITE_TESTING_REJECTED_COMBINATIONS).toHaveLength(42);
     expect(
       REACT_VITE_TESTING_REJECTED_COMBINATIONS.every(
         ({ flags }) => flags.lang === "javascript" && flags.extras.includes("shadcn"),
       ),
     ).toBe(true);
+    expect(
+      REACT_VITE_TESTING_NONREJECTED_COMBINATIONS.every(
+        ({ flags }) =>
+          !(
+            (flags.runtime === "python" || flags.runtime === "php") &&
+            flags.extras.includes("shadcn")
+          ),
+      ),
+    ).toBe(true);
     expect(new Set(exactKeys).size).toBe(combinations.length);
-    expect(REACT_VITE_TESTING_FOLLOWUP_SCENARIOS).toHaveLength(23);
+    expect(REACT_VITE_TESTING_FOLLOWUP_SCENARIOS).toHaveLength(19);
     expect(integrationScenarios("module-runtime-react-vite")).toEqual(
       REACT_VITE_TESTING_FOLLOWUP_SCENARIOS,
     );
@@ -270,22 +279,48 @@ describe("support matrix evidence", () => {
     );
     if (!supportedFamily)
       throw new Error("The supported React/Vite add-testing family is missing.");
-    expect(supportedFamily?.combinations).toHaveLength(254);
+    expect(supportedFamily?.combinations).toHaveLength(244);
     expect(supportedFamily?.scenarios).toEqual(
       REACT_VITE_TESTING_NONREJECTED_COMBINATIONS.map(({ flags }) =>
         reactViteTestingGroupId(flags),
       ),
     );
     expect(registeredMatrixRowPrefix(supportedFamily)).toBe(
-      "| `omnicraft add testing` — 254 other exact React/Vite paths | **Supported** |",
+      "| `omnicraft add testing` — 244 other exact React/Vite paths | **Supported** |",
     );
-    const [rejectedFamily] = REJECTED_MODULE_CAPABILITIES;
+    const rejectedFamily = REJECTED_MODULE_CAPABILITIES.find(
+      ({ id }) => id === "testing-module-react-vite-js-shadcn",
+    );
     if (!rejectedFamily) throw new Error("The rejected JavaScript + shadcn family is missing.");
-    expect(REJECTED_MODULE_CAPABILITIES).toHaveLength(1);
-    expect(rejectedFamily.combinations).toHaveLength(52);
+    expect(rejectedFamily.combinations).toHaveLength(42);
     expect(registeredRejectedMatrixRowPrefix(rejectedFamily)).toBe(
-      "| `omnicraft add testing` — React/Vite JavaScript + shadcn (52 exact module paths) | **Rejected — unsupported combination** |",
+      "| `omnicraft add testing` — React/Vite JavaScript + shadcn (42 exact module paths) | **Rejected — unsupported combination** |",
     );
+  });
+
+  it("registers symmetric rejection coverage for every Rejected matrix row", () => {
+    expect(REJECTED_MODULE_CAPABILITIES.map(({ id }) => id)).toEqual([
+      "testing-module-react-vite-js-shadcn",
+      "javascript-vue-svelte-nextjs",
+      "javascript-expo-tauri",
+      "nextjs-separate-backend-flags",
+      "node-prisma-sqlite-mysql",
+      "integrated-laravel-postgres-mysql",
+      "shadcn-frontend-limits",
+      "auth-module-fastify-hono",
+      "testing-module-vue-express-drizzle-sqlite",
+      "testing-module-svelte-express-drizzle-sqlite",
+      "testing-module-nextjs-sqlite",
+    ]);
+    for (const capability of REJECTED_MODULE_CAPABILITIES) {
+      expect(capability.combinations.length).toBeGreaterThan(0);
+      for (const combination of capability.combinations) {
+        expect(combination.guardMessage).toBeTruthy();
+        if (capability.guard === "module-preflight") {
+          expect(combination.module).toBeDefined();
+        }
+      }
+    }
   });
 
   it("rejects Supported combinations that the CLI compatibility rules disallow", () => {

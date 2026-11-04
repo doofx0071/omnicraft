@@ -258,12 +258,8 @@ jobs:
           - react-vite-testing-php-eslint-tailwind
           - react-vite-testing-frontend-only-shadcn
           - react-vite-testing-node-shadcn
-          - react-vite-testing-python-shadcn
-          - react-vite-testing-php-shadcn
           - react-vite-testing-frontend-only-shadcn-eslint
           - react-vite-testing-node-shadcn-eslint
-          - react-vite-testing-python-shadcn-eslint
-          - react-vite-testing-php-shadcn-eslint
     steps:
       - uses: actions/checkout@v4
 

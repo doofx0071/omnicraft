@@ -18,7 +18,7 @@ import {
 } from '../src/compatibility.js'
 import { TEMPLATES_ROOT } from '../src/config.js'
 import { buildManifest } from '../src/manifest.js'
-import { resolveAnswers, validateStackFlags } from '../src/prefill.js'
+import { AVAILABLE, resolveAnswers, validateStackFlags } from '../src/prefill.js'
 import { composeLayers } from '../src/scaffold/compose.js'
 import {
   INTEGRATION_TARGETS,
@@ -29,11 +29,21 @@ import {
   reactViteTestingGroupId,
   SUPPORTED_CAPABILITIES,
   type NodeRuntimeScenario,
+  type RejectedCombination,
   type RejectedModuleCapability,
   type SupportedCapability,
   type SupportedCombination,
 } from '../src/support-evidence.js'
-import type { Answers, Database } from '../src/types.js'
+import type {
+  Answers,
+  AuthenticationSetup,
+  BackendFramework,
+  BackendRuntime,
+  Database,
+  Frontend,
+  Language,
+  Orm,
+} from '../src/types.js'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 
@@ -72,7 +82,20 @@ function matrixList(job: string, key: string): string[] {
   return values
 }
 
-function argsFor(combination: SupportedCombination) {
+interface CombinationFlagShape {
+  platform?: string
+  lang?: Language
+  frontend?: Frontend
+  fullStack?: boolean
+  runtime?: BackendRuntime
+  backend?: BackendFramework
+  orm?: Orm
+  db?: Database
+  auth?: AuthenticationSetup
+  extras: readonly (typeof AVAILABLE.extras)[number][]
+}
+
+function argsFor({ flags }: { flags: CombinationFlagShape }) {
   return {
     latest: false,
     skipInstall: true,
@@ -80,8 +103,8 @@ function argsFor(combination: SupportedCombination) {
     help: false,
     version: false,
     yes: true,
-    ...combination.flags,
-    extras: [...(combination.flags.extras ?? [])],
+    ...flags,
+    extras: [...(flags.extras ?? [])],
   }
 }
 
@@ -387,84 +410,107 @@ function validateCombination(
   index: number,
 ): string {
   const args = argsFor(combination)
-  const targetDir = join(tmpdir(), `omnicraft-support-check-${capability.id}-${index}`)
-  validateStackFlags(args)
-  assert(
-    isProjectTypeAllowedByFlags('web', args),
-    `Prompt filtering rejects the project type for "${capability.id}".`,
-  )
-
-  const answers = resolveAnswers(args, `support-${capability.id}`, targetDir)
-  assert(
-    isFrontendAllowedByFlags(answers.frontend, args),
-    `Prompt filtering rejects the frontend for "${capability.id}".`,
-  )
-  if (answers.backendRuntime) {
+  const targetDir = mkdtempSync(join(tmpdir(), `omnicraft-support-check-${capability.id}-${index}-`))
+  try {
+    validateStackFlags(args)
     assert(
-      isRuntimeAllowedByFlags(answers.backendRuntime, args),
-      `Prompt filtering rejects runtime "${answers.backendRuntime}" for "${capability.id}".`,
+      isProjectTypeAllowedByFlags('web', args),
+      `Prompt filtering rejects the project type for "${capability.id}".`,
     )
-  }
 
-  const layers = composeLayers(answers)
-  assert(layers.length > 0, `Composition produced no production layers for "${capability.id}".`)
-  for (const layer of layers) {
+    const answers = resolveAnswers(args, `support-${capability.id}`, targetDir)
     assert(
-      existsSync(join(TEMPLATES_ROOT, layer.src)),
-      `Supported capability "${capability.id}" references a missing production layer: ${layer.src}.`,
+      isFrontendAllowedByFlags(answers.frontend, args),
+      `Prompt filtering rejects the frontend for "${capability.id}".`,
     )
-  }
+    if (answers.backendRuntime) {
+      assert(
+        isRuntimeAllowedByFlags(answers.backendRuntime, args),
+        `Prompt filtering rejects runtime "${answers.backendRuntime}" for "${capability.id}".`,
+      )
+    }
 
-  if (combination.module) {
-    const module = MODULES.find((candidate) => candidate.id === combination.module)
-    assert(
-      module,
-      `Supported capability "${capability.id}" references an unavailable module "${combination.module}".`,
-    )
-    const manifest = buildManifest(answers, 'support-evidence', 'npm')
-    const reason = module.incompatible?.(manifest, targetDir) ?? null
-    assert.equal(
-      reason,
-      null,
-      `Module "${combination.module}" rejects Supported capability "${capability.id}": ${reason}`,
-    )
-  }
+    const layers = composeLayers(answers)
+    assert(layers.length > 0, `Composition produced no production layers for "${capability.id}".`)
+    for (const layer of layers) {
+      assert(
+        existsSync(join(TEMPLATES_ROOT, layer.src)),
+        `Supported capability "${capability.id}" references a missing production layer: ${layer.src}.`,
+      )
+    }
 
-  if (combination.flags.auth === 'better-auth') {
-    const module = MODULES.find((candidate) => candidate.id === 'auth')
-    assert(module, `Supported capability "${capability.id}" requires the existing auth module.`)
-    const manifest = buildManifest(answers, 'support-evidence', 'npm')
-    assert.equal(manifest.authentication, 'better-auth')
-    assert.deepEqual(manifest.modules, [], `"${capability.id}" must keep auth separate from module history.`)
-    const reason = module.incompatible?.(manifest, targetDir) ?? null
-    assert.equal(
-      reason,
-      null,
-      `The existing auth module rejects Supported creation-time capability "${capability.id}": ${reason}`,
-    )
-  }
+    if (combination.module) {
+      const module = MODULES.find((candidate) => candidate.id === combination.module)
+      assert(
+        module,
+        `Supported capability "${capability.id}" references an unavailable module "${combination.module}".`,
+      )
+      const manifest = buildManifest(answers, 'support-evidence', 'npm')
+      const reason = module.incompatible?.(manifest, targetDir) ?? null
+      assert.equal(
+        reason,
+        null,
+        `Module "${combination.module}" rejects Supported capability "${capability.id}": ${reason}`,
+      )
+    }
 
-  if (
-    capability.matrixFormat === 'laravel-livewire-auth' ||
-    capability.matrixFormat === 'laravel-inertia-react-auth' ||
-    capability.matrixFormat === 'laravel-sanctum-spa-auth'
-  ) {
-    const manifest = buildManifest(answers, 'support-evidence', 'npm')
-    assert.equal(manifest.authentication, answers.authentication)
-    assert.deepEqual(manifest.modules, [], `"${capability.id}" must keep auth separate from module history.`)
-  }
+    if (combination.flags.auth === 'better-auth') {
+      const module = MODULES.find((candidate) => candidate.id === 'auth')
+      assert(module, `Supported capability "${capability.id}" requires the existing auth module.`)
+      const manifest = buildManifest(answers, 'support-evidence', 'npm')
+      assert.equal(manifest.authentication, 'better-auth')
+      assert.deepEqual(manifest.modules, [], `"${capability.id}" must keep auth separate from module history.`)
+      const reason = module.incompatible?.(manifest, targetDir) ?? null
+      assert.equal(
+        reason,
+        null,
+        `The existing auth module rejects Supported creation-time capability "${capability.id}": ${reason}`,
+      )
+    }
 
-  return expectedScenario(capability, combination, answers)
+    if (
+      capability.matrixFormat === 'laravel-livewire-auth' ||
+      capability.matrixFormat === 'laravel-inertia-react-auth' ||
+      capability.matrixFormat === 'laravel-sanctum-spa-auth'
+    ) {
+      const manifest = buildManifest(answers, 'support-evidence', 'npm')
+      assert.equal(manifest.authentication, answers.authentication)
+      assert.deepEqual(manifest.modules, [], `"${capability.id}" must keep auth separate from module history.`)
+    }
+
+    return expectedScenario(capability, combination, answers)
+  } finally {
+    rmSync(targetDir, { recursive: true, force: true })
+  }
 }
 
 function validateRejectedCombination(
   capability: RejectedModuleCapability,
-  combination: SupportedCombination,
+  combination: RejectedCombination,
   index: number,
-): string {
+): string | undefined {
   const args = argsFor(combination)
   const targetDir = mkdtempSync(join(tmpdir(), `omnicraft-rejected-support-check-${capability.id}-${index}-`))
   try {
+    if (capability.guard === 'flag-preflight') {
+      let thrown: Error | undefined
+      try {
+        validateStackFlags(args)
+      } catch (error) {
+        thrown = error as Error
+      }
+      assert(
+        thrown,
+        `Flag preflight must reject registered combination ${index} of "${capability.id}".`,
+      )
+      assert.equal(
+        thrown.message,
+        combination.guardMessage,
+        `Rejected capability "${capability.id}" no longer matches the live flag-preflight guard.`,
+      )
+      return combination.scenario
+    }
+
     validateStackFlags(args)
     assert(
       isProjectTypeAllowedByFlags('web', args),
@@ -481,12 +527,6 @@ function validateRejectedCombination(
         `Prompt filtering rejects runtime "${answers.backendRuntime}" for "${capability.id}".`,
       )
     }
-    assert.equal(answers.frontend, 'react')
-    assert.equal(answers.language, 'javascript')
-    assert(
-      answers.extras.shadcn,
-      `Rejected capability "${capability.id}" must enable shadcn.`,
-    )
 
     const layers = composeLayers(answers)
     assert(layers.length > 0, `Composition produced no production layers for "${capability.id}".`)
@@ -497,6 +537,7 @@ function validateRejectedCombination(
       )
     }
 
+    assert(combination.module, `Rejected capability "${capability.id}" must name its module.`)
     const module = MODULES.find((candidate) => candidate.id === combination.module)
     assert(module, `Rejected capability "${capability.id}" references a missing module.`)
     const appRoot = answers.architecture.kind === 'separate-frontend-api' ? join(targetDir, 'client') : targetDir
@@ -505,10 +546,10 @@ function validateRejectedCombination(
     const manifest = buildManifest(answers, 'support-evidence', 'npm')
     assert.equal(
       module.incompatible?.(manifest, targetDir) ?? null,
-      capability.reason,
+      combination.guardMessage,
       `Rejected module capability "${capability.id}" no longer matches the production preflight guard.`,
     )
-    return reactViteTestingGroupId(combination.flags)
+    return combination.scenario
   } finally {
     rmSync(targetDir, { recursive: true, force: true })
   }
@@ -548,8 +589,7 @@ export function validateSupportEvidence(
   const documentedRejections = new Map<string, string>()
   for (const row of rejectedRows) {
     const ids = [...row.matchAll(rejectionIdPattern)].map((match) => match[1] ?? '')
-    if (ids.length === 0) continue
-    assert.equal(ids.length, 1, `Every registered rejection row must have exactly one rejection id: ${row}`)
+    assert.equal(ids.length, 1, `Every Rejected matrix row must have exactly one rejection id: ${row}`)
     const id = ids[0] ?? ''
     assert(!documentedRejections.has(id), `Rejection id "${id}" appears more than once in the matrix.`)
     documentedRejections.set(id, row)
@@ -602,11 +642,16 @@ export function validateSupportEvidence(
     const exactScenarios = capability.combinations.map((combination, index) =>
       validateRejectedCombination(capability, combination, index),
     )
-    const targetScenarios = INTEGRATION_TARGETS[capability.target].scenarios
-    assert(
-      exactScenarios.every((scenario) => targetScenarios.includes(scenario)),
-      `Rejection capability "${capability.id}" references a scenario missing from target "${capability.target}".`,
-    )
+    if (capability.target) {
+      const targetScenarios: readonly string[] = INTEGRATION_TARGETS[capability.target].scenarios
+      assert(
+        exactScenarios.every(
+          (scenario) =>
+            scenario !== undefined && targetScenarios.includes(scenario),
+        ),
+        `Rejection capability "${capability.id}" references a scenario missing from target "${capability.target}".`,
+      )
+    }
     assert(
       row.startsWith(registeredRejectedMatrixRowPrefix(capability)),
       `Rejected matrix row "${capability.id}" no longer matches its registered combinations.`,
