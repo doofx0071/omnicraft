@@ -65,7 +65,7 @@ For the current CI coverage and repository-recorded manual results, see the per-
 - [Completed: auth provider and PHP expansion follow-up](plans/completed/omnicraft-auth-provider-php-stack-expansion-follow-up-plan.md) — exact Supabase Auth frontend-only and Laravel 12 API Sanctum SPA SQLite evidence; deferred expansion remains separate.
 - Current release status is summarized in [ROADMAP.md](../ROADMAP.md); active implementation plans live under `docs/plans/active/`.
 - [Active auth provider and PHP next-target plan](plans/active/omnicraft-auth-provider-php-next-targets-plan.md) — records deferred providers, JWT/data models, and Laravel mode/database targets; each requires owner approval.
-- [Active codebase audit remediation plan](plans/active/omnicraft-codebase-audit-remediation-plan.md) — P0/P1 defects from the full codebase scan (engine, scaffold, CLI surface, evidence, release process) and their fix workstreams.
+- [Completed: codebase audit remediation](plans/completed/omnicraft-codebase-audit-remediation-plan.md) — all six workstreams (engine P0s, broken combos, hardening, templates, evidence/CI, release prep) implemented, verified, and merged; open follow-ups recorded.
 - [Active native platform evidence follow-up plan](plans/active/omnicraft-native-platform-evidence-follow-up-plan.md) — Android-emulator and Tauri macOS/Windows hosted checks recorded without changing the `Scaffold-verified` matrix rows; physical-device paths keep it active.
 - [Auth provider and Laravel mode decision audit](research/auth-provider-laravel-decision-audit.md) — owner choices, deferred auth models, and mode boundaries.
 

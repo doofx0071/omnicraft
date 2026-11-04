@@ -66,7 +66,7 @@ and their evidence.
 | Process helpers | `src/exec.ts` | Captured and visible subprocess execution; Windows command-shell rules are in [coding standards](../development/coding-standards.md). |
 | Templates | `packages/cli/templates/` | Embedded generated-project files published with the CLI. See the [template contract](../templates/template-contract.md). |
 | Tests | `src/**/*.test.ts` | Unit and contract coverage for CLI behavior; generated-project coverage is recorded separately in the [testing strategy](../development/testing-strategy.md) and support matrix. |
-| Smoke generation | `scripts/smoke-e2e.ts` | Lists 19 layer-composition paths, including two Inertia React root overlays and a network-backed `create-next-app` step; it does not cover native projects or install/boot every generated app. |
+| Smoke generation | `scripts/smoke-e2e.ts` | Lists 22 project paths, including two Inertia React root overlays and a network-backed `create-next-app` step; it does not cover native projects or install/boot every generated app. |
 
 ## Cross-cutting behavior and limits
 

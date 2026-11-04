@@ -111,10 +111,12 @@ future safety work.
 | `{{databaseName}}`      | name with dashes → underscores                             | Postgres/MySQL DB identifiers, compose                                |
 | `{{backendFramework}}`  | `express` \| `fastify` \| `hono` \| `fastapi` \| `laravel` | generated README tables                                               |
 | `{{orm}}`               | `drizzle` \| `prisma` \| `none` \| empty when null         | generated README tables                                               |
+| `{{clientFramework}}`   | display name of the chosen frontend (React, Vue, Svelte, …) | generated README client rows                                         |
+| `{{clientLanguage}}`    | `TypeScript` \| `JavaScript`; empty when the flow has no JS/TS choice | generated README client rows, layout tree                       |
 | `{{dbConfig}}`          | Laravel-only multi-line DB env block                       | PHP overlay `.env.example` files (`server/php/laravel/`, `server/php/laravel-sanctum-spa/`) |
 
 The current template tree uses `projectName`, `clientPackageName`, `serverPackageName`, `databaseName`,
-`backendFramework`, and `orm`. Vue `.vue` files also contain `{{ error }}` as Vue mustache syntax; the
+`backendFramework`, `orm`, `clientFramework`, `clientLanguage`, and — in the PHP overlays — `dbConfig`. Vue `.vue` files also contain `{{ error }}` as Vue mustache syntax; the
 engine intentionally skips unresolved-token scanning for `.vue` files. Unknown expressions are left
 untouched by `renderString` itself, then rejected by `applyLayer` in other text files. New template
 variables must be documented here and in the template contract.
