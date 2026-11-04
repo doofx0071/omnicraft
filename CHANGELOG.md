@@ -6,6 +6,39 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [1.0.6] — 2026-11-05
+
+### Added
+
+- Laravel 12 API Sanctum SPA authentication for React/Vite TypeScript + Eloquent on PostgreSQL and
+  MySQL, extending the previously SQLite-only path. Evidence is bounded to the pinned PostgreSQL and
+  MySQL test images; Laravel sessions remain file-based.
+
+### Changed
+
+- shadcn is restricted to Node stacks: the prompt no longer offers it for FastAPI or Laravel
+  backends, and compatibility rejects the combination before writing files.
+- The ESLint extra on integrated Next.js projects no longer shadows `create-next-app`'s own ESLint
+  configuration.
+- Generated root READMEs reflect the selected client framework instead of hardcoding React.
+- Laravel API responses emit `createdAt`, matching the Node frameworks' response shape.
+
+### Fixed
+
+- Engine dotfile restoration no longer corrupts Python scaffolds (`__init__.py`).
+- Official-generator output can no longer land outside the target project directory.
+- `--yes` no longer hangs on install confirmation prompts.
+- Windows command quoting for child processes.
+- React JavaScript + Tailwind/shadcn extras now work.
+- Raw-SQL database seeds load `.env` before touching the database.
+- The `add` route rejects non-TTY runs and parses `--dry-run` correctly.
+- Next.js + SQLite scaffolds gitignore the generated `data/` directory.
+- Next-steps guidance for FastAPI + PostgreSQL names the correct database setup command.
+
+### Removed
+
+- The unused `drizzle-orm` dependency from the raw-SQL PostgreSQL templates.
+
 ## [1.0.5] — 2026-11-01
 
 This release consolidates the previously tagged v1.0.3 and repository-only v1.0.4 candidate

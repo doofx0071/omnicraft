@@ -1,6 +1,6 @@
 # 🗺️ OmniCraft Roadmap
 
-> **Versioning model:** `v1.0.0` is the first stable release. As checked on 2026-11-01, npm `latest` is `1.0.2`, published from Git commit `b359b91`, and GitHub tag `v1.0.2` points to that same commit. The repository's next release candidate is `v1.0.5`; v1.0.3 was tagged and v1.0.4 was prepared in the repository, but neither was published to npm. Future releases follow semver; release versions do not mean every selectable stack combination is fully verified.
+> **Versioning model:** `v1.0.0` is the first stable release. As checked on 2026-11-01, npm `latest` is `1.0.5`, published from Git commit `c8dd5bb`, and GitHub tag `v1.0.5` points to that same commit. The repository's next release candidate is `v1.0.6` (audit remediation); v1.0.3 and v1.0.4 were tagged or prepared in the repository but never published to npm. Future releases follow semver; release versions do not mean every selectable stack combination is fully verified.
 >
 > Progress is tracked with GitHub issues — this file is the big picture, the issues are the work. Check off here when the linked issue closes.
 
@@ -19,7 +19,8 @@
 | v1.0.2  | Reliability fixes and runtime evidence       | ✅ published         | —       |
 | v1.0.3  | Laravel Livewire, auth, and runtime evidence | 🟡 consolidated into v1.0.5 | —       |
 | v1.0.4  | Laravel Inertia React scaffolding            | 🟡 consolidated into v1.0.5 | —       |
-| v1.0.5  | Auth integrations and verified stack updates | 🟡 release candidate | —       |
+| v1.0.5  | Auth integrations and verified stack updates | ✅ published         | —       |
+| v1.0.6  | Audit remediation and release-process repair | 🟡 release candidate | —       |
 
 ---
 
@@ -78,12 +79,14 @@ Published on 2026-10-27. Issue #27 was delivered early with the template contrac
 - [x] #26 — Multi-OS CI once repo is public _(done early — repo is public, all 3 OS green)_
 - [x] #27 — Contributor docs: template composition guide _(delivered across `docs/templates/` and `docs/architecture/template-engine.md`; issue closed)_
 
-## v1.0.5 — Release candidate
+## v1.0.5 — Auth integrations and verified stack updates (published 2026-11-01)
 
-The repository baseline is version 1.0.4; npm `latest` remains 1.0.2. This candidate consolidates
-the earlier v1.0.3 and v1.0.4 candidate scopes with the Supabase Auth and Laravel Sanctum changes
-merged to `main`. It is the next version to publish to npm; the earlier versions were not published
-as npm releases.
+This release consolidates the earlier v1.0.3 and v1.0.4 candidate scopes with the Supabase Auth and
+Laravel Sanctum changes merged to `main`. npm `latest` is 1.0.5 (published 2026-11-01); Git tag
+`v1.0.5` points to commit `c8dd5bb`. The tag-triggered publish workflow failed at the npm step
+because npm Trusted Publishing was not configured yet, so the package was published manually and the
+workflow's ROADMAP/system-overview snapshot commit did not run; the state is recorded here manually
+and the process gap is addressed with v1.0.6.
 
 The release includes the exact supported combinations documented in the
 [stack support matrix](docs/templates/stack-support-matrix.md): Laravel 13 + Livewire 4 and Laravel
@@ -104,6 +107,24 @@ checks remain Scaffold-verified; physical Android/iOS paths remain Selectable �
 
 The release PR must pass the `supported-stack-release-gate` on its exact versioned commit before it
 is merged. Pushing the matching `v1.0.5` tag will trigger the npm publishing workflow.
+
+## v1.0.6 — Audit remediation and release-process repair (in preparation)
+
+The next release candidate collects the full codebase-audit remediation: engine dotfile restore no
+longer corrupts Python scaffolds, official-generator output stays inside the target directory,
+`--yes` no longer hangs on install confirms, win32 command quoting, React JavaScript +
+Tailwind/shadcn extras, raw-SQL seeds loading `.env`, shadcn restricted to Node stacks, the ESLint
+extra no longer shadows `create-next-app` on Next.js, Laravel API responses emit `createdAt` for
+parity with Node, root READMEs reflect the selected client framework, the unused `drizzle-orm`
+dependency is removed from raw-SQL PostgreSQL templates, Next.js + SQLite gitignores its data
+directory, the `add` route gains a non-TTY guard and `--dry-run` parsing, and next-steps guidance is
+corrected for FastAPI + PostgreSQL. It also includes the merged Laravel 12 API Sanctum SPA support
+for PostgreSQL and MySQL (#61).
+
+Release-process repair: npm Trusted Publishing must be verified before pushing the `v1.0.6` tag, and
+the `docs/architecture/system-overview.md` snapshot sentence required by
+`.github/scripts/release-metadata.mjs` must be restored so the tag workflow's documentation snapshot
+commit can succeed (it was dropped from the overview during the v1.0.5 cycle).
 
 ## v1.0.3 and v1.0.4 — candidate scopes consolidated into v1.0.5
 

@@ -178,7 +178,7 @@ export function planLayerApplication(
   };
 }
 
-/** Tokens available to every template file. */
+/** Tokens available to every template file. `dbConfig` is the Laravel-only multi-line DB env block rendered by the PHP overlay `.env.example` files. */
 export function templateVariables(answers: Answers): Record<string, string> {
   const name = answers.projectName;
   const databaseName = name.replace(/-/g, "_");
