@@ -1,5 +1,14 @@
-import { describe, expect, it } from 'vitest'
-import { runCommand, startCommand } from './exec.js'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterAll, describe, expect, it } from 'vitest'
+import {
+  assertGeneratorOutput,
+  joinWin32Command,
+  quoteWin32Token,
+  runCommand,
+  startCommand,
+} from './exec.js'
 
 describe('exec helpers', () => {
   it('captures a fixed command result and applies its timeout', () => {
@@ -21,5 +30,89 @@ describe('exec helpers', () => {
     const result = await child.exited
     expect(result.ok).toBe(false)
     expect(result.exitCode).not.toBe(0)
+  })
+})
+
+describe('win32 command quoting', () => {
+  const tempDirs: string[] = []
+  function makeSpacedCwd(): string {
+    const dir = join(mkdtempSync(join(tmpdir(), 'omnicraft-exec-')), 'John Doe')
+    mkdirSync(dir, { recursive: true })
+    tempDirs.push(dir)
+    return dir
+  }
+
+  afterAll(() => {
+    for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('quotes tokens with whitespace or cmd.exe metacharacters', () => {
+    expect(quoteWin32Token('plain')).toBe('plain')
+    expect(quoteWin32Token('--skip-install')).toBe('--skip-install')
+    expect(quoteWin32Token('John Doe')).toBe('"John Doe"')
+    expect(quoteWin32Token('a&b')).toBe('"a&b"')
+    expect(quoteWin32Token('say "hi"')).toBe('"say ""hi"""')
+    expect(quoteWin32Token('C:\\Users\\John Doe\\my-app')).toBe('"C:\\Users\\John Doe\\my-app"')
+  })
+
+  it('joins a command into the single win32 shell string', () => {
+    expect(joinWin32Command('npx', ['--yes', 'create-expo-app@latest', 'C:\\apps\\my app', '--no-install'])).toBe(
+      'npx --yes create-expo-app@latest "C:\\apps\\my app" --no-install',
+    )
+  })
+
+  it('runs a command with spaced args from a spaced cwd like John Doe', () => {
+    const result = runCommand(
+      'node',
+      ['-e', 'console.log(process.argv[1])', 'John Doe arg'],
+      makeSpacedCwd(),
+      { timeoutMs: 15_000 },
+    )
+
+    expect(result.ok).toBe(true)
+    expect(result.output).toBe('John Doe arg')
+  })
+
+  it('passes cmd.exe metacharacters through as literal data', () => {
+    const result = runCommand(
+      'node',
+      ['-e', 'console.log(process.argv[1])', 'a&b|c'],
+      process.cwd(),
+      { timeoutMs: 15_000 },
+    )
+
+    expect(result.ok).toBe(true)
+    expect(result.output).toBe('a&b|c')
+  })
+})
+
+describe('assertGeneratorOutput', () => {
+  const tempDirs: string[] = []
+  function makeTempDir(): string {
+    const dir = mkdtempSync(join(tmpdir(), 'omnicraft-genout-'))
+    tempDirs.push(dir)
+    return dir
+  }
+
+  afterAll(() => {
+    for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('passes when the generator skeleton landed in the target', () => {
+    const dir = makeTempDir()
+    writeFileSync(join(dir, 'package.json'), '{}')
+
+    expect(() => assertGeneratorOutput(dir, 'package.json', 'create-next-app')).not.toThrow()
+  })
+
+  it('fails with a clear error when the skeleton landed elsewhere', () => {
+    const dir = makeTempDir()
+
+    expect(() => assertGeneratorOutput(dir, 'package.json', 'create-next-app')).toThrow(
+      /create-next-app reported success but its output is missing from/,
+    )
+    expect(() =>
+      assertGeneratorOutput(dir, 'server/composer.json', 'composer create-project'),
+    ).toThrow(/composer create-project reported success/)
   })
 })

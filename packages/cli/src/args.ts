@@ -151,3 +151,44 @@ function splitList(value: string): string[] {
   if (items.length === 1 && items[0] === "none") return [];
   return items;
 }
+
+export interface ParsedAddArgs {
+  moduleName?: string;
+  target?: string;
+  dryRun: boolean;
+}
+
+/**
+ * Parses the `omnicraft add <module> [target] [--dry-run]` surface. The three
+ * exact `--dry-run` forms are recognized (`--dry-run`, `--dry-run=true`,
+ * `--dry-run=false`); unknown flags and positionals beyond the module target
+ * are rejected instead of silently dropped.
+ */
+export function parseAddArgs(argv: string[]): ParsedAddArgs {
+  const result: ParsedAddArgs = { dryRun: false };
+  const positionals: string[] = [];
+
+  for (const arg of argv) {
+    if (arg === "--dry-run" || arg === "--dry-run=true") result.dryRun = true;
+    else if (arg === "--dry-run=false") result.dryRun = false;
+    else if (arg.startsWith("--dry-run=")) {
+      throw new Error(
+        `Invalid value for --dry-run: ${arg.slice("--dry-run=".length)}. Use --dry-run, --dry-run=true, or --dry-run=false.`,
+      );
+    } else if (arg.startsWith("-")) {
+      throw new Error(`Unknown option: ${arg}. Usage: omnicraft add <module> [target] [--dry-run]`);
+    } else {
+      positionals.push(arg);
+    }
+  }
+
+  if (positionals.length > 2) {
+    throw new Error(
+      `Expected at most a module and a target, got: ${positionals.join(" ")}. Usage: omnicraft add <module> [target] [--dry-run]`,
+    );
+  }
+
+  result.moduleName = positionals[0];
+  result.target = positionals[1];
+  return result;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { HELP_TEXT, parseArgs } from './args.js'
+import { HELP_TEXT, parseAddArgs, parseArgs } from './args.js'
 import { readFileSync } from 'node:fs'
 
 describe('parseArgs', () => {
@@ -60,5 +60,35 @@ describe('parseArgs', () => {
   it('keeps the positional project name', () => {
     expect(parseArgs(['my-app', '--yes']).projectName).toBe('my-app')
     expect(() => parseArgs(['a', 'b'])).toThrow(/at most one project name/)
+  })
+})
+
+describe('parseAddArgs', () => {
+  it('parses the module and optional target', () => {
+    expect(parseAddArgs([])).toEqual({ dryRun: false, moduleName: undefined, target: undefined })
+    expect(parseAddArgs(['auth'])).toEqual({ dryRun: false, moduleName: 'auth', target: undefined })
+    expect(parseAddArgs(['auth', 'path/to/app'])).toEqual({
+      dryRun: false,
+      moduleName: 'auth',
+      target: 'path/to/app',
+    })
+  })
+
+  it('recognizes every --dry-run form', () => {
+    expect(parseAddArgs(['auth', '--dry-run']).dryRun).toBe(true)
+    expect(parseAddArgs(['--dry-run=true', 'auth']).dryRun).toBe(true)
+    expect(parseAddArgs(['auth', '--dry-run=false']).dryRun).toBe(false)
+  })
+
+  it('rejects an unknown --dry-run value instead of silently filtering it', () => {
+    expect(() => parseAddArgs(['auth', '--dry-run=yes'])).toThrow(/Invalid value for --dry-run/)
+    expect(() => parseAddArgs(['auth', '--dry-run=1'])).toThrow(/Invalid value for --dry-run/)
+  })
+
+  it('rejects unknown options and extra positionals', () => {
+    expect(() => parseAddArgs(['auth', '--force'])).toThrow(/Unknown option: --force/)
+    expect(() => parseAddArgs(['auth', 'target', 'extra'])).toThrow(
+      /Expected at most a module and a target, got: auth target extra/,
+    )
   })
 })
