@@ -16,8 +16,10 @@ import { runCommand, startCommand, type StartedCommand } from '../src/exec.js'
 import {
   CNA_PACKAGE,
   CLI_VERSION,
+  PRETTIER_PACKAGE,
   SHADCN_BASE,
   SHADCN_COMPONENTS,
+  SHADCN_PACKAGE,
   SHADCN_PRESET,
   TEMPLATES_ROOT,
 } from '../src/config.js'
@@ -392,7 +394,7 @@ async function prepareShadcnScenario(
     'Run production shadcn init path',
     'npx',
     [
-      '--yes', 'shadcn@latest', 'init', '--base', SHADCN_BASE,
+      '--yes', SHADCN_PACKAGE, 'init', '--base', SHADCN_BASE,
       '--preset', SHADCN_PRESET, '--no-monorepo', '--force',
     ],
     appRoot,
@@ -401,14 +403,14 @@ async function prepareShadcnScenario(
   runRequired(
     'Run production shadcn component install path',
     'npx',
-    ['--yes', 'shadcn@latest', 'add', ...SHADCN_COMPONENTS, '--yes', '--overwrite'],
+    ['--yes', SHADCN_PACKAGE, 'add', ...SHADCN_COMPONENTS, '--yes', '--overwrite'],
     appRoot,
     diagnostics,
   )
   runRequired(
     'Run production shadcn formatting step',
     'npx',
-    ['--yes', 'prettier@latest', '--write', '.'],
+    ['--yes', PRETTIER_PACKAGE, '--write', '.'],
     appRoot,
     diagnostics,
   )
@@ -429,7 +431,7 @@ function verifyJavaScriptShadcnSetupLimitation(
   const result = runCommand(
     'npx',
     [
-      '--yes', 'shadcn@latest', 'init', '--base', SHADCN_BASE,
+      '--yes', SHADCN_PACKAGE, 'init', '--base', SHADCN_BASE,
       '--preset', SHADCN_PRESET, '--no-monorepo', '--force',
     ],
     appRoot,

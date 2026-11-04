@@ -34,6 +34,16 @@ export const TEMPLATES_ROOT = fileURLToPath(new URL('../templates/', import.meta
 export const CNA_PACKAGE = 'create-next-app@16'
 
 /**
+ * Official generators pinned to exact versions, like every other external
+ * input: two runs of the same CLI version must produce identical projects
+ * and exercise the same generator behavior. Bump deliberately and re-verify
+ * the hosted evidence for the affected paths.
+ */
+export const CREATE_EXPO_APP_PACKAGE = 'create-expo-app@5.0.0'
+export const SHADCN_PACKAGE = 'shadcn@4.23.0'
+export const PRETTIER_PACKAGE = 'prettier@3.9.10'
+
+/**
  * Laravel Livewire generator inputs are pinned to reviewed official starter-kit commits.
  * The blank kit has no auth routes; the authenticated kit uses Laravel Fortify.
  */
