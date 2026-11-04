@@ -5,13 +5,57 @@ import { tmpdir } from 'node:os'
 const REGISTRY_URL = 'https://registry.npmjs.org/create-omnicraft/latest'
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000
 
-/** Numeric per-segment comparison of plain x.y.z versions; prereleases compare equal to their base. */
+/**
+ * Semver-style comparison of x.y.z[-prerelease][+build] versions: numeric
+ * per-segment comparison of the base, then semver prerelease precedence
+ * (rule 11). A prerelease binds to its own base version and sorts BELOW it:
+ * 1.0.5-beta.1 < 1.0.5 < 1.0.6-beta.1 — so a prerelease install like
+ * 1.0.5-beta.1 still sees the 1.0.5 stable notice, while a prerelease of a
+ * higher base (1.0.6-beta.1) still outranks the older stable 1.0.5. Build
+ * metadata is ignored.
+ */
 export function compareVersions(a: string, b: string): number {
-  const pa = a.split('-')[0].split('.').map(Number)
-  const pb = b.split('-')[0].split('.').map(Number)
+  const [baseA, preA] = splitCoreVersion(a)
+  const [baseB, preB] = splitCoreVersion(b)
+  const pa = baseA.split('.').map(Number)
+  const pb = baseB.split('.').map(Number)
   for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
     const diff = (pa[i] ?? 0) - (pb[i] ?? 0)
     if (diff !== 0) return diff
+  }
+  if (preA === undefined && preB === undefined) return 0
+  if (preA === undefined) return 1 // stable outranks a prerelease of the same base
+  if (preB === undefined) return -1
+  return comparePrerelease(preA, preB)
+}
+
+/** Splits "x.y.z[-prerelease][+build]" into the numeric base and prerelease string. */
+function splitCoreVersion(version: string): [string, string | undefined] {
+  const plus = version.indexOf('+')
+  const core = plus === -1 ? version : version.slice(0, plus)
+  const dash = core.indexOf('-')
+  return dash === -1 ? [core, undefined] : [core.slice(0, dash), core.slice(dash + 1)]
+}
+
+/** Semver rule 11: numeric identifiers compare numerically and rank below alphanumeric ones. */
+function comparePrerelease(a: string, b: string): number {
+  const idsA = a.split('.')
+  const idsB = b.split('.')
+  for (let i = 0; i < Math.max(idsA.length, idsB.length); i++) {
+    const left = idsA[i]
+    const right = idsB[i]
+    if (left === undefined) return -1 // fewer identifiers sorts lower
+    if (right === undefined) return 1
+    const leftNumeric = /^\d+$/.test(left)
+    const rightNumeric = /^\d+$/.test(right)
+    if (leftNumeric && rightNumeric) {
+      const diff = Number(left) - Number(right)
+      if (diff !== 0) return diff < 0 ? -1 : 1
+    } else if (leftNumeric !== rightNumeric) {
+      return leftNumeric ? -1 : 1
+    } else if (left !== right) {
+      return left < right ? -1 : 1
+    }
   }
   return 0
 }
