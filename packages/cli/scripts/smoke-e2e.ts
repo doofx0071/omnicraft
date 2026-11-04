@@ -16,6 +16,15 @@ import { saveManifest } from '../src/add.js'
 import type { Answers } from '../src/types.js'
 
 const outRoot = resolve(process.argv[2] ?? 'smoke-out')
+
+/**
+ * Every scaffold below must produce exactly this many project paths — the
+ * number docs reconcile against (see the support/testing docs). A drift here
+ * means a combo was added or removed without updating the smoke surface.
+ */
+const EXPECTED_PROJECT_COUNT = 22
+const produced: string[] = []
+
 const combos = [
   { framework: 'express', orm: 'drizzle', db: 'postgres' },
   { framework: 'express', orm: 'prisma', db: 'postgres' },
@@ -39,6 +48,7 @@ function scaffold(answers: Answers): string {
   applyLayers(TEMPLATES_ROOT, composeLayers(answers), templateVariables(answers), dir)
   createEnvFiles(dir)
   saveManifest(dir, buildManifest(answers, CLI_VERSION, 'npm'))
+  produced.push(dir)
   console.log(`scaffolded ${dir}`)
   return dir
 }
@@ -160,7 +170,9 @@ for (const authentication of ['none', 'laravel-native'] as const) {
 // Next.js integrated full-stack: NOTE this only scaffolds the overlay + db
 // adapter onto a target dir. A complete project needs `create-next-app` run
 // first (the CLI does this; see src/index.ts). For smoke purposes we run CNA
-// when network+node are available, else record the overlay-only output.
+// when network+node are available; in CI a CNA failure fails the run because
+// it silently loses the only Next.js overlay coverage. Locally the failure is
+// logged and the overlay-only output is recorded so the count still holds.
 {
   const name = 'smoke-nextjs-fullstack'
   const dir = resolve(outRoot, name)
@@ -196,6 +208,10 @@ for (const authentication of ['none', 'laravel-native'] as const) {
   const skeletonOk = cna.status === 0
   if (skeletonOk) {
     console.log(`create-next-app skeleton landed in ${dir}`)
+  } else if (process.env.CI) {
+    throw new Error(
+      `create-next-app failed for ${name} (exit ${cna.status}) — CI smoke requires the Next.js skeleton for overlay coverage`,
+    )
   } else {
     console.error(`create-next-app failed for ${name} — recording overlay-only output (run manually to verify)`)
   }
@@ -216,5 +232,16 @@ for (const authentication of ['none', 'laravel-native'] as const) {
   }
   applyLayers(TEMPLATES_ROOT, composeLayers(answers), templateVariables(answers), dir)
   createEnvFiles(dir)
+  // Production records a manifest for every scaffold (see src/index.ts) — the
+  // smoke Next.js path must do the same so `omnicraft add` works on it.
+  saveManifest(dir, buildManifest(answers, CLI_VERSION, 'npm'))
+  produced.push(dir)
   console.log(`scaffolded ${skeletonOk ? '(next overlay on CNA skeleton)' : '(next overlay only)'} ${dir}`)
+}
+
+console.log(`\nsmoke produced ${produced.length}/${EXPECTED_PROJECT_COUNT} project paths`)
+if (produced.length !== EXPECTED_PROJECT_COUNT) {
+  throw new Error(
+    `smoke path count mismatch: produced ${produced.length}, expected ${EXPECTED_PROJECT_COUNT} — update the smoke surface or the documented count`,
+  )
 }
