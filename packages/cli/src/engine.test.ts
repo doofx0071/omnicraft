@@ -788,6 +788,12 @@ describe("frontend expansion (v0.4)", () => {
     // no vite artifacts (cna wires tailwind via turbopack)
     expect(existsSync(join(dir, "vite.config.ts"))).toBe(false);
     expect(existsSync(join(dir, "docker-compose.yml"))).toBe(false); // sqlite
+
+    // root layer ships a complete .gitignore (it replaces cna's) that
+    // ignores the SQLite data dir the db adapter writes to
+    const gitignore = readFileSync(join(dir, ".gitignore"), "utf8");
+    expect(gitignore).toContain("/data/");
+    expect(gitignore).toContain("node_modules");
   });
 
   it("scaffolds the next postgres variant with compose file", () => {
@@ -808,6 +814,9 @@ describe("frontend expansion (v0.4)", () => {
     expect(readFileSync(join(dir, ".env"), "utf8")).toContain(
       "DATABASE_URL=postgres://omnicraft:omnicraft@localhost:5432/demo_app",
     );
+    // every fullstack-next variant ships the root .gitignore (uniform files;
+    // /data/ is inert for containerized databases)
+    expect(readFileSync(join(dir, ".gitignore"), "utf8")).toContain("/data/");
   });
 });
 describe("layer composition edge cases", () => {
