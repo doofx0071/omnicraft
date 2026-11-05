@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { setTimeout as delay } from 'node:timers/promises'
 import { runCommand, startCommand } from '../src/exec.js'
 import { composeLayers, templateVariables } from '../src/scaffold/compose.js'
@@ -524,9 +525,12 @@ end tell`
   const powershellCommand =
     '"$titles = Get-Process | Where-Object { $_.MainWindowHandle -ne 0 } | ForEach-Object { $_.MainWindowTitle }; $titles"'
   // Cold windows-2025 runners can download/initialize the WebView2 runtime on
-  // the app's first launch; the window then appears minutes later while the
-  // process stays alive the whole time (three consecutive 60s timeouts in
-  // November 2026 gates, with Linux and macOS passing on the same commits).
+  // the app's first launch, so allow minutes rather than seconds. Window
+  // detection uses the EnumWindows fixture: Get-Process MainWindowHandle only
+  // reflects a process's "main window" and missed the visible window on the
+  // windows-2025-vs2026 hosted image (four consecutive November 2026 gate
+  // timeouts with Linux and macOS passing on the same commits).
+  const windowsListFixture = fileURLToPath(new URL('./fixtures/list-visible-windows.ps1', import.meta.url))
   const deadline = Date.now() + 240_000
   let lastOutput = ''
   while (Date.now() < deadline) {
@@ -536,10 +540,15 @@ end tell`
             timeoutMs: 8_000,
             maxBuffer: 4 * 1024 * 1024,
           })
-        : runCommand('powershell', ['-NoProfile', '-NonInteractive', '-Command', powershellCommand], projectRoot, {
-            timeoutMs: 8_000,
-            maxBuffer: 4 * 1024 * 1024,
-          })
+        : runCommand(
+            'powershell',
+            ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', windowsListFixture],
+            projectRoot,
+            {
+              timeoutMs: 8_000,
+              maxBuffer: 4 * 1024 * 1024,
+            },
+          )
     lastOutput = result.output
     const windowTitles = result.output.split(/,\s*|\r?\n/).map((value) => value.trim())
     if (result.ok && windowTitles.includes(title)) return
@@ -550,8 +559,14 @@ end tell`
     }
     await delay(1_000)
   }
+  const webviewProcesses = runCommand(
+    'powershell',
+    ['-NoProfile', '-NonInteractive', '-Command', '(Get-Process msedgewebview2 -ErrorAction SilentlyContinue | Measure-Object).Count'],
+    projectRoot,
+    { timeoutMs: 8_000, maxBuffer: 1024 * 1024 },
+  )
   throw new Error(
-    `No visible Tauri ${platform} window titled "${title}" appeared within 240 seconds. Window query output:\n${tail(redact(lastOutput), 3_000)}\nApp output:\n${tail(redact(appProcess.output), 3_000)}`,
+    `No visible Tauri ${platform} window titled "${title}" appeared within 240 seconds. Enumerated visible windows:\n${tail(redact(lastOutput), 3_000)}\nmsedgewebview2 process count: ${webviewProcesses.output.trim() || 'unknown'}\nGet-Process main-window output:\n${tail(redact(runCommand('powershell', ['-NoProfile', '-NonInteractive', '-Command', powershellCommand], projectRoot, { timeoutMs: 8_000, maxBuffer: 4 * 1024 * 1024 }).output), 1_000)}\nApp output:\n${tail(redact(appProcess.output), 3_000)}`,
   )
 }
 
