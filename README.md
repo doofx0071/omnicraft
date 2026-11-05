@@ -10,6 +10,8 @@
 npm create omnicraft@latest
 ```
 
+**Requirements:** the CLI runs on Node.js 20.12+. Generated projects that use **SQLite** (Node stacks ship `better-sqlite3` v13) need Node.js **22+** to install and run; PostgreSQL, MySQL, Python, and PHP stacks have no additional Node floor. Integrated Laravel + Livewire has its own tooling requirement listed below.
+
 ![OmniCraft scaffolding a full-stack React app — the full interactive flow from app name to installed dependencies](docs/demo.gif)
 
 <details>
