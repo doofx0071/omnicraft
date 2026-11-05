@@ -424,7 +424,7 @@ async function prepareShadcnScenario(
   runRequired('Install shadcn component dependencies', 'npm', ['install', '--no-audit', '--no-fund'], projectRoot, diagnostics)
 }
 
-function verifyJavaScriptShadcnSetupLimitation(
+function verifyJavaScriptShadcnSetup(
   appRoot: string,
   diagnostics: string[],
 ): void {
@@ -442,13 +442,13 @@ function verifyJavaScriptShadcnSetupLimitation(
     },
   )
   const output = redact(result.output)
-  diagnostics.push(`Production shadcn init limitation (exit ${result.exitCode ?? 'unknown'}):\n${tail(output)}`)
-  assert.equal(result.ok, false, 'The current JavaScript shadcn path unexpectedly initialized successfully.')
-  assert(
-    output.includes('Could not find valid path aliases'),
-    `The JavaScript shadcn path failed for an unexpected reason:\n${tail(output)}`,
+  diagnostics.push(`Production shadcn init on the JavaScript template (exit ${result.exitCode ?? 'unknown'}):\n${tail(output)}`)
+  assert.equal(
+    result.ok,
+    true,
+    `The JavaScript shadcn path failed to initialize:\n${tail(output)}`,
   )
-  console.log('[integration] production shadcn init failed because the JavaScript template has no path alias')
+  console.log('[integration] production shadcn init succeeded on the JavaScript template (shadcn-js templates ship path aliases)')
 }
 
 async function runShadcnScenario(projectRoot: string, diagnostics: string[]): Promise<void> {
@@ -605,13 +605,13 @@ async function runCombinationScenario(combination: SupportedCombination): Promis
         tempRoot,
         diagnostics,
       )
-      verifyJavaScriptShadcnSetupLimitation(appRoot, diagnostics)
+      verifyJavaScriptShadcnSetup(appRoot, diagnostics)
       await runExpectedTestingRejection(
         tempRoot,
         moduleLabel,
         'the current shadcn templates require the TypeScript React/Vite app template',
       )
-      console.log(`[module-path:${pathLabel}] existing shadcn setup limitation and pre-write testing rejection verified`)
+      console.log(`[module-path:${pathLabel}] shadcn-js init success and pre-write testing rejection verified`)
     } else {
       if (answers.extras.shadcn) await prepareShadcnScenario(tempRoot, appRoot, diagnostics)
       await runTestingScenario(tempRoot, answers, moduleLabel, diagnostics)

@@ -50,7 +50,7 @@ export const PRETTIER_PACKAGE = 'prettier@3.9.10'
 export const TIGED_PACKAGE = 'tiged@2.12.8'
 export const LARAVEL_LIVEWIRE_STARTER_KITS = {
   none: 'laravel/blank-livewire-starter-kit#75cf9e5cfbc18161027774fc025a1ead81eddcea',
-  'laravel-native': 'laravel/livewire-starter-kit#143e0c1e574e122ebe7e294e5342b7bf251df799',
+  'laravel-native': 'laravel/livewire-starter-kit#05c258129526254900acac0730bd2bc03a0353e5',
 } as const
 
 /**
