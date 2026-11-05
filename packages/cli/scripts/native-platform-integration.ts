@@ -523,7 +523,11 @@ return windowNames as text
 end tell`
   const powershellCommand =
     '"$titles = Get-Process | Where-Object { $_.MainWindowHandle -ne 0 } | ForEach-Object { $_.MainWindowTitle }; $titles"'
-  const deadline = Date.now() + 60_000
+  // Cold windows-2025 runners can download/initialize the WebView2 runtime on
+  // the app's first launch; the window then appears minutes later while the
+  // process stays alive the whole time (three consecutive 60s timeouts in
+  // November 2026 gates, with Linux and macOS passing on the same commits).
+  const deadline = Date.now() + 240_000
   let lastOutput = ''
   while (Date.now() < deadline) {
     const result =
@@ -547,7 +551,7 @@ end tell`
     await delay(1_000)
   }
   throw new Error(
-    `No visible Tauri ${platform} window titled "${title}" appeared within 60 seconds. Window query output:\n${tail(redact(lastOutput), 3_000)}\nApp output:\n${tail(redact(appProcess.output), 3_000)}`,
+    `No visible Tauri ${platform} window titled "${title}" appeared within 240 seconds. Window query output:\n${tail(redact(lastOutput), 3_000)}\nApp output:\n${tail(redact(appProcess.output), 3_000)}`,
   )
 }
 
