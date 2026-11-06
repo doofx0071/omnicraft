@@ -6,10 +6,14 @@ import { applyModuleToProject, runAdd } from "./add-run.js";
 import {
   CLI_VERSION,
   CNA_PACKAGE,
+  CREATE_EXPO_APP_PACKAGE,
+  CREATE_TAURI_APP_PACKAGE,
   LARAVEL_INERTIA_REACT_STARTER_KITS,
   LARAVEL_LIVEWIRE_STARTER_KITS,
+  PRETTIER_PACKAGE,
   SHADCN_BASE,
   SHADCN_COMPONENTS,
+  SHADCN_PACKAGE,
   SHADCN_PRESET,
   TEMPLATES_ROOT,
   TIGED_PACKAGE,
@@ -22,12 +26,29 @@ import { composeLayers, planLayerApplication, templateVariables } from "./scaffo
 import { createEnvFiles } from "./scaffold/env.js";
 import { applyLayers } from "./scaffold/engine.js";
 import { createLaravelSqliteMigrationEnv } from "./scaffold/laravel-env.js";
+import {
+  createLivewireStarterRetrievalError,
+  LIVEWIRE_STARTER_RETRIEVAL_ATTEMPTS,
+  retryLivewireStarterRetrieval,
+} from "./scaffold/livewire-starter-retrieval.js";
 import { gitInit } from "./scaffold/git.js";
-import { assertGeneratorOutput, runCommand, runCommandVisible } from "./exec.js";
-import { detectPackageManager, installDependencies } from "./scaffold/pkg-manager.js";
+import {
+  assertGeneratorOutput,
+  GENERATOR_MAX_BUFFER,
+  GENERATOR_TIMEOUT_MS,
+  runCommand,
+  runCommandVisible,
+} from "./exec.js";
+import {
+  detectPackageManager,
+  formatInstallCommand,
+  installDependencies,
+  planNativeInstall,
+} from "./scaffold/pkg-manager.js";
+import { formatScaffoldFailure } from "./scaffold/failure.js";
 import { fetchRemoteTemplates } from "./scaffold/remote.js";
 import { validateStackFlags } from "./prefill.js";
-import { checkForUpdate } from "./update-check.js";
+import { checkForUpdate, shouldCheckForUpdate } from "./update-check.js";
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
@@ -130,7 +151,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (!process.env.NO_UPDATE_NOTIFIER && !process.env.CI) {
+  if (shouldCheckForUpdate(process.stdin.isTTY, process.env)) {
     const latest = await checkForUpdate(CLI_VERSION);
     if (latest) {
       p.log.info(
@@ -158,22 +179,29 @@ async function main(): Promise<void> {
     }
   }
 
-  // Native platforms (mobile/desktop): the official generator IS the
-  // scaffold; OmniCraft applies its overlay afterwards and returns — no web
-  // flow, no db prompts, no tailwind/shadcn steps.
-  if (answers.architecture.kind === "native-app") {
-    const mobile = answers.architecture.platform === "mobile";
-    const layers = composeLayers(answers);
-    const variables = templateVariables(answers);
-    const spinner = p.spinner();
+  try {
+    // Native platforms (mobile/desktop): the official generator IS the
+    // scaffold; OmniCraft applies its overlay afterwards and returns — no web
+    // flow, no db prompts, no tailwind/shadcn steps.
+    if (answers.architecture.kind === "native-app") {
+      const mobile = answers.architecture.platform === "mobile";
+      const layers = composeLayers(answers);
+      const variables = templateVariables(answers);
+      const nativeInstall = planNativeInstall(
+        answers.architecture.platform,
+        detectPackageManager(),
+        args.skipInstall,
+      );
+      const nativePackageManager = nativeInstall.packageManager;
+      const spinner = p.spinner();
 
-    if (mobile) {
+      if (mobile) {
       spinner.start("Creating the Expo app with create-expo-app (this can take a minute)...");
       const cea = runCommand(
         "npx",
         [
           "--yes",
-          "create-expo-app@latest",
+          CREATE_EXPO_APP_PACKAGE,
           answers.targetDir,
           "--template",
           "default@sdk-58",
@@ -182,7 +210,7 @@ async function main(): Promise<void> {
           "--no-agents-md",
         ],
         dirname(answers.targetDir),
-        64 * 1024 * 1024,
+        { maxBuffer: GENERATOR_MAX_BUFFER, timeoutMs: GENERATOR_TIMEOUT_MS },
       );
       if (!cea.ok) {
         spinner.stop("create-expo-app failed");
@@ -200,7 +228,7 @@ async function main(): Promise<void> {
         "npx",
         [
           "--yes",
-          "create-tauri-app@latest",
+          CREATE_TAURI_APP_PACKAGE,
           answers.targetDir,
           "--template",
           "react-ts",
@@ -211,7 +239,7 @@ async function main(): Promise<void> {
           identifier,
         ],
         dirname(answers.targetDir),
-        64 * 1024 * 1024,
+        { maxBuffer: GENERATOR_MAX_BUFFER, timeoutMs: GENERATOR_TIMEOUT_MS },
       );
       if (!cta.ok) {
         spinner.stop("create-tauri-app failed");
@@ -231,7 +259,7 @@ async function main(): Promise<void> {
     // Project manifest — enables omnicraft add stack detection.
     const { buildManifest } = await import("./manifest.js");
     const { saveManifest } = await import("./add.js");
-    saveManifest(answers.targetDir, buildManifest(answers, CLI_VERSION, detectPackageManager()));
+    saveManifest(answers.targetDir, buildManifest(answers, CLI_VERSION, nativePackageManager));
     p.log.step("Created .omnicraft/project.json");
 
     spinner.start("Initializing git repository...");
@@ -240,23 +268,29 @@ async function main(): Promise<void> {
       gitOkNative ? "Git repository initialized" : "Git not available — skipped git init",
     );
 
-    if (!args.skipInstall && mobile) {
+    if (nativeInstall.shouldInstall) {
       const shouldInstall = await confirmOrYes(
         args.yes,
-        "Install Expo dependencies with npm now? (Expo SDK + Expo Router — this can take a couple of minutes)",
+        `Install ${mobile ? "Expo" : "Tauri"} dependencies with ${nativePackageManager} now? (this can take a couple of minutes)`,
         p.confirm,
       );
       if (shouldInstall) {
-        p.log.step("Installing dependencies with npm — live output below");
-        const ok = await installDependencies(answers.targetDir, "npm");
-        if (ok) p.log.success("Dependencies installed");
-        else p.log.warn('Install failed — run "npm install" inside the project');
+        p.log.step(`Installing dependencies with ${nativePackageManager} — live output below`);
+        const ok = await installDependencies(answers.targetDir, nativePackageManager);
+        if (ok) p.log.success(`Dependencies installed with ${nativePackageManager}`);
+        else
+          p.log.warn(
+            `Install failed — check the output above, then run "${formatInstallCommand(nativePackageManager)}" inside the project`,
+          );
       } else {
-        p.log.step('Skipped — run "npm install" when ready');
+        p.log.step(
+          `Skipped — run "${formatInstallCommand(nativePackageManager)}" inside the project when ready`,
+        );
       }
-    }
-    if (!mobile) {
-      p.log.info("Dependencies were installed by create-tauri-app (npm)");
+    } else {
+      p.log.step(
+        `Skipped install — run "${formatInstallCommand(nativePackageManager)}" inside the project when ready`,
+      );
     }
 
     p.note(
@@ -265,7 +299,25 @@ async function main(): Promise<void> {
         : `cd ${answers.projectName}\ncargo --version            # Rust is required to build the shell\nnpm run tauri dev          # desktop app with hot reload\n# pair with a backend: see OMNICRAFT.md`,
       "Next steps",
     );
-    p.outro("Crafted! Happy building ⚡");
+      p.outro("Crafted! Happy building ⚡");
+      return;
+    }
+  } catch (err) {
+    if (err instanceof CancelledError) {
+      p.cancel(err.message);
+      return;
+    }
+    p.cancel("Something went wrong while scaffolding.");
+    if (args.debug) {
+      console.error(err);
+    } else {
+      p.log.error(
+        existsSync(answers.targetDir)
+          ? `${formatScaffoldFailure(err, answers.targetDir)} (re-run with --debug for the stack trace)`
+          : `${(err as Error).message} (re-run with --debug for the stack trace)`,
+      );
+    }
+    process.exitCode = 1;
     return;
   }
 
@@ -306,7 +358,7 @@ async function main(): Promise<void> {
           "--no-progress",
         ],
         answers.targetDir,
-        64 * 1024 * 1024,
+        { maxBuffer: GENERATOR_MAX_BUFFER, timeoutMs: GENERATOR_TIMEOUT_MS },
       );
       if (!starterCreated.ok) {
         spinner.stop("Laravel Inertia React starter retrieval failed");
@@ -369,19 +421,35 @@ async function main(): Promise<void> {
       spinner.start("Creating the Laravel Livewire app from its pinned official starter kit...");
       mkdirSync(answers.targetDir, { recursive: true });
       const starterKit = LARAVEL_LIVEWIRE_STARTER_KITS[answers.authentication];
-      const cloned = runCommand(
-        "npx",
-        ["--yes", TIGED_PACKAGE, starterKit, "server"],
+      await retryLivewireStarterRetrieval(
         answers.targetDir,
-        64 * 1024 * 1024,
-      );
-      if (!cloned.ok) {
+        () => {
+          const cloned = runCommand(
+            "npx",
+            ["--yes", TIGED_PACKAGE, starterKit, "server"],
+            answers.targetDir,
+            { maxBuffer: GENERATOR_MAX_BUFFER, timeoutMs: GENERATOR_TIMEOUT_MS },
+          );
+          if (!cloned.ok) throw createLivewireStarterRetrievalError(cloned.output);
+          assertGeneratorOutput(
+            answers.targetDir,
+            "server/composer.json",
+            "the Laravel Livewire starter clone",
+          );
+          return cloned;
+        },
+        {
+          onRetry: (attempt, error) => {
+            p.log.warn(
+              `Livewire starter retrieval failed transiently; retrying (${attempt}/${LIVEWIRE_STARTER_RETRIEVAL_ATTEMPTS}).`,
+            );
+            if (args.debug && error instanceof Error) p.log.message(error.message);
+          },
+        },
+      ).catch((error: unknown) => {
         spinner.stop("Laravel Livewire starter retrieval failed");
-        throw new Error(
-          `Could not retrieve the pinned Laravel Livewire starter kit — check your connection and Node.js.\n${cloned.output.split("\n").slice(-10).join("\n")}`,
-        );
-      }
-      assertGeneratorOutput(answers.targetDir, "server/composer.json", "the Laravel Livewire starter clone");
+        throw error;
+      });
       applyLayers(templatesRoot, layerPlan.afterOfficialGenerator, variables, answers.targetDir);
       const serverDir = join(answers.targetDir, "server");
       const sqliteFile = join(serverDir, "database", "database.sqlite");
@@ -474,7 +542,7 @@ async function main(): Promise<void> {
         // create-next-app refuses to write into an existing non-empty dir, but
         // the empty target itself is fine — it fills exactly that directory.
         dirname(answers.targetDir),
-        64 * 1024 * 1024,
+        { maxBuffer: GENERATOR_MAX_BUFFER, timeoutMs: GENERATOR_TIMEOUT_MS },
       );
       if (!cna.ok) {
         spinner.stop("create-next-app failed");
@@ -511,7 +579,8 @@ async function main(): Promise<void> {
         ],
         answers.targetDir,
         {
-          maxBuffer: 64 * 1024 * 1024,
+          maxBuffer: GENERATOR_MAX_BUFFER,
+          timeoutMs: GENERATOR_TIMEOUT_MS,
           env: createLaravelSqliteMigrationEnv(process.env, starterSqliteFile),
         },
       );
@@ -535,9 +604,8 @@ async function main(): Promise<void> {
         answers.authentication === "laravel-native" &&
         answers.architecture.kind === "separate-frontend-api"
       ) {
-        p.log.step(
-          "Installing Laravel Sanctum for first-party SPA sessions — no token scaffolding",
-        );
+        spinner.stop("Laravel application created — installing Sanctum");
+        p.log.step("Installing Laravel Sanctum for first-party SPA sessions — no token scaffolding");
         const sanctumInstalled = await runCommandVisible(
           "composer",
           ["require", "laravel/sanctum:4.3.3", "--no-interaction", "--no-progress"],
@@ -558,7 +626,9 @@ async function main(): Promise<void> {
       spinner.stop("Laravel application created and configured");
     }
 
-    const envFiles = createEnvFiles(answers.targetDir);
+    const envFiles = createEnvFiles(answers.targetDir, {
+      betterAuth: answers.authentication === "better-auth",
+    });
     for (const file of envFiles)
       p.log.step(
         `Created ${file.replace(answers.targetDir + "\\", "").replace(answers.targetDir + "/", "")}`,
@@ -568,19 +638,22 @@ async function main(): Promise<void> {
     const { buildManifest } = await import("./manifest.js");
     const { saveManifest } = await import("./add.js");
     const manifest = buildManifest(answers, CLI_VERSION, detectPackageManager());
-    saveManifest(
-      answers.targetDir,
-      answers.authentication === "better-auth" ? { ...manifest, authentication: "none" } : manifest,
-    );
+    saveManifest(answers.targetDir, manifest);
     p.log.step("Created .omnicraft/project.json");
 
     if (answers.authentication === "better-auth") {
-      const result = applyModuleToProject("auth", answers.targetDir, { recordModule: false });
+      const result = applyModuleToProject("auth", answers.targetDir, {
+        recordModule: false,
+        applyConfiguredAuth: true,
+      });
       if (result.status !== "applied") {
         const details = result.status === "rejected" ? ` ${result.message}` : "";
         throw new Error(`Could not configure Better Auth during project creation.${details}`);
       }
       p.log.step("Configured Better Auth");
+      const { MODULES } = await import("./add.js");
+      const authModule = MODULES.find(({ id }) => id === "auth");
+      if (authModule?.nextSteps?.length) p.log.message(authModule.nextSteps.join("\n"));
     }
 
     spinner.start("Initializing git repository...");
@@ -690,7 +763,11 @@ async function main(): Promise<void> {
       } else if (answers.backendRuntime === "php") {
         p.log.step("PHP dependencies already installed by Composer");
       } else {
-        const shouldInstall = await confirmOrYes(args.yes, `Install dependencies with ${pm} now?`, p.confirm);
+        const shouldInstall = await confirmOrYes(
+          args.yes,
+          `Install dependencies with ${pm} now?`,
+          p.confirm,
+        );
         if (shouldInstall) {
           p.log.step(
             `Installing dependencies with ${pm} — live output below (this can take a minute)`,
@@ -717,7 +794,7 @@ async function main(): Promise<void> {
               "npx",
               [
                 "--yes",
-                "shadcn@latest",
+                SHADCN_PACKAGE,
                 "init",
                 "--base",
                 SHADCN_BASE,
@@ -732,18 +809,18 @@ async function main(): Promise<void> {
               init.ok &&
               runCommand(
                 "npx",
-                ["--yes", "shadcn@latest", "add", ...SHADCN_COMPONENTS, "--yes", "--overwrite"],
+                ["--yes", SHADCN_PACKAGE, "add", ...SHADCN_COMPONENTS, "--yes", "--overwrite"],
                 clientDir,
               ).ok;
             if (init.ok && add) {
               // The shadcn CLI emits its own formatting — normalize to the
               // project's prettier config so the lint gates stay clean.
-              runCommand("npx", ["--yes", "prettier@latest", "--write", "."], clientDir);
+              runCommand("npx", ["--yes", PRETTIER_PACKAGE, "--write", "."], clientDir);
               spinner.stop(`shadcn/ui ready (${SHADCN_PRESET}: ${SHADCN_COMPONENTS.join(", ")})`);
             } else {
               spinner.stop("shadcn setup failed");
               p.log.warn(
-                `Run manually inside ${answers.fullStack ? "client/" : "the project"}:\n  npx shadcn@latest init --base ${SHADCN_BASE} --preset ${SHADCN_PRESET} --no-monorepo --force\n  npx shadcn@latest add ${SHADCN_COMPONENTS.join(" ")}`,
+                `Run manually inside ${answers.fullStack ? "client/" : "the project"}:\n  npx ${SHADCN_PACKAGE} init --base ${SHADCN_BASE} --preset ${SHADCN_PRESET} --no-monorepo --force\n  npx ${SHADCN_PACKAGE} add ${SHADCN_COMPONENTS.join(" ")}`,
               );
             }
           }
@@ -764,7 +841,11 @@ async function main(): Promise<void> {
     if (args.debug) {
       console.error(err);
     } else {
-      p.log.error(`${(err as Error).message} (re-run with --debug for the stack trace)`);
+      p.log.error(
+        existsSync(answers.targetDir)
+          ? `${formatScaffoldFailure(err, answers.targetDir)} (re-run with --debug for the stack trace)`
+          : `${(err as Error).message} (re-run with --debug for the stack trace)`,
+      );
     }
     process.exitCode = 1;
   }

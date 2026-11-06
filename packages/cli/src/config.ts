@@ -40,6 +40,7 @@ export const CNA_PACKAGE = 'create-next-app@16'
  * the hosted evidence for the affected paths.
  */
 export const CREATE_EXPO_APP_PACKAGE = 'create-expo-app@5.0.0'
+export const CREATE_TAURI_APP_PACKAGE = 'create-tauri-app@4.7.5'
 export const SHADCN_PACKAGE = 'shadcn@4.23.0'
 export const PRETTIER_PACKAGE = 'prettier@3.9.10'
 
@@ -48,9 +49,15 @@ export const PRETTIER_PACKAGE = 'prettier@3.9.10'
  * The blank kit has no auth routes; the authenticated kit uses Laravel Fortify.
  */
 export const TIGED_PACKAGE = 'tiged@2.12.8'
+// Pins must point at commits that are still named refs upstream: tiged
+// resolves commits via info/refs and cannot fetch arbitrary historical SHAs
+// (a pin goes stale the moment Laravel advances the starter's main branch).
+// Bump both pins together when retrieval starts failing with "could not find
+// commit hash for <sha>" — see the hosted-CI rerun policy first to rule out
+// transient failures.
 export const LARAVEL_LIVEWIRE_STARTER_KITS = {
-  none: 'laravel/blank-livewire-starter-kit#75cf9e5cfbc18161027774fc025a1ead81eddcea',
-  'laravel-native': 'laravel/livewire-starter-kit#05c258129526254900acac0730bd2bc03a0353e5',
+  none: 'laravel/blank-livewire-starter-kit#0f9a3995bdef53487aa503c1c39d4ce50bcb84d4',
+  'laravel-native': 'laravel/livewire-starter-kit#3be373acadbe7de05847487f1ff45eee150d1dd6',
 } as const
 
 /**

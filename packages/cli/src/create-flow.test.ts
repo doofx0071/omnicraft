@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -30,7 +30,7 @@ describe("create flow in non-TTY mode", () => {
   });
 
   it(
-    "scaffolds a full project with --yes --skip-install without prompting",
+    "scaffolds a frontend-only project with --yes --skip-install without prompting",
     () => {
       const outDir = makeOutDir();
       const result = runCommand(
@@ -46,6 +46,42 @@ describe("create flow in non-TTY mode", () => {
       expect(existsSync(join(target, "package.json"))).toBe(true);
       expect(existsSync(join(target, "src", "App.tsx"))).toBe(true);
       expect(existsSync(join(target, ".omnicraft", "project.json"))).toBe(true);
+    },
+    120_000,
+  );
+
+  it(
+    "configures Better Auth with an environment placeholder, persisted state, and next steps",
+    () => {
+      const outDir = makeOutDir();
+      const result = runCommand(
+        "node",
+        [
+          TSX_CLI,
+          CLI_ENTRY,
+          "better-auth-flow-app",
+          "--yes",
+          "--skip-install",
+          "--auth",
+          "better-auth",
+        ],
+        outDir,
+        { timeoutMs: 90_000, env: { ...process.env, NO_UPDATE_NOTIFIER: "1" } },
+      );
+
+      expect(result.exitCode).toBe(0);
+      const target = join(outDir, "better-auth-flow-app");
+      const manifest = JSON.parse(
+        readFileSync(join(target, ".omnicraft", "project.json"), "utf8"),
+      ) as { authentication: string; modules: string[] };
+      expect(manifest.authentication).toBe("better-auth");
+      expect(manifest.modules).toEqual([]);
+      const serverEnv = readFileSync(join(target, "server", ".env"), "utf8");
+      const serverEnvExample = readFileSync(join(target, "server", ".env.example"), "utf8");
+      expect(serverEnv).toBe(serverEnvExample);
+      expect(serverEnv).toContain("BETTER_AUTH_SECRET=");
+      expect(result.output).toContain("BETTER_AUTH_SECRET=<a long random string>");
+      expect(result.output).toContain("npm run db:push");
     },
     120_000,
   );

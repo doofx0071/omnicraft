@@ -1,0 +1,2 @@
+# Set this to your backend API origin.
+VITE_API_URL=http://localhost:3000

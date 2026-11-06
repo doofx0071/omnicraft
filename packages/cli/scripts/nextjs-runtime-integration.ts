@@ -15,6 +15,7 @@ import { createEnvFiles } from '../src/scaffold/env.js'
 import { applyLayers } from '../src/scaffold/engine.js'
 import { composeLayers, templateVariables } from '../src/scaffold/compose.js'
 import { NEXTJS_DATABASE_SCENARIOS } from '../src/support-evidence.js'
+import { ensureDockerAvailable as ensureDockerReady } from './lib/dwait.js'
 import type { Answers, Database } from '../src/types.js'
 
 const POSTGRES_IMAGE = 'postgres:17.11-alpine3.24'
@@ -184,17 +185,9 @@ async function ensureDockerAvailable(): Promise<void> {
   if ((version[0] ?? 0) < 22 || ((version[0] ?? 0) === 22 && (version[1] ?? 0) < 22)) {
     throw new Error('PostgreSQL/MySQL integration requires Node.js 22.22 or newer (Testcontainers v12).')
   }
-  for (let attempt = 1; attempt <= 5; attempt += 1) {
-    const result = runCommand('docker', ['info'], process.cwd(), {
-      timeoutMs: 10_000,
-      maxBuffer: 1_000_000,
-    })
-    if (result.ok) return
-    if (attempt < 5) await delay(2_000)
-  }
-  throw new Error(
-    'Docker Engine/Desktop did not become ready for Next.js database integration tests after five bounded checks.',
-  )
+  // Shared bounded Docker readiness wait (scripts/lib/dwait.ts) — replaces the
+  // copy-pasted five-attempt loop this script carried.
+  await ensureDockerReady('Next.js database integration')
 }
 
 async function reservePort(): Promise<number> {

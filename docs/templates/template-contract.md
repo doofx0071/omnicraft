@@ -24,14 +24,17 @@ the authoring contract. The tree layout is in the [repository structure](../arch
 
 ## Rules every template must follow
 
-1. **`_`-prefix for dotfiles.** Anything npm won't publish (`_gitignore`, `_prettierignore`) and whole
-   directories (`_github/`) use the underscore form; the engine restores the dot on copy.
+1. **Explicit npm-hostile dotfile allowlist.** The engine restores only `_gitignore`, `_prettierignore`,
+   `_env.example`, and `_github` to `.gitignore`, `.prettierignore`, `.env.example`, and `.github/` on
+   copy. Do not treat every leading underscore as a dotfile: files such as Python `__init__.py` must keep
+   their names. Add a new name to the renderer's allowlist only when npm-hostile publication requires it.
 2. **Tokens only from the documented set.** Current templates use `{{projectName}}`,
    `{{clientPackageName}}`, `{{serverPackageName}}`, `{{databaseName}}`, `{{backendFramework}}`,
-   `{{orm}}`, `{{clientFramework}}` (display name of the chosen frontend: React, Vue, Svelte, …), and
-   `{{clientLanguage}}` (TypeScript or JavaScript; empty when the flow has no JS/TS language choice).
-   `templateVariables` also contains `dbConfig`, the Laravel-only multi-line DB env block rendered by
-   the PHP overlay `.env.example` files (`server/php/laravel/`, `server/php/laravel-sanctum-spa/`).
+   `{{orm}}`, `{{clientFramework}}` (display name of the chosen frontend: React, Vue, Svelte, …),
+   `{{clientLanguage}}` (TypeScript or JavaScript; empty when the flow has no JS/TS language choice),
+   and `{{authSetup}}` (Laravel authentication setup display name). `templateVariables` also contains
+   `dbConfig`, the Laravel-only multi-line DB env block rendered by the PHP overlay `.env.example`
+   files (`server/php/laravel/`, `server/php/laravel-sanctum-spa/`).
    Unknown expressions in non-`.vue` text files make generation fail with `UnresolvedTokenError`;
    `.vue` files are excluded because Vue uses `{{ }}` for interpolation. Document any new variable here
    and in the [template engine guide](../architecture/template-engine.md).

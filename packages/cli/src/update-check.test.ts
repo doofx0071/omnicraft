@@ -1,8 +1,17 @@
-import { mkdtempSync, existsSync, readFileSync } from 'node:fs'
+import { mkdtempSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
-import { checkForUpdate, compareVersions } from './update-check.js'
+import { afterAll, describe, expect, it } from 'vitest'
+import { checkForUpdate, compareVersions, shouldCheckForUpdate } from './update-check.js'
+
+describe('shouldCheckForUpdate', () => {
+  it('skips non-interactive runs, CI, and an explicit opt-out', () => {
+    expect(shouldCheckForUpdate(false, {})).toBe(false)
+    expect(shouldCheckForUpdate(true, { CI: '1' })).toBe(false)
+    expect(shouldCheckForUpdate(true, { NO_UPDATE_NOTIFIER: '1' })).toBe(false)
+    expect(shouldCheckForUpdate(true, {})).toBe(true)
+  })
+})
 
 describe('compareVersions', () => {
   it('orders plain semver', () => {
@@ -39,11 +48,33 @@ describe('compareVersions', () => {
   })
 })
 
+const tempDirs: string[] = []
+
 function freshCacheDir(): string {
-  return mkdtempSync(join(tmpdir(), 'omnicraft-update-'))
+  const dir = mkdtempSync(join(tmpdir(), 'omnicraft-update-'))
+  tempDirs.push(dir)
+  return dir
 }
 
+afterAll(() => {
+  for (const dir of tempDirs) {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+  }
+})
+
 describe('checkForUpdate', () => {
+  it('creates the cache in the cache file parent directory', async () => {
+    const root = freshCacheDir()
+    const nested = join(root, 'subdirectory')
+    const cacheFile = join(nested, 'cache.json')
+    const fetchFn = (async () => ({ ok: true, json: async () => ({ version: '9.9.9' }) })) as unknown as typeof fetch
+
+    await checkForUpdate('0.1.0', { fetchFn, cacheFile })
+
+    expect(existsSync(cacheFile)).toBe(true)
+    rmSync(root, { recursive: true, force: true })
+  })
+
   it('returns the newer version from the registry payload', async () => {
     const fetchFn = (async () =>
       ({ ok: true, json: async () => ({ version: '9.9.9' }) })) as unknown as typeof fetch
@@ -99,5 +130,40 @@ describe('checkForUpdate', () => {
     expect(calls).toBe(1)
     expect(existsSync(cacheFile)).toBe(true)
     expect(JSON.parse(readFileSync(cacheFile, 'utf8')).latest).toBe('9.9.9')
+  })
+
+  it.each([
+    ['array', '[]'],
+    ['null', 'null'],
+    ['missing checkedAt', JSON.stringify({ latest: '9.9.9' })],
+    ['string checkedAt', JSON.stringify({ checkedAt: 'now', latest: '9.9.9' })],
+    ['infinite checkedAt', JSON.stringify({ checkedAt: 1e309, latest: '9.9.9' })],
+    ['missing latest', JSON.stringify({ checkedAt: Date.now() })],
+    ['non-string latest', JSON.stringify({ checkedAt: Date.now(), latest: 99 })],
+  ])('rechecks malformed cached JSON with %s shape', async (_label, content) => {
+    const cacheFile = join(freshCacheDir(), 'cache.json')
+    writeFileSync(cacheFile, content)
+    let calls = 0
+    const fetchFn = (async () => {
+      calls++
+      return { ok: true, json: async () => ({ version: '9.9.9' }) } as unknown as Response
+    }) as unknown as typeof fetch
+
+    await expect(checkForUpdate('0.1.0', { fetchFn, cacheFile })).resolves.toBe('9.9.9')
+    expect(calls).toBe(1)
+    expect(JSON.parse(readFileSync(cacheFile, 'utf8'))).toMatchObject({ latest: '9.9.9' })
+  })
+
+  it('rechecks future-dated cache entries rather than treating them as fresh', async () => {
+    const cacheFile = join(freshCacheDir(), 'cache.json')
+    writeFileSync(cacheFile, JSON.stringify({ checkedAt: Date.now() + 60_000, latest: '0.0.1' }))
+    let calls = 0
+    const fetchFn = (async () => {
+      calls++
+      return { ok: true, json: async () => ({ version: '9.9.9' }) } as unknown as Response
+    }) as unknown as typeof fetch
+
+    await expect(checkForUpdate('0.1.0', { fetchFn, cacheFile })).resolves.toBe('9.9.9')
+    expect(calls).toBe(1)
   })
 })

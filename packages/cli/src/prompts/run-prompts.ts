@@ -22,7 +22,7 @@ import {
 } from "../validators.js";
 import { CLIENT_PORT, SERVER_PORT } from "../config.js";
 import { CAPABILITY_REGISTRY } from "../capabilities.js";
-import { AVAILABLE, parseEnumChoice, validateStackFlags } from "../prefill.js";
+import { AVAILABLE, normalizeExtras, parseEnumChoice, validateStackFlags } from "../prefill.js";
 import type { ParsedArgs } from "../args.js";
 import {
   hasFullStackFlags,
@@ -451,10 +451,11 @@ export async function runPrompts(argName?: string, args?: ParsedArgs): Promise<A
     // generator defaults rather than optional Vite overlay choices.
     extras = { tailwind: true, eslintPrettier: true, shadcn: false };
   } else if (flags.extras) {
+    const selectedExtras = normalizeExtras(flags.extras);
     extras = {
-      tailwind: flags.extras.includes("tailwind") || flags.extras.includes("shadcn"),
-      eslintPrettier: flags.extras.includes("eslint"),
-      shadcn: flags.extras.includes("shadcn"),
+      tailwind: selectedExtras.includes("tailwind"),
+      eslintPrettier: selectedExtras.includes("eslint"),
+      shadcn: selectedExtras.includes("shadcn"),
     };
   } else if (forced) {
     extras = { tailwind: true, eslintPrettier: true, shadcn: false };

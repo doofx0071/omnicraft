@@ -10,6 +10,9 @@ const app = express();
 app.use(cors({ origin: env.CORS_ORIGIN }));
 app.use(express.json());
 app.use("/api", apiRouter);
+app.use("/api", (_req, res) => {
+  res.status(404).json({ error: "Not found" });
+});
 
 // JSON error handler — keeps API responses consistent instead of
 // Express's default HTML error page.

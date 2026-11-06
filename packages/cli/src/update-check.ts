@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 
 const REGISTRY_URL = 'https://registry.npmjs.org/create-omnicraft/latest'
@@ -67,8 +67,19 @@ interface CacheShape {
 
 function readCache(cacheFile: string, now: number): string | null {
   try {
-    const cache = JSON.parse(readFileSync(cacheFile, 'utf8')) as CacheShape
-    if (now - cache.checkedAt < CHECK_INTERVAL_MS) return cache.latest
+    const cache = JSON.parse(readFileSync(cacheFile, 'utf8')) as unknown
+    if (typeof cache !== 'object' || cache === null || Array.isArray(cache)) return null
+
+    const candidate = cache as Partial<CacheShape>
+    if (
+      typeof candidate.checkedAt !== 'number' ||
+      !Number.isFinite(candidate.checkedAt) ||
+      typeof candidate.latest !== 'string'
+    ) {
+      return null
+    }
+    if (candidate.checkedAt > now) return null
+    if (now - candidate.checkedAt < CHECK_INTERVAL_MS) return candidate.latest
   } catch {
     // missing or corrupt cache — just re-check
   }
@@ -77,7 +88,7 @@ function readCache(cacheFile: string, now: number): string | null {
 
 function writeCache(cacheFile: string, latest: string, now: number): void {
   try {
-    mkdirSync(join(cacheFile, '..'), { recursive: true })
+    mkdirSync(dirname(cacheFile), { recursive: true })
     writeFileSync(cacheFile, JSON.stringify({ checkedAt: now, latest } satisfies CacheShape))
   } catch {
     // cache is best-effort
@@ -88,6 +99,14 @@ export interface CheckDeps {
   fetchFn?: typeof fetch
   now?: () => number
   cacheFile?: string
+}
+
+/** Update notices are interactive-only and can be disabled in CI or by env. */
+export function shouldCheckForUpdate(
+  isInteractive: boolean | undefined,
+  env: Partial<Pick<NodeJS.ProcessEnv, 'NO_UPDATE_NOTIFIER' | 'CI'>> = process.env,
+): boolean {
+  return isInteractive === true && !env.NO_UPDATE_NOTIFIER && !env.CI
 }
 
 /**

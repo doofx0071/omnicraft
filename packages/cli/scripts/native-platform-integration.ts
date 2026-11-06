@@ -501,12 +501,20 @@ async function waitForTauriWindow(
   throw new Error(`No visible Tauri window titled "${title}" appeared within 60 seconds:\n${tail(redact(process.output))}`)
 }
 
-async function waitForHostedTauriWindow(
+interface HostedTauriWaitFailure {
+  /** 'exited' when the app process ended before its window appeared. */
+  reason: 'deadline' | 'exited'
+  exitCode: number | null
+  /** Last enumerated visible-window list from the polling loop. */
+  windowList: string
+}
+
+async function waitForHostedTauriWindowAttempt(
   appProcess: ReturnType<typeof startCommand>,
   projectRoot: string,
   title: string,
   platform: 'macos' | 'windows',
-): Promise<void> {
+): Promise<HostedTauriWaitFailure | undefined> {
   let exitResult: { ok: boolean; output: string; exitCode: number | null } | undefined
   void appProcess.exited.then((result) => {
     exitResult = result
@@ -522,8 +530,6 @@ repeat with appProcess in (every application process whose visible is true)
 end repeat
 return windowNames as text
 end tell`
-  const powershellCommand =
-    '"$titles = Get-Process | Where-Object { $_.MainWindowHandle -ne 0 } | ForEach-Object { $_.MainWindowTitle }; $titles"'
   // Cold windows-2025 runners can download/initialize the WebView2 runtime on
   // the app's first launch, so allow minutes rather than seconds. Window
   // detection uses the EnumWindows fixture: Get-Process MainWindowHandle only
@@ -551,23 +557,101 @@ end tell`
           )
     lastOutput = result.output
     const windowTitles = result.output.split(/,\s*|\r?\n/).map((value) => value.trim())
-    if (result.ok && windowTitles.includes(title)) return
+    if (result.ok && windowTitles.includes(title)) return undefined
     if (exitResult) {
-      throw new Error(
-        `The Tauri ${platform} process exited before its window appeared (exit ${exitResult.exitCode ?? 'unknown'}):\n${tail(redact(`${exitResult.output}\n${appProcess.output}`))}`,
-      )
+      return {
+        reason: 'exited',
+        exitCode: exitResult.exitCode,
+        windowList: lastOutput,
+      }
     }
     await delay(1_000)
   }
-  const webviewProcesses = runCommand(
-    'powershell',
-    ['-NoProfile', '-NonInteractive', '-Command', '(Get-Process msedgewebview2 -ErrorAction SilentlyContinue | Measure-Object).Count'],
-    projectRoot,
-    { timeoutMs: 8_000, maxBuffer: 1024 * 1024 },
+  return { reason: 'deadline', exitCode: null, windowList: lastOutput }
+}
+
+function hostedTauriFailureDiagnostics(
+  title: string,
+  platform: 'macos' | 'windows',
+  failure: HostedTauriWaitFailure,
+  appProcess: ReturnType<typeof startCommand>,
+  projectRoot: string,
+): string {
+  const poll =
+    platform === 'macos'
+      ? null
+      : (args: string[], timeoutMs: number) =>
+          runCommand('powershell', ['-NoProfile', '-NonInteractive', '-Command', ...args], projectRoot, {
+            timeoutMs,
+            maxBuffer: 4 * 1024 * 1024,
+          })
+  const sections: string[] = []
+  sections.push(
+    failure.reason === 'exited'
+      ? `No visible Tauri ${platform} window titled "${title}" appeared: the app process exited (code ${failure.exitCode ?? 'unknown'}) before its window appeared, and the single bounded relaunch also produced no window.`
+      : `No visible Tauri ${platform} window titled "${title}" appeared within the 240-second deadline, and the single bounded relaunch also produced no window.`,
   )
-  throw new Error(
-    `No visible Tauri ${platform} window titled "${title}" appeared within 240 seconds. Enumerated visible windows:\n${tail(redact(lastOutput), 3_000)}\nmsedgewebview2 process count: ${webviewProcesses.output.trim() || 'unknown'}\nGet-Process main-window output:\n${tail(redact(runCommand('powershell', ['-NoProfile', '-NonInteractive', '-Command', powershellCommand], projectRoot, { timeoutMs: 8_000, maxBuffer: 4 * 1024 * 1024 }).output), 1_000)}\nApp output:\n${tail(redact(appProcess.output), 3_000)}`,
+  sections.push(`Enumerated visible windows:\n${tail(redact(failure.windowList), 3_000) || '(empty list)'}`)
+  if (poll) {
+    const webviewCount = poll(['(Get-Process msedgewebview2 -ErrorAction SilentlyContinue | Measure-Object).Count'], 8_000)
+    sections.push(`msedgewebview2 process count: ${webviewCount.output.trim() || 'unknown'}`)
+    const webviewParents = poll(
+      [
+        'Get-CimInstance Win32_Process -Filter "Name=\'msedgewebview2.exe\'" | Select-Object -First 10 ProcessId,ParentProcessId | Format-Table -HideTableHeaders | Out-String',
+      ],
+      8_000,
+    )
+    sections.push(
+      `msedgewebview2 process/parent ids (child of the app pid proves WebView2 initialized):\n${tail(redact(webviewParents.output), 1_000) || '(none)'}`,
+    )
+    // GUI-subsystem release binaries never write to the captured stdout/stderr
+    // pipes, so a Windows app crash only surfaces in the Application event log.
+    const appCrashes = runCommand(
+      'wevtutil',
+      ['qe', 'Application', '/q:*[System[(EventID=1000)]]', '/c:3', '/rd:true', '/f:text'],
+      projectRoot,
+      { timeoutMs: 15_000, maxBuffer: 4 * 1024 * 1024 },
+    )
+    sections.push(`Most recent Application event-log crash records (EventID 1000):\n${tail(redact(appCrashes.output), 3_000) || '(none)'}`)
+  }
+  sections.push(
+    `App process captured stdout+stderr (${
+      platform === 'windows'
+        ? 'the release binary is a Windows GUI-subsystem executable that attaches no console, so an empty capture is expected unless the app logs itself'
+        : 'the binary inherits the launcher pipes on macOS'
+    }):\n${tail(redact(appProcess.output), 3_000) || '(empty)'}`,
   )
+  return sections.join('\n')
+}
+
+/**
+ * Waits for the hosted Tauri window with ONE bounded relaunch: a deadline
+ * expiry or an app exit on the first launch stops the child, launches a fresh
+ * app process with a fresh deadline, and only a second failure reports — with
+ * the enumerated window list, WebView2 inventory, event-log crash records
+ * (Windows), and the app's captured output.
+ */
+async function waitForHostedTauriWindow(
+  launchApp: () => ReturnType<typeof startCommand>,
+  projectRoot: string,
+  title: string,
+  platform: 'macos' | 'windows',
+): Promise<void> {
+  let appProcess = launchApp()
+  try {
+    const firstFailure = await waitForHostedTauriWindowAttempt(appProcess, projectRoot, title, platform)
+    if (!firstFailure) return
+    await appProcess.stop(10_000)
+    console.log(
+      `[native] Tauri ${platform} window check failed once (${firstFailure.reason}); relaunching the app once with a fresh deadline.`,
+    )
+    appProcess = launchApp()
+    const secondFailure = await waitForHostedTauriWindowAttempt(appProcess, projectRoot, title, platform)
+    if (!secondFailure) return
+    throw new Error(hostedTauriFailureDiagnostics(title, platform, secondFailure, appProcess, projectRoot))
+  } finally {
+    await appProcess.stop(10_000)
+  }
 }
 
 async function waitForX11Display(
@@ -983,7 +1067,6 @@ async function runTauriHostedDesktop(platform: 'macos' | 'windows'): Promise<voi
 
   const { parent, projectName, projectRoot } = createScratchProject('tauri')
   const answers = makeAnswers(projectRoot, projectName, 'desktop')
-  let appProcess: ReturnType<typeof startCommand> | undefined
 
   try {
     const identifier = `com.omnicraft.${projectName.replace(/[^a-z0-9]/gi, '').toLowerCase() || 'app'}`
@@ -1023,14 +1106,14 @@ async function runTauriHostedDesktop(platform: 'macos' | 'windows'): Promise<voi
       platform === 'windows' ? findTauriWindowsExecutable(releaseDir) : findTauriBinary(releaseDir)
     const title = tauriWindowTitle(projectRoot)
     console.log(`[native] Launch the generated Tauri ${platform} executable.`)
-    appProcess = startCommand(executable, [], projectRoot, {
-      env: isolatedEnvironment({ CI: 'true' }),
-      maxOutputBytes: MAX_OUTPUT_BYTES,
-    })
-    await waitForHostedTauriWindow(appProcess, projectRoot, title, platform)
+    const launchApp = (): ReturnType<typeof startCommand> =>
+      startCommand(executable, [], projectRoot, {
+        env: isolatedEnvironment({ CI: 'true' }),
+        maxOutputBytes: MAX_OUTPUT_BYTES,
+      })
+    await waitForHostedTauriWindow(launchApp, projectRoot, title, platform)
     console.log(`[native] Tauri ${platform}: native build launched a visible window titled "${title}".`)
   } finally {
-    if (appProcess) await appProcess.stop(10_000)
     rmSync(parent, { recursive: true, force: true, maxRetries: 10, retryDelay: 1_000 })
   }
 }

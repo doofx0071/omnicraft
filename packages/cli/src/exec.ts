@@ -7,6 +7,14 @@ const DEFAULT_MAX_BUFFER = 16 * 1024 * 1024
 const MAX_CAPTURED_OUTPUT = 1024 * 1024
 
 /**
+ * Captured-output ceiling for official generators (create-expo-app,
+ * create-tauri-app, create-next-app, composer create-project, tiged). Their
+ * progress chatter regularly exceeds the general 16 MB default, so every
+ * generator call site passes this explicitly.
+ */
+export const GENERATOR_MAX_BUFFER = 64 * 1024 * 1024
+
+/**
  * Characters cmd.exe treats as operators or expands on the win32 spawn path
  * (whitespace included — it separates argv tokens). A token containing any of
  * these must be double-quoted.
@@ -46,11 +54,7 @@ export function joinWin32Command(command: string, args: string[]): string {
  * otherwise the overlay applies to an empty dir and the user gets a
  * half-generated project recorded as a success.
  */
-export function assertGeneratorOutput(
-  targetDir: string,
-  marker: string,
-  generator: string,
-): void {
+export function assertGeneratorOutput(targetDir: string, marker: string, generator: string): void {
   if (!existsSync(join(targetDir, marker))) {
     throw new Error(
       `${generator} reported success but its output is missing from "${targetDir}". ` +
@@ -64,6 +68,28 @@ export interface ExecResult {
   output: string
   exitCode: number | null
 }
+
+/**
+ * Captured commands never hang forever: `runCommand` applies this timeout when
+ * the caller does not pass one, so a wedged quick child (artisan key:generate,
+ * `uv sync`, the shadcn/prettier tooling runs) fails loudly instead of
+ * blocking the CLI behind a spinner. Call sites that legitimately run longer
+ * — the official generators — pass GENERATOR_TIMEOUT_MS explicitly. Pick the
+ * value per call site: quick captured calls rely on this default, generators
+ * override it.
+ *
+ * `runCommandVisible` stays un-timeout'd by design: it is used for
+ * interactive installs whose live output must stream and where Ctrl+C is the
+ * intended escape hatch.
+ *
+ * Note the timeout signals the direct child; on win32 the shell's
+ * grandchildren are best-effort, so a timed-out generator may leave a stray
+ * process — the caller's failure message covers the user guidance.
+ */
+export const DEFAULT_COMMAND_TIMEOUT_MS = 300_000
+
+/** Timeout for official generator runs (expo/tauri/next-app/composer/tiged). */
+export const GENERATOR_TIMEOUT_MS = 600_000
 
 export interface RunCommandOptions {
   env?: NodeJS.ProcessEnv
@@ -104,7 +130,7 @@ export function runCommand(
         shell: true,
         cwd,
         env: options.env,
-        timeout: options.timeoutMs,
+        timeout: options.timeoutMs ?? DEFAULT_COMMAND_TIMEOUT_MS,
         stdio: 'pipe',
         encoding: 'utf8',
         maxBuffer: options.maxBuffer ?? DEFAULT_MAX_BUFFER,
@@ -112,7 +138,7 @@ export function runCommand(
     : spawnSync(command, args, {
         cwd,
         env: options.env,
-        timeout: options.timeoutMs,
+        timeout: options.timeoutMs ?? DEFAULT_COMMAND_TIMEOUT_MS,
         stdio: 'pipe',
         encoding: 'utf8',
         maxBuffer: options.maxBuffer ?? DEFAULT_MAX_BUFFER,

@@ -8,6 +8,17 @@ const app = Fastify({ logger: true });
 
 await app.register(cors, { origin: env.CORS_ORIGIN });
 await app.register(apiRoutes, { prefix: "/api" });
+app.setNotFoundHandler((request, reply) => {
+  const requestPath = request.url.split("?", 1)[0] ?? request.url;
+  if (requestPath === "/api" || requestPath.startsWith("/api/")) {
+    return reply.status(404).send({ error: "Not found" });
+  }
+  return reply.status(404).send({
+    message: `Route ${request.method}:${request.url} not found`,
+    error: "Not Found",
+    statusCode: 404,
+  });
+});
 
 // Friendly response when the database is unreachable, instead of a raw
 // driver stack trace.

@@ -9,6 +9,8 @@ const app = new Hono();
 
 app.use("/api/*", cors({ origin: env.CORS_ORIGIN }));
 app.route("/api", apiRoutes);
+app.all("/api", (c) => c.json({ error: "Not found" }, 404));
+app.all("/api/*", (c) => c.json({ error: "Not found" }, 404));
 
 // Friendly response when the database is unreachable, instead of a raw
 // driver stack trace.

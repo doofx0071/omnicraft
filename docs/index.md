@@ -7,13 +7,13 @@ the catalog is not a promise that every cross-product is equally supported.
 
 ## Reading paths
 
-| If you want to…                 | Read                                                                                  |
-| ------------------------------- | ------------------------------------------------------------------------------------- |
-| Understand the repo in one page | [AGENTS.md](../AGENTS.md)                                                             |
-| Install and use the CLI         | [README.md](../README.md)                                                             |
-| See what is supported today     | [Stack support matrix](templates/stack-support-matrix.md)                             |
-| See the plan for what's next    | [ROADMAP.md](../ROADMAP.md) and the plans under `docs/plans/active/`                      |
-| Contribute                      | [CONTRIBUTING.md](../CONTRIBUTING.md)                                                 |
+| If you want to…                 | Read                                                                 |
+| ------------------------------- | -------------------------------------------------------------------- |
+| Understand the repo in one page | [AGENTS.md](../AGENTS.md)                                            |
+| Install and use the CLI         | [README.md](../README.md)                                            |
+| See what is supported today     | [Stack support matrix](templates/stack-support-matrix.md)            |
+| See the plan for what's next    | [ROADMAP.md](../ROADMAP.md) and the plans under `docs/plans/active/` |
+| Contribute                      | [CONTRIBUTING.md](../CONTRIBUTING.md)                                |
 
 ## Reference
 
@@ -64,7 +64,8 @@ For the current CI coverage and repository-recorded manual results, see the per-
 - [Completed: auth provider and PHP stack expansion](plans/completed/omnicraft-auth-provider-php-stack-expansion-plan.md) — the broad expansion proposal, closed as split: the delivered slices (create-time auth catalog, Laravel 13 + Livewire 4 on SQLite) hold matrix evidence and the unfinished scope moved to the active follow-up.
 - [Completed: auth provider and PHP expansion follow-up](plans/completed/omnicraft-auth-provider-php-stack-expansion-follow-up-plan.md) — exact Supabase Auth frontend-only and Laravel 12 API Sanctum SPA SQLite evidence; deferred expansion remains separate.
 - Current release status is summarized in [ROADMAP.md](../ROADMAP.md); active implementation plans live under `docs/plans/active/`.
-- [Active v1.0.7 polish plan](plans/active/omnicraft-v107-polish-plan.md) — gate flake fixes, generated-app quality, CLI surface polish, docs truth, and peer-informed UX from the round-2 audit.
+- [Active v1.0.7 polish plan](plans/active/omnicraft-v107-polish-plan.md) — gate reliability, core correctness, native env/API contracts, docs truth, and exact-head hosted verification.
+- [Planned generated-app quality follow-up](plans/active/omnicraft-generated-app-quality-follow-up-plan.md) — per-composition Node floors, generated CI/test tooling, security baselines, and project guidance that need their own dependency/runtime evidence.
 - [Active auth provider and PHP next-target plan](plans/active/omnicraft-auth-provider-php-next-targets-plan.md) — records deferred providers, JWT/data models, and Laravel mode/database targets; each requires owner approval.
 - [Completed: codebase audit remediation](plans/completed/omnicraft-codebase-audit-remediation-plan.md) — all six workstreams (engine P0s, broken combos, hardening, templates, evidence/CI, release prep) implemented, verified, and merged; open follow-ups recorded.
 - [Active native platform evidence follow-up plan](plans/active/omnicraft-native-platform-evidence-follow-up-plan.md) — Android-emulator and Tauri macOS/Windows hosted checks recorded without changing the `Scaffold-verified` matrix rows; physical-device paths keep it active.

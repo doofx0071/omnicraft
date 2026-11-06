@@ -343,7 +343,7 @@ describe("composition compatibility", () => {
     },
   );
 
-  it("scaffolds None without Better Auth files or dependencies", () => {
+  it("scaffolds None without Better Auth files, dependencies, or secret placeholders", () => {
     const dir = makeTempDir("auth-none");
     scaffoldInto(dir, makeAnswers({ authentication: "none" }));
 
@@ -357,6 +357,12 @@ describe("composition compatibility", () => {
     expect(dependencies["better-auth"]).toBeUndefined();
     expect(dependencies["@better-auth/drizzle-adapter"]).toBeUndefined();
     expect(serverIndex).not.toContain("/api/auth/");
+    expect(readFileSync(join(dir, "server", ".env.example"), "utf8")).not.toContain(
+      "BETTER_AUTH_SECRET=",
+    );
+    expect(readFileSync(join(dir, "server", ".env"), "utf8")).not.toContain(
+      "BETTER_AUTH_SECRET=",
+    );
   });
 
   it.each(["none", "laravel-native"] as const)(
@@ -412,6 +418,44 @@ describe("composition compatibility", () => {
       expect(readme).not.toContain("{{");
     },
   );
+});
+
+describe("native platform environments", () => {
+  it.each([
+    {
+      platform: "mobile",
+      projectType: "mobile",
+      variable: "EXPO_PUBLIC_API_URL",
+    },
+    {
+      platform: "desktop",
+      projectType: "desktop",
+      variable: "VITE_API_URL",
+    },
+  ] as const)("copies the $variable example into .env", ({ platform, projectType, variable }) => {
+    const dir = makeTempDir(`native-${platform}-env`);
+    const answers: Answers = {
+      projectName: `demo-${platform}`,
+      targetDir: dir,
+      projectType,
+      frontend: "react",
+      language: "typescript",
+      fullStack: false,
+      backendRuntime: null,
+      backendFramework: null,
+      orm: null,
+      database: null,
+      authentication: "none",
+      extras: { tailwind: false, eslintPrettier: false, shadcn: false },
+      architecture: { kind: "native-app", platform },
+    };
+
+    scaffoldInto(dir, answers);
+
+    const example = readFileSync(join(dir, ".env.example"), "utf8");
+    expect(example).toContain(`${variable}=`);
+    expect(readFileSync(join(dir, ".env"), "utf8")).toBe(example);
+  });
 });
 
 describe("full-stack combos", () => {

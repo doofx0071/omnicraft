@@ -21,6 +21,15 @@ export function parseEnumChoice<T extends string>(
   return v as T;
 }
 
+/** Returns implied extras without changing the caller's parsed flag list. */
+export function normalizeExtras(extras: readonly string[]): string[] {
+  const normalized = [...extras];
+  if (normalized.includes("shadcn") && !normalized.includes("tailwind")) {
+    normalized.push("tailwind");
+  }
+  return normalized;
+}
+
 function resolveRuntime(args: ParsedArgs): Runtime {
   if (args.runtime) return parseEnumChoice("--runtime", args.runtime, AVAILABLE.runtime);
   if (
@@ -49,10 +58,6 @@ export function validateStackFlags(args: ParsedArgs): void {
   if (args.orm) parseEnumChoice("--orm", args.orm, AVAILABLE.orm.node);
   if (args.extras) {
     for (const extra of args.extras) parseEnumChoice("--extras", extra, AVAILABLE.extras);
-    // shadcn/ui is built on Tailwind — selecting it implies the tailwind extra.
-    if (args.extras.includes("shadcn") && !args.extras.includes("tailwind")) {
-      args.extras.push("tailwind");
-    }
   }
   // Prisma 7 driver adapters are wired for PostgreSQL only right now —
   // SQLite/MySQL ship with Drizzle or raw SQL.
@@ -120,7 +125,7 @@ export function resolveAnswers(args: ParsedArgs, projectName: string, targetDir:
         : null;
   // Defaults mirror the interactive prompt's initialValues (tailwind + eslint,
   // shadcn opt-in) — NOT the full AVAILABLE list.
-  const extrasList = args.extras ?? AVAILABLE.extras.filter((e) => e !== "shadcn");
+  const extrasList = normalizeExtras(args.extras ?? AVAILABLE.extras.filter((e) => e !== "shadcn"));
 
   const answers: Answers = {
     projectName,

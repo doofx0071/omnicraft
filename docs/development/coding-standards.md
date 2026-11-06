@@ -23,9 +23,11 @@ All child processes go through `src/exec.ts`:
 
 On win32 both spawn a **single joined command string** with `shell: true`. Never pass an args array with
 `shell: true` (Node 24 DEP0190), and never assume `.cmd` shims (npm, git, composer) spawn without a shell.
-This is safe **only** because every caller passes hardcoded literals — never interpolate user input
-(project names, paths) into a command string. A project name reaches a subprocess only as a working
-directory (`cwd`) or by the smoke script's file operations, never as part of a shell command.
+`joinWin32Command()` quotes each command/argument token containing whitespace or cmd.exe metacharacters,
+so target paths (including paths with spaces) can be passed as arguments without splitting into extra
+shell tokens. Keep the executable/command fixed, pass target paths as arguments or `cwd`, and never build
+a shell command by interpolating user input yourself; the quoting helper is not a license to accept
+arbitrary shell syntax.
 
 ## Error handling and cancellation
 
@@ -42,16 +44,18 @@ directory (`cwd`) or by the smoke script's file operations, never as part of a s
 - `Option<Value>` can't be satisfied by an unresolved generic — constrain to `string` and cast at the
   edge (see `selectWithSoon` in `run-prompts.ts`).
 - `p.select` needs `Option<T>[]`; build option objects imperatively when the hint is conditional.
-- `AVAILABLE` in `src/prefill.ts` lists individual choices; `src/compatibility.ts` owns cross-option
-  constraints shared by flag validation, prompt filtering, composition, and Better Auth. When changing
-  choices, update the relevant sources together and test flag validation, prompts, and composition.
+- `AVAILABLE` is derived from the typed registry in `src/capabilities.ts` and re-exported by
+  `src/prefill.ts` for flag validation; `src/compatibility.ts` owns cross-option constraints shared by
+  flag validation, prompt filtering, composition, and Better Auth. When changing choices, update the
+  relevant sources together and test flag validation, prompts, and composition.
 
 ## Capability changes
 
 When adding/changing what the CLI can scaffold, update **all** of these together (see the
 [feature workflow](feature-development-workflow.md)):
 
-1. `AVAILABLE` in `src/prefill.ts` and cross-option rules in `src/compatibility.ts`,
+1. the typed choice registry in `src/capabilities.ts` (which derives `AVAILABLE`) and cross-option
+   rules in `src/compatibility.ts`,
 2. prompt choices in `run-prompts.ts` (choices + hints, incl. "(soon)" entries),
 3. `composeLayers` if a new layer kind is involved,
 4. tests (`prefill.test.ts`, `engine.test.ts`, `prompts/run-prompts.test.ts` as applicable),
@@ -86,3 +90,6 @@ Template dependency versions are chosen for peer compatibility, not recency. Bef
 - `typescript` is pinned to `^5.9.3` — typescript-eslint peers require `<6.1` (TS 7 breaks it).
 - `prisma`/`@prisma/client` pinned to `^7.10.1` — npm's `latest` tag currently points at an 8.0 RC.
   Check peer ranges of the dependent packages before changing either.
+- `tailwindcss`/`@tailwindcss/vite` are pinned to the exact `4.3.4` — Tailwind's 4.3.5 release did not publish the
+  matching `@tailwindcss/oxide@4.3.5` platform package, so fresh installs resolving `^4.3.5` fail with
+  ETARGET. Revisit only when a Tailwind release publishes a complete version pair.

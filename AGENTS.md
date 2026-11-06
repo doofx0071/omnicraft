@@ -4,20 +4,21 @@ Interactive project-scaffolding CLI. npm package **`create-omnicraft`** → user
 
 ## Documentation map — read what your task needs
 
-| Task                                          | Read first                                                                                                                                        |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Any change                                    | everything below in this file, plus [docs/development/feature-development-workflow.md](docs/development/feature-development-workflow.md)          |
-| How the CLI works                             | [docs/architecture/system-overview.md](docs/architecture/system-overview.md)                                                                      |
-| Where files belong                            | [docs/architecture/repository-structure.md](docs/architecture/repository-structure.md)                                                            |
-| Engine/composition/token/merge details        | [docs/architecture/template-engine.md](docs/architecture/template-engine.md)                                                                      |
-| New runtime/framework/stack                   | [docs/templates/adding-a-stack.md](docs/templates/adding-a-stack.md) + [docs/templates/template-contract.md](docs/templates/template-contract.md) |
-| New database/ORM/extra                        | [docs/templates/adding-an-integration.md](docs/templates/adding-an-integration.md)                                                                |
-| What is actually supported (and its evidence) | [docs/templates/stack-support-matrix.md](docs/templates/stack-support-matrix.md)                                                                  |
-| Test requirements per change type             | [docs/development/testing-strategy.md](docs/development/testing-strategy.md)                                                                      |
-| Which docs change with which code             | [docs/development/documentation-standards.md](docs/development/documentation-standards.md)                                                        |
-| Coding rules (incl. Windows subprocess law)   | [docs/development/coding-standards.md](docs/development/coding-standards.md)                                                                      |
-| Contributing + release process                | [CONTRIBUTING.md](CONTRIBUTING.md)                                                                                                                |
-| Current release status and priorities         | [ROADMAP.md](ROADMAP.md)                                                                                                                           |
+| Task                                          | Read first                                                                                                                                                      |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Any change                                    | everything below in this file, plus [docs/development/feature-development-workflow.md](docs/development/feature-development-workflow.md)                        |
+| How the CLI works                             | [docs/architecture/system-overview.md](docs/architecture/system-overview.md)                                                                                    |
+| Where files belong                            | [docs/architecture/repository-structure.md](docs/architecture/repository-structure.md)                                                                          |
+| Engine/composition/token/merge details        | [docs/architecture/template-engine.md](docs/architecture/template-engine.md)                                                                                    |
+| New runtime/framework/stack                   | [docs/templates/adding-a-stack.md](docs/templates/adding-a-stack.md) + [docs/templates/template-contract.md](docs/templates/template-contract.md)               |
+| New database/ORM/extra                        | [docs/templates/adding-an-integration.md](docs/templates/adding-an-integration.md)                                                                              |
+| What is actually supported (and its evidence) | [docs/templates/stack-support-matrix.md](docs/templates/stack-support-matrix.md)                                                                                |
+| Test requirements per change type             | [docs/development/testing-strategy.md](docs/development/testing-strategy.md)                                                                                    |
+| Which docs change with which code             | [docs/development/documentation-standards.md](docs/development/documentation-standards.md)                                                                      |
+| Coding rules (incl. Windows subprocess law)   | [docs/development/coding-standards.md](docs/development/coding-standards.md)                                                                                    |
+| Contributing + release process                | [CONTRIBUTING.md](CONTRIBUTING.md)                                                                                                                              |
+| Current release status and priorities         | [ROADMAP.md](ROADMAP.md)                                                                                                                                        |
+| Active v1.0.7 polish / generated-app scope    | [Polish plan](docs/plans/active/omnicraft-v107-polish-plan.md) + [generated-app follow-up](docs/plans/active/omnicraft-generated-app-quality-follow-up-plan.md) |
 
 Docs index: [docs/index.md](docs/index.md). Status vocabulary: Supported / Scaffold-verified /
 Selectable — unverified / Rejected — unsupported combination / Planned — never describe a combination
@@ -30,6 +31,7 @@ All from `packages/cli/` unless noted:
 - Install workspace deps: `npm install` (repo root)
 - Typecheck: `npx tsc --noEmit` (no lint script in this repo)
 - Tests: `npx vitest run` (or `npm test` from root)
+- Support evidence/matrix check: `npm run check:support-matrix`
 - Build (tsup → `dist/index.js` with shebang): `npx tsup`
 - Run CLI from source: `npm run dev` (interactive — needs a real TTY)
 - Scaffold the combinations currently listed in the smoke script without prompts: `npx tsx scripts/smoke-e2e.ts <out-dir>`
@@ -44,7 +46,7 @@ All from `packages/cli/` unless noted:
 
 ## Template rules
 
-- Files starting with `_` (`_gitignore`, `_prettierignore`) are restored to dotfiles on copy — npm won't reliably publish them otherwise. The rule applies to directories too (`_github/` → `.github/`). `.env.example` ships as-is.
+- The renderer restores only the npm-hostile template names `_gitignore`, `_prettierignore`, `_env.example`, and `_github` to `.gitignore`, `.prettierignore`, `.env.example`, and `.github/`. This is an explicit allowlist, not a rule for every leading underscore; ordinary names such as Python `__init__.py` stay unchanged.
 - Template variables: `projectName`, `clientPackageName`, `serverPackageName`, `databaseName` (underscores for database identifiers), `backendFramework`, and `orm`; `dbConfig` is the Laravel-only multi-line DB env block rendered by the PHP overlay `.env.example` files (`server/php/laravel/`, `server/php/laravel-sanctum-spa/`). Unknown `{{token}}` expressions fail generation in non-`.vue` files; Vue interpolation is intentionally exempt.
 - Dependency versions in templates are chosen for peer-compat, not "latest tag": TypeScript `^5.9.3` (typescript-eslint peers require <6.1 — TS7 breaks it), Prisma `^7.10.1` (npm's `latest` tag currently points at an 8.0 RC). Check peers before bumping.
 - Prisma 7 specifics: schema datasource has **no `url` property** (P1012 error if added) — URL lives in `prisma.config.ts`; `prisma-client` generator with `output = "../src/generated/prisma"`; `@prisma/adapter-pg`; `postinstall: prisma generate` requires `server/.env` to exist, which the CLI creates from `.env.example` **before** installing deps.
@@ -52,7 +54,7 @@ All from `packages/cli/` unless noted:
 
 ## Windows / terminal constraints (dev machine is win32)
 
-- All child processes go through `src/exec.ts` (`runCommand`, `runCommandVisible`). On win32 they join the command into a single string with `shell: true` — never pass an args array with `shell: true` (Node 24 DEP0190), and npm/git are `.cmd` shims that cannot spawn without a shell. Safe only because every caller passes hardcoded literals.
+- All child processes go through `src/exec.ts` (`runCommand`, `runCommandVisible`). On win32 the wrapper joins the command and arguments into one string for `shell: true` — never pass a separate args array with `shell: true` (Node 24 DEP0190), and npm/git are `.cmd` shims that require a shell. The wrapper quotes each token containing whitespace or cmd.exe metacharacters, including target-path arguments; keep command names and shell syntax fixed and pass paths as arguments rather than building command strings by hand.
 - `restoreTerminal()` in `src/index.ts` is registered on exit/SIGINT/uncaughtException: clack drives the console in raw mode, and a hard exit otherwise leaves cmd.exe garbled (`^[[A` keystrokes). Never remove it.
 - Install step uses `runCommandVisible` (inherited stdio) so npm's live progress streams; don't wrap it back in a spinner.
 - Non-TTY guard: the CLI refuses to run piped (clack prompts can't be driven without a TTY).

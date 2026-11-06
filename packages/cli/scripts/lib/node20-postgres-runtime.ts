@@ -15,7 +15,7 @@
  * It is an extra CI hygiene check — it registers no Supported matrix row and
  * does not run on any other stack.
  *
- * Run: npx tsx scripts/lib/node20-sqlite-runtime.ts (after `npx tsup`).
+ * Run: npx tsx scripts/lib/node20-postgres-runtime.ts (after `npx tsup`).
  */
 import assert from 'node:assert/strict'
 import { existsSync, mkdtempSync, rmSync } from 'node:fs'
