@@ -16,6 +16,7 @@ import { LARAVEL_LIVEWIRE_NODE_VERSION_LADDER } from '../src/config.js'
 import { integrationScenarios } from '../src/support-evidence.js'
 import type { AuthenticationSetup } from '../src/types.js'
 import { runCommand } from '../src/exec.js'
+import { retryStarterKitRetrieval } from './lib/starter-retrieval-retry.js'
 
 const COMMAND_TIMEOUT_MS = 15 * 60 * 1000
 const AUTHENTICATION_SETUPS = integrationScenarios(
@@ -88,30 +89,45 @@ function routeNames(serverDir: string): Set<string> {
   return new Set(routes.flatMap((route) => (route.name ? [route.name] : [])))
 }
 
-function generateProject(
+async function generateProject(
   cliPath: string,
   tempRoot: string,
   setup: AuthenticationSetup,
   env: NodeJS.ProcessEnv,
-): string {
+): Promise<string> {
   const projectName = `livewire-${setup}`
   const skipFrontendInstall = setup === 'none'
-  const output = runRequired(
-    `Generate Laravel Livewire project with ${setup} auth`,
-    'node',
-    [
-      cliPath,
-      '--yes',
-      ...(skipFrontendInstall ? ['--skip-install'] : []),
-      '--frontend',
-      'livewire',
-      '--auth',
-      setup,
-      projectName,
-    ],
-    tempRoot,
-    env,
-  )
+  // The pinned starter-kit clone (tiged against a fixed upstream commit) is
+  // the only network-transient step in this generation; retry it in a bounded
+  // way instead of failing the whole gate when one fetch flakes.
+  const output = await retryStarterKitRetrieval(`laravel-livewire:${setup}`, (attempt) => {
+    if (attempt > 1) {
+      // The CLI creates the target directory before the pinned clone; clear a
+      // partial attempt so the retry starts from an empty target.
+      rmSync(join(tempRoot, projectName), {
+        recursive: true,
+        force: true,
+        maxRetries: 10,
+        retryDelay: 250,
+      })
+    }
+    return runRequired(
+      `Generate Laravel Livewire project with ${setup} auth`,
+      'node',
+      [
+        cliPath,
+        '--yes',
+        ...(skipFrontendInstall ? ['--skip-install'] : []),
+        '--frontend',
+        'livewire',
+        '--auth',
+        setup,
+        projectName,
+      ],
+      tempRoot,
+      env,
+    )
+  })
   if (skipFrontendInstall) {
     assert(!output.includes('Installing Livewire frontend dependencies'), '--skip-install must skip npm setup.')
   } else {
@@ -218,7 +234,7 @@ function assertOwnedTempDirectory(tempRoot: string): void {
   assert(basename(absoluteRoot).startsWith('omnicraft-laravel-livewire-auth-'))
 }
 
-function main(): void {
+async function main(): Promise<void> {
   assertSupportedNodeForLivewire()
   const cliPath = resolve(fileURLToPath(new URL('../dist/index.js', import.meta.url)))
   assert(existsSync(cliPath), 'Build the CLI with `npx tsup` before running Livewire integration checks.')
@@ -237,7 +253,7 @@ function main(): void {
         DB_CONNECTION: 'sqlite',
         DB_DATABASE: callerDatabase,
       }
-      const projectRoot = generateProject(cliPath, tempRoot, setup, callerEnv)
+      const projectRoot = await generateProject(cliPath, tempRoot, setup, callerEnv)
       assert.equal(
         statSync(callerDatabase).size,
         0,
@@ -262,4 +278,4 @@ function main(): void {
   if (failure) throw failure
 }
 
-main()
+await main()

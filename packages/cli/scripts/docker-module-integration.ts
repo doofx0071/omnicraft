@@ -12,6 +12,7 @@ import { createEnvFiles } from '../src/scaffold/env.js'
 import { applyLayers } from '../src/scaffold/engine.js'
 import { composeLayers, templateVariables } from '../src/scaffold/compose.js'
 import { loadManifest, saveManifest } from '../src/add.js'
+import { ensureDockerAvailable } from './lib/dwait.js'
 import type { Answers, Database } from '../src/types.js'
 
 const DATABASES = ['postgres', 'mysql'] as const satisfies readonly Extract<Database, 'postgres' | 'mysql'>[]
@@ -122,16 +123,10 @@ function scaffold(projectRoot: string, database: DockerDatabase): Answers {
   return answers
 }
 
-async function ensureDockerAvailable(): Promise<void> {
-  for (let attempt = 1; attempt <= 5; attempt += 1) {
-    const result = runCommand('docker', ['info'], CLI_ROOT, {
-      timeoutMs: 10_000,
-      maxBuffer: 1_000_000,
-    })
-    if (result.ok) return
-    if (attempt < 5) await delay(2_000)
-  }
-  throw new Error('Docker Engine did not become ready after five bounded checks.')
+async function ensureDockerReady(): Promise<void> {
+  // Shared bounded Docker readiness wait (scripts/lib/dwait.ts) — replaces the
+  // copy-pasted five-attempt loop this script carried.
+  await ensureDockerAvailable('docker-module integration')
 }
 
 function invokeAddDocker(projectRoot: string, secrets: string[]): ReturnType<typeof runCommand> {
@@ -399,7 +394,7 @@ async function runScenario(database: DockerDatabase): Promise<void> {
 
 async function main(argv = process.argv.slice(2)): Promise<void> {
   const database = requestedDatabase(argv)
-  await ensureDockerAvailable()
+  await ensureDockerReady()
   await runScenario(database)
 }
 

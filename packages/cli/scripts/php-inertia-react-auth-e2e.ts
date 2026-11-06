@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import { integrationScenarios } from "../src/support-evidence.js";
 import type { AuthenticationSetup } from "../src/types.js";
 import { runCommand } from "../src/exec.js";
+import { retryStarterKitRetrieval } from "./lib/starter-retrieval-retry.js";
 
 const COMMAND_TIMEOUT_MS = 15 * 60 * 1000;
 const AUTHENTICATION_SETUPS = integrationScenarios(
@@ -81,30 +82,46 @@ function routeList(serverDir: string): LaravelRoute[] {
   return JSON.parse(output) as LaravelRoute[];
 }
 
-function generateProject(
+async function generateProject(
   cliPath: string,
   tempRoot: string,
   setup: AuthenticationSetup,
   env: NodeJS.ProcessEnv,
-): string {
+): Promise<string> {
   const projectName = `inertia-${setup}`;
-  const output = runRequired(
-    `Generate Laravel Inertia React project with ${setup} auth`,
-    "node",
-    [
-      cliPath,
-      "--yes",
-      "--frontend",
-      "inertia-react",
-      "--db",
-      "sqlite",
-      "--auth",
-      setup,
-      projectName,
-    ],
-    tempRoot,
-    env,
-  );
+  // The pinned starter-kit retrieval (`composer create-project` against a
+  // fixed `:dev-main#<commit>` ref) is the only network-transient step in
+  // this generation; retry it in a bounded way instead of failing the whole
+  // gate when one fetch flakes.
+  const output = await retryStarterKitRetrieval(`laravel-inertia-react:${setup}`, (attempt) => {
+    if (attempt > 1) {
+      // The CLI creates the target directory before the pinned retrieval;
+      // clear a partial attempt so the retry starts from an empty target.
+      rmSync(join(tempRoot, projectName), {
+        recursive: true,
+        force: true,
+        maxRetries: 10,
+        retryDelay: 250,
+      });
+    }
+    return runRequired(
+      `Generate Laravel Inertia React project with ${setup} auth`,
+      "node",
+      [
+        cliPath,
+        "--yes",
+        "--frontend",
+        "inertia-react",
+        "--db",
+        "sqlite",
+        "--auth",
+        setup,
+        projectName,
+      ],
+      tempRoot,
+      env,
+    );
+  });
   assert(
     output.includes("Laravel Inertia React"),
     "The production CLI should report the integrated Inertia React mode.",
@@ -268,7 +285,7 @@ function assertOwnedTempDirectory(tempRoot: string): void {
   assert(basename(absoluteRoot).startsWith("omnicraft-laravel-inertia-react-auth-"));
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const cliPath = resolve(fileURLToPath(new URL("../dist/index.js", import.meta.url)));
   assert(
     existsSync(cliPath),
@@ -289,7 +306,7 @@ function main(): void {
         DB_CONNECTION: "sqlite",
         DB_DATABASE: callerDatabase,
       };
-      const projectRoot = generateProject(cliPath, tempRoot, setup, callerEnv);
+      const projectRoot = await generateProject(cliPath, tempRoot, setup, callerEnv);
       assert.equal(
         statSync(callerDatabase).size,
         0,
@@ -319,4 +336,4 @@ function main(): void {
   if (failure) throw failure;
 }
 
-main();
+await main();
