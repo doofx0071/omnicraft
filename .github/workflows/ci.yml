@@ -15,12 +15,20 @@ on:
   schedule:
     - cron: '17 2 * * *'
 
+# One gate per ref: a second push to the same branch/tag supersedes the
+# in-flight run instead of racing it for the scarce macOS runner pool
+# (two full gates started 17s apart on 5 November and collided).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # Hosted runners on 3 OSes x Node {20 (declared minimum), 24}.
   # bash is pinned: hosted Windows defaults to pwsh, which can't run the
   # cmd-style cleanup; Git Bash is preinstalled and cross-platform.
   unix:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         node: [20, 24]
