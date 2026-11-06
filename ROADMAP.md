@@ -108,23 +108,23 @@ checks remain Scaffold-verified; physical Android/iOS paths remain Selectable �
 The release PR must pass the `supported-stack-release-gate` on its exact versioned commit before it
 is merged. Pushing the matching `v1.0.5` tag will trigger the npm publishing workflow.
 
-## v1.0.6 — Audit remediation and release-process repair (in preparation)
+## v1.0.6 — Audit remediation and release-process repair (published 2026-11-05)
 
-The next release candidate collects the full codebase-audit remediation: engine dotfile restore no
-longer corrupts Python scaffolds, official-generator output stays inside the target directory,
-`--yes` no longer hangs on install confirms, win32 command quoting, React JavaScript +
-Tailwind/shadcn extras, raw-SQL seeds loading `.env`, shadcn restricted to Node stacks, the ESLint
-extra no longer shadows `create-next-app` on Next.js, Laravel API responses emit `createdAt` for
-parity with Node, root READMEs reflect the selected client framework, the unused `drizzle-orm`
-dependency is removed from raw-SQL PostgreSQL templates, Next.js + SQLite gitignores its data
-directory, the `add` route gains a non-TTY guard and `--dry-run` parsing, and next-steps guidance is
-corrected for FastAPI + PostgreSQL. It also includes the merged Laravel 12 API Sanctum SPA support
-for PostgreSQL and MySQL (#61).
+Published to npm as `1.0.6` from commit `c10dcb1`; tag `v1.0.6` points to that commit. The release
+shipped the codebase-audit remediation and the Laravel 12 API Sanctum SPA PostgreSQL/MySQL support
+(#61). Fixes include an explicit npm-hostile dotfile allowlist that preserves Python `__init__.py`,
+containment checks for official-generator output, `--yes` handling for install confirmations, quoted
+Windows subprocess arguments, JavaScript + Tailwind/shadcn variants, dotenv loading in raw-SQL seeds,
+shadcn runtime restrictions, the Next.js ESLint overlay guard, Laravel `createdAt` response parity,
+client-aware generated READMEs, removal of an unused raw-SQL dependency, Next.js SQLite data
+`.gitignore` coverage, robust `omnicraft add` non-TTY/`--dry-run` handling, and corrected FastAPI
+PostgreSQL next steps. The release also added symmetric support/rejection evidence and generated-project
+checks at the Node 20 CLI floor; see the [testing strategy](docs/development/testing-strategy.md) and
+[stack support matrix](docs/templates/stack-support-matrix.md) for the exact limits.
 
-Release-process repair: npm Trusted Publishing must be verified before pushing the `v1.0.6` tag, and
-the `docs/architecture/system-overview.md` snapshot sentence required by
-`.github/scripts/release-metadata.mjs` must be restored so the tag workflow's documentation snapshot
-commit can succeed (it was dropped from the overview during the v1.0.5 cycle).
+The tag workflow published through npm Trusted Publishing and updated the release snapshot in the
+[system overview](docs/architecture/system-overview.md). The publication state above records npm
+`latest` and the Git tag as checked on 2026-11-06.
 
 ## v1.0.3 and v1.0.4 — candidate scopes consolidated into v1.0.5
 

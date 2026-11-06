@@ -83,7 +83,7 @@ passed the release gate on commit `b4c26273eaab033fee604bd77c04e0a2ab1d7e19`. It
 Express + raw SQL on SQLite/PostgreSQL/MySQL, and FastAPI + PostgreSQL through generated install/setup,
 boot, real database operations, and failure checks. The exact jobs are linked from their matrix rows.
 
-The `add testing` runtime fixes passed hosted [run #40880427361](https://github.com/doofx0071/omnicraft/actions/runs/40880427361)
+The initial `add testing` runtime fixes passed hosted [run #40880427361](https://github.com/doofx0071/omnicraft/actions/runs/40880427361)
 on commit `fd4d3888037e330ac160a997e91f2a5b6b4e70c9`, including the support-evidence check and strict
 release gate. Six exact React/Vite paths generated production layers, applied `add testing`, installed,
 and ran the generated sample test; they also built the client, booted Vite preview, and checked its
@@ -92,10 +92,11 @@ Vue, Svelte, and Next.js module requests reject before module files, dependencie
 change. This is module-path evidence only; backend and database claims remain tied to their own rows.
 
 The later exhaustive [runtime-evidence run #40903557153 (attempt 2)](https://github.com/doofx0071/omnicraft/actions/runs/40903557153)
-on commit `ccd48955` checked the remaining 306 compatible React/Vite tuples: 254 passed for the
-testing module and 52 JavaScript + shadcn tuples reject before writes because their template paths
-lack shadcn's required aliases. The additional module evidence does not establish backend or database
-support.
+on commit `ccd48955` checked the remaining 286 React/Vite module-eligible tuples after runtime-level
+shadcn rejection was added: 244 passed for the testing module and 42 JavaScript + shadcn tuples reject
+before writes because the module is TypeScript-only on shadcn paths. The 23 FastAPI/PHP + shadcn tuples
+are rejected by the runtime compatibility guard and no longer belong to the testing-module inventory.
+This module evidence does not establish backend or database support.
 
 The Fastify/Hono runtime slice passed all 15 Node runtime scenarios and the release gate on
 [run #40612114736](https://github.com/doofx0071/omnicraft/actions/runs/40612114736), commit
@@ -110,7 +111,7 @@ The current suite covers:
 
 | File                                                | Coverage                                                                                                                                                                                                                                                                                                                                                                                  |
 | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/args.test.ts`                                  | Flag parsing, Livewire/Inertia React auth help text, and help/README option parity.                                                                                                                                                                                                                                                                                                       |
+| `src/args.test.ts`                                  | Flag parsing, Livewire/Inertia React auth help text, and help/README option parity. The current `HELP_TEXT` does not yet document the `omnicraft add` command surface.                                                                                                                                                                                                                       |
 | `src/validators.test.ts`                            | Project-name normalization and npm-name validation.                                                                                                                                                                                                                                                                                                                                       |
 | `src/renderer.test.ts`                              | Token substitution, unresolved-token detection, dotfile renaming, and binary detection.                                                                                                                                                                                                                                                                                                   |
 | `src/merge.test.ts`                                 | `package.json` deep merge semantics.                                                                                                                                                                                                                                                                                                                                                      |
@@ -142,11 +143,11 @@ window on Linux/Xvfb, macOS, and Windows. These checks verify builds and launch 
 functionality or database operations. Simulators and emulators are not physical devices; physical Android
 and iOS device paths remain Selectable — unverified. The support matrix records exact hosted jobs while
 keeping the broader Expo and Tauri rows Scaffold-verified. `omnicraft add testing` is Supported for the
-six original and 254 additional exact React/Vite module paths listed in the
+six original and 244 additional exact React/Vite module paths listed in the
 [support matrix](../templates/stack-support-matrix.md). Runs [#40880427361](https://github.com/doofx0071/omnicraft/actions/runs/40880427361)
 and [#40903557153 (attempt 2)](https://github.com/doofx0071/omnicraft/actions/runs/40903557153) passed generated
 installation, sample-test execution, client build, Vite preview, bundle, and missing-asset checks. The
-52 JavaScript + shadcn tuples reject before writes because their template paths lack required aliases;
+42 JavaScript + shadcn tuples reject before writes because the module requires TypeScript on shadcn paths;
 Vue, Svelte, and Next.js `add testing` paths also reject before module writes. The module tests exercise
 frontend behavior only and do not establish backend/database support.
 
@@ -193,7 +194,9 @@ Do not infer one database/framework/frontend combination from a successful test 
 The current workflow:
 
 1. Runs CLI typecheck, unit tests, build, and scaffold smoke on Ubuntu, macOS, and Windows with Node 20
-   and 24.
+   and 24. A separate Node 20 generated-project job uses Express + raw SQL + PostgreSQL for a full
+   install/typecheck/migrate/boot/CRUD floor check; generated SQLite is not a Node 20 target because
+   `better-sqlite3@^13` requires Node 22+.
 2. On Node 24, installs and typechecks the generated Express + Drizzle + PostgreSQL project on the
    hosted OS jobs; the trusted Windows self-hosted job does the same and also lints that generated
    project.
@@ -218,7 +221,7 @@ The current workflow:
    PostgreSQL, and MySQL. It runs the pinned-major `create-next-app@16`, applies OmniCraft's exact
    production layers, installs, builds and typechecks the project, runs SQL migrations, boots the
    production server, and verifies CRUD and failure cases. All three database scenarios passed hosted
-   run #40614408163 on commit `336622e`.
+   run #40614408163 on commit `336622e`; Next.js hosted runtime evidence is not pending.
 7. Runs hosted Ubuntu `frontend-runtime-integration` for React/Vite JavaScript frontend-only. It
    installs, builds, boots Vite preview, fetches the generated bundle, and checks missing-asset
    behavior; database operations do not apply. The generated-project check passed hosted run
@@ -229,13 +232,13 @@ The current workflow:
    API, and verifies CRUD and failure cases. Both scenarios passed hosted run #40615980612 on commit
    `77ef06645421edb3977019f63683af3ea531ccbb`.
 9. Runs hosted Ubuntu `module-runtime-integration` for the `add testing` and shadcn frontend-only paths.
-   The six original and 254 additional exact React/Vite `add testing` cases generate through production composition, run the real
+   The six original and 244 additional exact React/Vite `add testing` cases generate through production composition, run the real
    add operation, install, execute the generated `npm test`, build the client, boot Vite preview, and
    check the bundle and missing-asset response. TypeScript client cases also typecheck. The Vue, Svelte,
-   and Next.js `add testing` cases assert pre-write rejection and unchanged manifests/packages; the 52
-   JavaScript + shadcn tuples reject because the template lacks required aliases. The original six
+   and Next.js `add testing` cases assert pre-write rejection and unchanged manifests/packages; the 42
+   JavaScript + shadcn tuples reject because the module is TypeScript-only on shadcn paths. The original six
    paths passed run [#40880427361](https://github.com/doofx0071/omnicraft/actions/runs/40880427361)
-   and the 254 additional paths passed run [#40903557153 (attempt 2)](https://github.com/doofx0071/omnicraft/actions/runs/40903557153)
+   and the 244 additional paths passed run [#40903557153 (attempt 2)](https://github.com/doofx0071/omnicraft/actions/runs/40903557153)
    on commit `ccd48955`.
    The support-evidence check and strict release gate passed in the latter run. See the [support matrix](../templates/stack-support-matrix.md)
    for exact path-level evidence. This module test does not establish backend/database behavior.
@@ -250,19 +253,25 @@ The current workflow:
     tag-only publish job was skipped for the pull-request event.
     The support matrix records the exact job links and evidence limits. Physical-device paths remain
     Selectable — unverified.
-11. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
+11. Runs hosted Ubuntu `node20-postgres-runtime` on Node 20 using the built production CLI to scaffold
+    Express + raw SQL + PostgreSQL. With a hosted PostgreSQL service, it installs, typechecks client and
+    API, migrates, boots, and exercises CRUD, duplicate, invalid-input, and missing-record behavior.
+    SQLite is not used because the generated SQLite driver requires Node 22+, and the integration
+    Testcontainers import chain also requires Node 22+. This is a Node-floor hygiene check, not a
+    Supported matrix row. The job is required by the aggregate release gate.
+12. Runs hosted Ubuntu `python-fastapi-integration` with `setup-uv` 0.13.5 and Python 3.12. It installs
     generated dependencies, runs Alembic migrations, boots Uvicorn, and checks SQLite and PostgreSQL
     CRUD and failure responses. PostgreSQL runs in an isolated Testcontainers instance.
-12. Runs hosted Ubuntu `php-laravel-integration` for SQLite/PostgreSQL/MySQL. The SQLite case uses the
+13. Runs hosted Ubuntu `php-laravel-integration` for SQLite/PostgreSQL/MySQL. The SQLite case uses the
     pinned PHP/Composer test image without a database service; networked databases use isolated Compose
     services. Each case installs Composer dependencies, checks platform requirements, migrates, and
     runs database/API feature tests.
-13. Runs hosted Ubuntu `php-laravel-inertia-react-auth-integration` for Laravel 13 + Inertia React on
+14. Runs hosted Ubuntu `php-laravel-inertia-react-auth-integration` for Laravel 13 + Inertia React on
     SQLite. It generates the None and Laravel-native projects through the production CLI, installs and
     checks Composer/npm dependencies, runs migrations and Laravel feature tests, and enforces pre-write
     rejection of incompatible flags. The job is required by the aggregate gate; the support matrix
     contains only exact modes with passing generated-project and hosted evidence.
-14. Runs hosted Ubuntu `php-laravel-sanctum-spa-auth-integration` for the public Laravel 12 API `None`
+15. Runs hosted Ubuntu `php-laravel-sanctum-spa-auth-integration` for the public Laravel 12 API `None`
     path on SQLite and the exact React/Vite TypeScript + Laravel 12 API + Sanctum SPA auth tuple on
     SQLite, PostgreSQL, and MySQL. It checks real generated-project driver selection and the complete
     auth lifecycle against each selected database. Integrated Laravel 13 Livewire/Inertia auth remains
@@ -272,19 +281,19 @@ The current workflow:
     and [supported-stack release gate](https://github.com/doofx0071/omnicraft/actions/runs/41311565918/job/124869365359).
     PostgreSQL and MySQL Sanctum support is limited to the pinned database images and file-backed Laravel
     sessions; it does not establish database-backed/distributed sessions or untested server versions.
-15. Runs hosted Ubuntu `supabase-auth-integration` on a disposable local Supabase CLI stack. It
+16. Runs hosted Ubuntu `supabase-auth-integration` on a disposable local Supabase CLI stack. It
     generates the React/Vite TypeScript frontend-only project through the production CLI, installs
     and builds it, applies the local migration, verifies explicit Data API grants and owner RLS,
     exercises signup/sign-in/session restoration/local sign-out and two-user row isolation, and scans
     the browser bundle for privileged credentials. It provisions no hosted Supabase project and
     consumes no real provider credentials. The job is required by the aggregate gate.
-16. Runs `support-evidence` to resolve every exact Supported flag combination through available values,
+17. Runs `support-evidence` to resolve every exact Supported flag combination through available values,
     prompt/flag and answer compatibility, production composition, and module guards; it also checks the
     rendered matrix label, matching scenario, job command, and release aggregate dependency.
     `supported-matrix` fails unless the OS/Node matrix, runtime jobs, support evidence, and package
     artifact all pass. It runs for PRs, main pushes, nightly, and version-tag pushes;
     `workflow_dispatch` supports an explicit pre-release run. The scheduled run uses GitHub-hosted jobs.
-17. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
+18. Version-tag pushes run the complete hosted release gate on the tagged commit. Only after it passes,
     the release job publishes to npm using OIDC, creates the GitHub Release from the version's changelog
     section, and updates the release snapshots in `ROADMAP.md` and `docs/architecture/system-overview.md`.
     The self-hosted Windows job runs only for main-branch pushes and same-repository pull requests.

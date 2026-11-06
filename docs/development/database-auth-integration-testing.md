@@ -179,10 +179,11 @@ This section records the commands and outcomes actually run for this change.
   import in the Hono raw-SQL route.
 - `npm run test:integration:nextjs --workspace=create-omnicraft -- --database ...` — SQLite,
   PostgreSQL, and MySQL passed locally through official generator, production layers, install, build,
-  typecheck, migration, production boot, CRUD/failure checks, and cleanup. These hosted rows are
-  pending their first CI run. The checks fixed the Next.js PostgreSQL query typing and migration URL,
-  added the missing direct dotenv dependency for migration commands, and checked the previously
-  unverified MySQL adapter end to end.
+  typecheck, migration, production boot, CRUD/failure checks, and cleanup. All three scenarios
+  subsequently passed hosted [run #40614408163](https://github.com/doofx0071/omnicraft/actions/runs/40614408163)
+  on commit `336622e`; Next.js hosted evidence is not pending. The checks fixed the Next.js PostgreSQL
+  query typing and migration URL, added the missing direct dotenv dependency for migration commands,
+  and checked the previously unverified MySQL adapter end to end.
 - `docker ps` — no test containers remained after the integration runs.
 
 The first PHP image build attempted to compile `pdo_sqlite`, which the selected PHP image already
@@ -203,4 +204,5 @@ FastAPI + PostgreSQL, and the aggregate release gate.
 Hosted [Fastify/Hono run #40612114736](https://github.com/doofx0071/omnicraft/actions/runs/40612114736)
 passed all 15 Node runtime scenarios and the aggregate release gate on commit
 `14adbf9d9805e74f44f66d8101077d0d68878f0d`. Exact Fastify/Hono jobs now support the corresponding
-matrix rows. The Next.js SQLite/PostgreSQL/MySQL jobs are still pending hosted CI.
+matrix rows. The Next.js SQLite/PostgreSQL/MySQL jobs passed hosted [run #40614408163](https://github.com/doofx0071/omnicraft/actions/runs/40614408163)
+on commit `336622e`; all three jobs are recorded in the [support matrix](../templates/stack-support-matrix.md).

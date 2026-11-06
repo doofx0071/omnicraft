@@ -24,8 +24,10 @@ the authoring contract. The tree layout is in the [repository structure](../arch
 
 ## Rules every template must follow
 
-1. **`_`-prefix for dotfiles.** Anything npm won't publish (`_gitignore`, `_prettierignore`) and whole
-   directories (`_github/`) use the underscore form; the engine restores the dot on copy.
+1. **Explicit npm-hostile dotfile allowlist.** The engine restores only `_gitignore`, `_prettierignore`,
+   `_env.example`, and `_github` to `.gitignore`, `.prettierignore`, `.env.example`, and `.github/` on
+   copy. Do not treat every leading underscore as a dotfile: files such as Python `__init__.py` must keep
+   their names. Add a new name to the renderer's allowlist only when npm-hostile publication requires it.
 2. **Tokens only from the documented set.** Current templates use `{{projectName}}`,
    `{{clientPackageName}}`, `{{serverPackageName}}`, `{{databaseName}}`, `{{backendFramework}}`,
    `{{orm}}`, `{{clientFramework}}` (display name of the chosen frontend: React, Vue, Svelte, …), and
