@@ -1,6 +1,6 @@
 # 🗺️ OmniCraft Roadmap
 
-> **Versioning model:** `v1.0.0` is the first stable release. As checked on 2026-11-06, npm `latest` is `1.0.6`, published from Git commit `c10dcb1`, and GitHub tag `v1.0.6` points to that same commit. Future releases follow semver; release versions do not mean every selectable stack combination is fully verified.
+> **Versioning model:** `v1.0.0` is the first stable release. As checked on 2026-11-07, npm `latest` is `1.0.7`, published from Git commit `ed76478`, and GitHub tag `v1.0.7` points to that same commit. Future releases follow semver; release versions do not mean every selectable stack combination is fully verified.
 >
 > Progress is tracked with GitHub issues — this file is the big picture, the issues are the work. Check off here when the linked issue closes.
 
@@ -21,7 +21,7 @@
 | v1.0.4  | Laravel Inertia React scaffolding                | 🟡 consolidated into v1.0.5 | —       |
 | v1.0.5  | Auth integrations and verified stack updates     | ✅ published                | —       |
 | v1.0.6  | Audit remediation and release-process repair     | ✅ published                | —       |
-| v1.0.7  | Gate reliability, CLI correctness, API contracts | 🟡 release candidate        | —       |
+| v1.0.7  | Gate reliability, CLI correctness, API contracts | ✅ published | —       |
 
 ---
 
