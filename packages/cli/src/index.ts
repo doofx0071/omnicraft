@@ -6,10 +6,14 @@ import { applyModuleToProject, runAdd } from "./add-run.js";
 import {
   CLI_VERSION,
   CNA_PACKAGE,
+  CREATE_EXPO_APP_PACKAGE,
+  CREATE_TAURI_APP_PACKAGE,
   LARAVEL_INERTIA_REACT_STARTER_KITS,
   LARAVEL_LIVEWIRE_STARTER_KITS,
+  PRETTIER_PACKAGE,
   SHADCN_BASE,
   SHADCN_COMPONENTS,
+  SHADCN_PACKAGE,
   SHADCN_PRESET,
   TEMPLATES_ROOT,
   TIGED_PACKAGE,
@@ -28,7 +32,13 @@ import {
   retryLivewireStarterRetrieval,
 } from "./scaffold/livewire-starter-retrieval.js";
 import { gitInit } from "./scaffold/git.js";
-import { assertGeneratorOutput, runCommand, runCommandVisible } from "./exec.js";
+import {
+  assertGeneratorOutput,
+  GENERATOR_MAX_BUFFER,
+  GENERATOR_TIMEOUT_MS,
+  runCommand,
+  runCommandVisible,
+} from "./exec.js";
 import { detectPackageManager, installDependencies } from "./scaffold/pkg-manager.js";
 import { fetchRemoteTemplates } from "./scaffold/remote.js";
 import { validateStackFlags } from "./prefill.js";
@@ -178,7 +188,7 @@ async function main(): Promise<void> {
         "npx",
         [
           "--yes",
-          "create-expo-app@latest",
+          CREATE_EXPO_APP_PACKAGE,
           answers.targetDir,
           "--template",
           "default@sdk-58",
@@ -187,7 +197,7 @@ async function main(): Promise<void> {
           "--no-agents-md",
         ],
         dirname(answers.targetDir),
-        64 * 1024 * 1024,
+        { maxBuffer: GENERATOR_MAX_BUFFER, timeoutMs: GENERATOR_TIMEOUT_MS },
       );
       if (!cea.ok) {
         spinner.stop("create-expo-app failed");
@@ -205,7 +215,7 @@ async function main(): Promise<void> {
         "npx",
         [
           "--yes",
-          "create-tauri-app@latest",
+          CREATE_TAURI_APP_PACKAGE,
           answers.targetDir,
           "--template",
           "react-ts",
@@ -216,7 +226,7 @@ async function main(): Promise<void> {
           identifier,
         ],
         dirname(answers.targetDir),
-        64 * 1024 * 1024,
+        { maxBuffer: GENERATOR_MAX_BUFFER, timeoutMs: GENERATOR_TIMEOUT_MS },
       );
       if (!cta.ok) {
         spinner.stop("create-tauri-app failed");
@@ -311,7 +321,7 @@ async function main(): Promise<void> {
           "--no-progress",
         ],
         answers.targetDir,
-        64 * 1024 * 1024,
+        { maxBuffer: GENERATOR_MAX_BUFFER, timeoutMs: GENERATOR_TIMEOUT_MS },
       );
       if (!starterCreated.ok) {
         spinner.stop("Laravel Inertia React starter retrieval failed");
@@ -381,7 +391,7 @@ async function main(): Promise<void> {
             "npx",
             ["--yes", TIGED_PACKAGE, starterKit, "server"],
             answers.targetDir,
-            64 * 1024 * 1024,
+            { maxBuffer: GENERATOR_MAX_BUFFER, timeoutMs: GENERATOR_TIMEOUT_MS },
           );
           if (!cloned.ok) throw createLivewireStarterRetrievalError(cloned.output);
           assertGeneratorOutput(
@@ -495,7 +505,7 @@ async function main(): Promise<void> {
         // create-next-app refuses to write into an existing non-empty dir, but
         // the empty target itself is fine — it fills exactly that directory.
         dirname(answers.targetDir),
-        64 * 1024 * 1024,
+        { maxBuffer: GENERATOR_MAX_BUFFER, timeoutMs: GENERATOR_TIMEOUT_MS },
       );
       if (!cna.ok) {
         spinner.stop("create-next-app failed");
@@ -532,7 +542,8 @@ async function main(): Promise<void> {
         ],
         answers.targetDir,
         {
-          maxBuffer: 64 * 1024 * 1024,
+          maxBuffer: GENERATOR_MAX_BUFFER,
+          timeoutMs: GENERATOR_TIMEOUT_MS,
           env: createLaravelSqliteMigrationEnv(process.env, starterSqliteFile),
         },
       );
@@ -711,7 +722,11 @@ async function main(): Promise<void> {
       } else if (answers.backendRuntime === "php") {
         p.log.step("PHP dependencies already installed by Composer");
       } else {
-        const shouldInstall = await confirmOrYes(args.yes, `Install dependencies with ${pm} now?`, p.confirm);
+        const shouldInstall = await confirmOrYes(
+          args.yes,
+          `Install dependencies with ${pm} now?`,
+          p.confirm,
+        );
         if (shouldInstall) {
           p.log.step(
             `Installing dependencies with ${pm} — live output below (this can take a minute)`,
@@ -738,7 +753,7 @@ async function main(): Promise<void> {
               "npx",
               [
                 "--yes",
-                "shadcn@latest",
+                SHADCN_PACKAGE,
                 "init",
                 "--base",
                 SHADCN_BASE,
@@ -753,18 +768,18 @@ async function main(): Promise<void> {
               init.ok &&
               runCommand(
                 "npx",
-                ["--yes", "shadcn@latest", "add", ...SHADCN_COMPONENTS, "--yes", "--overwrite"],
+                ["--yes", SHADCN_PACKAGE, "add", ...SHADCN_COMPONENTS, "--yes", "--overwrite"],
                 clientDir,
               ).ok;
             if (init.ok && add) {
               // The shadcn CLI emits its own formatting — normalize to the
               // project's prettier config so the lint gates stay clean.
-              runCommand("npx", ["--yes", "prettier@latest", "--write", "."], clientDir);
+              runCommand("npx", ["--yes", PRETTIER_PACKAGE, "--write", "."], clientDir);
               spinner.stop(`shadcn/ui ready (${SHADCN_PRESET}: ${SHADCN_COMPONENTS.join(", ")})`);
             } else {
               spinner.stop("shadcn setup failed");
               p.log.warn(
-                `Run manually inside ${answers.fullStack ? "client/" : "the project"}:\n  npx shadcn@latest init --base ${SHADCN_BASE} --preset ${SHADCN_PRESET} --no-monorepo --force\n  npx shadcn@latest add ${SHADCN_COMPONENTS.join(" ")}`,
+                `Run manually inside ${answers.fullStack ? "client/" : "the project"}:\n  npx ${SHADCN_PACKAGE} init --base ${SHADCN_BASE} --preset ${SHADCN_PRESET} --no-monorepo --force\n  npx ${SHADCN_PACKAGE} add ${SHADCN_COMPONENTS.join(" ")}`,
               );
             }
           }

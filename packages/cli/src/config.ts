@@ -40,6 +40,7 @@ export const CNA_PACKAGE = 'create-next-app@16'
  * the hosted evidence for the affected paths.
  */
 export const CREATE_EXPO_APP_PACKAGE = 'create-expo-app@5.0.0'
+export const CREATE_TAURI_APP_PACKAGE = 'create-tauri-app@4.7.5'
 export const SHADCN_PACKAGE = 'shadcn@4.23.0'
 export const PRETTIER_PACKAGE = 'prettier@3.9.10'
 
