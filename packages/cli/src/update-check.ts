@@ -67,8 +67,19 @@ interface CacheShape {
 
 function readCache(cacheFile: string, now: number): string | null {
   try {
-    const cache = JSON.parse(readFileSync(cacheFile, 'utf8')) as CacheShape
-    if (now - cache.checkedAt < CHECK_INTERVAL_MS) return cache.latest
+    const cache = JSON.parse(readFileSync(cacheFile, 'utf8')) as unknown
+    if (typeof cache !== 'object' || cache === null || Array.isArray(cache)) return null
+
+    const candidate = cache as Partial<CacheShape>
+    if (
+      typeof candidate.checkedAt !== 'number' ||
+      !Number.isFinite(candidate.checkedAt) ||
+      typeof candidate.latest !== 'string'
+    ) {
+      return null
+    }
+    if (candidate.checkedAt > now) return null
+    if (now - candidate.checkedAt < CHECK_INTERVAL_MS) return candidate.latest
   } catch {
     // missing or corrupt cache — just re-check
   }
@@ -92,10 +103,10 @@ export interface CheckDeps {
 
 /** Update notices are interactive-only and can be disabled in CI or by env. */
 export function shouldCheckForUpdate(
-  isInteractive: boolean,
+  isInteractive: boolean | undefined,
   env: Partial<Pick<NodeJS.ProcessEnv, 'NO_UPDATE_NOTIFIER' | 'CI'>> = process.env,
 ): boolean {
-  return isInteractive && !env.NO_UPDATE_NOTIFIER && !env.CI
+  return isInteractive === true && !env.NO_UPDATE_NOTIFIER && !env.CI
 }
 
 /**

@@ -39,10 +39,16 @@ import {
   runCommand,
   runCommandVisible,
 } from "./exec.js";
-import { detectPackageManager, installDependencies } from "./scaffold/pkg-manager.js";
+import {
+  detectPackageManager,
+  formatInstallCommand,
+  installDependencies,
+  planNativeInstall,
+} from "./scaffold/pkg-manager.js";
+import { formatScaffoldFailure } from "./scaffold/failure.js";
 import { fetchRemoteTemplates } from "./scaffold/remote.js";
 import { validateStackFlags } from "./prefill.js";
-import { checkForUpdate } from "./update-check.js";
+import { checkForUpdate, shouldCheckForUpdate } from "./update-check.js";
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
@@ -145,7 +151,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (!process.env.NO_UPDATE_NOTIFIER && !process.env.CI) {
+  if (shouldCheckForUpdate(process.stdin.isTTY, process.env)) {
     const latest = await checkForUpdate(CLI_VERSION);
     if (latest) {
       p.log.info(
@@ -173,16 +179,23 @@ async function main(): Promise<void> {
     }
   }
 
-  // Native platforms (mobile/desktop): the official generator IS the
-  // scaffold; OmniCraft applies its overlay afterwards and returns — no web
-  // flow, no db prompts, no tailwind/shadcn steps.
-  if (answers.architecture.kind === "native-app") {
-    const mobile = answers.architecture.platform === "mobile";
-    const layers = composeLayers(answers);
-    const variables = templateVariables(answers);
-    const spinner = p.spinner();
+  try {
+    // Native platforms (mobile/desktop): the official generator IS the
+    // scaffold; OmniCraft applies its overlay afterwards and returns — no web
+    // flow, no db prompts, no tailwind/shadcn steps.
+    if (answers.architecture.kind === "native-app") {
+      const mobile = answers.architecture.platform === "mobile";
+      const layers = composeLayers(answers);
+      const variables = templateVariables(answers);
+      const nativeInstall = planNativeInstall(
+        answers.architecture.platform,
+        detectPackageManager(),
+        args.skipInstall,
+      );
+      const nativePackageManager = nativeInstall.packageManager;
+      const spinner = p.spinner();
 
-    if (mobile) {
+      if (mobile) {
       spinner.start("Creating the Expo app with create-expo-app (this can take a minute)...");
       const cea = runCommand(
         "npx",
@@ -246,7 +259,7 @@ async function main(): Promise<void> {
     // Project manifest — enables omnicraft add stack detection.
     const { buildManifest } = await import("./manifest.js");
     const { saveManifest } = await import("./add.js");
-    saveManifest(answers.targetDir, buildManifest(answers, CLI_VERSION, detectPackageManager()));
+    saveManifest(answers.targetDir, buildManifest(answers, CLI_VERSION, nativePackageManager));
     p.log.step("Created .omnicraft/project.json");
 
     spinner.start("Initializing git repository...");
@@ -255,23 +268,29 @@ async function main(): Promise<void> {
       gitOkNative ? "Git repository initialized" : "Git not available — skipped git init",
     );
 
-    if (!args.skipInstall && mobile) {
+    if (nativeInstall.shouldInstall) {
       const shouldInstall = await confirmOrYes(
         args.yes,
-        "Install Expo dependencies with npm now? (Expo SDK + Expo Router — this can take a couple of minutes)",
+        `Install ${mobile ? "Expo" : "Tauri"} dependencies with ${nativePackageManager} now? (this can take a couple of minutes)`,
         p.confirm,
       );
       if (shouldInstall) {
-        p.log.step("Installing dependencies with npm — live output below");
-        const ok = await installDependencies(answers.targetDir, "npm");
-        if (ok) p.log.success("Dependencies installed");
-        else p.log.warn('Install failed — run "npm install" inside the project');
+        p.log.step(`Installing dependencies with ${nativePackageManager} — live output below`);
+        const ok = await installDependencies(answers.targetDir, nativePackageManager);
+        if (ok) p.log.success(`Dependencies installed with ${nativePackageManager}`);
+        else
+          p.log.warn(
+            `Install failed — check the output above, then run "${formatInstallCommand(nativePackageManager)}" inside the project`,
+          );
       } else {
-        p.log.step('Skipped — run "npm install" when ready');
+        p.log.step(
+          `Skipped — run "${formatInstallCommand(nativePackageManager)}" inside the project when ready`,
+        );
       }
-    }
-    if (!mobile) {
-      p.log.info("Dependencies were installed by create-tauri-app (npm)");
+    } else {
+      p.log.step(
+        `Skipped install — run "${formatInstallCommand(nativePackageManager)}" inside the project when ready`,
+      );
     }
 
     p.note(
@@ -280,7 +299,25 @@ async function main(): Promise<void> {
         : `cd ${answers.projectName}\ncargo --version            # Rust is required to build the shell\nnpm run tauri dev          # desktop app with hot reload\n# pair with a backend: see OMNICRAFT.md`,
       "Next steps",
     );
-    p.outro("Crafted! Happy building ⚡");
+      p.outro("Crafted! Happy building ⚡");
+      return;
+    }
+  } catch (err) {
+    if (err instanceof CancelledError) {
+      p.cancel(err.message);
+      return;
+    }
+    p.cancel("Something went wrong while scaffolding.");
+    if (args.debug) {
+      console.error(err);
+    } else {
+      p.log.error(
+        existsSync(answers.targetDir)
+          ? `${formatScaffoldFailure(err, answers.targetDir)} (re-run with --debug for the stack trace)`
+          : `${(err as Error).message} (re-run with --debug for the stack trace)`,
+      );
+    }
+    process.exitCode = 1;
     return;
   }
 
@@ -567,9 +604,8 @@ async function main(): Promise<void> {
         answers.authentication === "laravel-native" &&
         answers.architecture.kind === "separate-frontend-api"
       ) {
-        p.log.step(
-          "Installing Laravel Sanctum for first-party SPA sessions — no token scaffolding",
-        );
+        spinner.stop("Laravel application created — installing Sanctum");
+        p.log.step("Installing Laravel Sanctum for first-party SPA sessions — no token scaffolding");
         const sanctumInstalled = await runCommandVisible(
           "composer",
           ["require", "laravel/sanctum:4.3.3", "--no-interaction", "--no-progress"],
@@ -805,7 +841,11 @@ async function main(): Promise<void> {
     if (args.debug) {
       console.error(err);
     } else {
-      p.log.error(`${(err as Error).message} (re-run with --debug for the stack trace)`);
+      p.log.error(
+        existsSync(answers.targetDir)
+          ? `${formatScaffoldFailure(err, answers.targetDir)} (re-run with --debug for the stack trace)`
+          : `${(err as Error).message} (re-run with --debug for the stack trace)`,
+      );
     }
     process.exitCode = 1;
   }

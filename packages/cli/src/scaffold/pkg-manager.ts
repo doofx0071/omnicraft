@@ -23,6 +23,23 @@ export function getNativePackageManager(
   return platform === 'desktop' ? 'npm' : invokedManager
 }
 
+export interface NativeInstallPlan {
+  packageManager: PackageManager
+  shouldInstall: boolean
+}
+
+/** Resolves the native install step without executing a generator or package manager. */
+export function planNativeInstall(
+  platform: 'mobile' | 'desktop',
+  invokedManager: PackageManager,
+  skipInstall: boolean,
+): NativeInstallPlan {
+  return {
+    packageManager: getNativePackageManager(platform, invokedManager),
+    shouldInstall: !skipInstall,
+  }
+}
+
 export function formatInstallCommand(pm: PackageManager): string {
   return pm === 'yarn' ? 'yarn' : `${pm} install`
 }
