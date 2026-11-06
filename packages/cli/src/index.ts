@@ -590,7 +590,9 @@ async function main(): Promise<void> {
       spinner.stop("Laravel application created and configured");
     }
 
-    const envFiles = createEnvFiles(answers.targetDir);
+    const envFiles = createEnvFiles(answers.targetDir, {
+      betterAuth: answers.authentication === "better-auth",
+    });
     for (const file of envFiles)
       p.log.step(
         `Created ${file.replace(answers.targetDir + "\\", "").replace(answers.targetDir + "/", "")}`,
@@ -600,19 +602,22 @@ async function main(): Promise<void> {
     const { buildManifest } = await import("./manifest.js");
     const { saveManifest } = await import("./add.js");
     const manifest = buildManifest(answers, CLI_VERSION, detectPackageManager());
-    saveManifest(
-      answers.targetDir,
-      answers.authentication === "better-auth" ? { ...manifest, authentication: "none" } : manifest,
-    );
+    saveManifest(answers.targetDir, manifest);
     p.log.step("Created .omnicraft/project.json");
 
     if (answers.authentication === "better-auth") {
-      const result = applyModuleToProject("auth", answers.targetDir, { recordModule: false });
+      const result = applyModuleToProject("auth", answers.targetDir, {
+        recordModule: false,
+        applyConfiguredAuth: true,
+      });
       if (result.status !== "applied") {
         const details = result.status === "rejected" ? ` ${result.message}` : "";
         throw new Error(`Could not configure Better Auth during project creation.${details}`);
       }
       p.log.step("Configured Better Auth");
+      const { MODULES } = await import("./add.js");
+      const authModule = MODULES.find(({ id }) => id === "auth");
+      if (authModule?.nextSteps?.length) p.log.message(authModule.nextSteps.join("\n"));
     }
 
     spinner.start("Initializing git repository...");

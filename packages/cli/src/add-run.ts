@@ -86,7 +86,12 @@ function applyChangesTransactionally(targetDir: string, changes: Map<string, str
 export function applyModuleToProject(
   moduleId: ModuleId,
   targetDir: string,
-  options: { dryRun?: boolean; recordModule?: boolean; onApplying?: () => void } = {},
+  options: {
+    dryRun?: boolean
+    recordModule?: boolean
+    applyConfiguredAuth?: boolean
+    onApplying?: () => void
+  } = {},
 ): ModuleApplyResult {
   const module = MODULES.find((candidate) => candidate.id === moduleId)
   if (!module) throw new Error(`Unknown module "${moduleId}".`)
@@ -94,7 +99,9 @@ export function applyModuleToProject(
   const manifest = loadManifest(targetDir)
   if (
     manifest.modules.includes(module.id) ||
-    (module.id === 'auth' && manifest.authentication === 'better-auth')
+    (module.id === 'auth' &&
+      manifest.authentication === 'better-auth' &&
+      !options.applyConfiguredAuth)
   ) {
     return { status: 'already-installed', module }
   }
