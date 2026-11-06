@@ -4,20 +4,21 @@ Interactive project-scaffolding CLI. npm package **`create-omnicraft`** → user
 
 ## Documentation map — read what your task needs
 
-| Task                                          | Read first                                                                                                                                        |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Any change                                    | everything below in this file, plus [docs/development/feature-development-workflow.md](docs/development/feature-development-workflow.md)          |
-| How the CLI works                             | [docs/architecture/system-overview.md](docs/architecture/system-overview.md)                                                                      |
-| Where files belong                            | [docs/architecture/repository-structure.md](docs/architecture/repository-structure.md)                                                            |
-| Engine/composition/token/merge details        | [docs/architecture/template-engine.md](docs/architecture/template-engine.md)                                                                      |
-| New runtime/framework/stack                   | [docs/templates/adding-a-stack.md](docs/templates/adding-a-stack.md) + [docs/templates/template-contract.md](docs/templates/template-contract.md) |
-| New database/ORM/extra                        | [docs/templates/adding-an-integration.md](docs/templates/adding-an-integration.md)                                                                |
-| What is actually supported (and its evidence) | [docs/templates/stack-support-matrix.md](docs/templates/stack-support-matrix.md)                                                                  |
-| Test requirements per change type             | [docs/development/testing-strategy.md](docs/development/testing-strategy.md)                                                                      |
-| Which docs change with which code             | [docs/development/documentation-standards.md](docs/development/documentation-standards.md)                                                        |
-| Coding rules (incl. Windows subprocess law)   | [docs/development/coding-standards.md](docs/development/coding-standards.md)                                                                      |
-| Contributing + release process                | [CONTRIBUTING.md](CONTRIBUTING.md)                                                                                                                |
-| Current release status and priorities         | [ROADMAP.md](ROADMAP.md)                                                                                                                           |
+| Task                                          | Read first                                                                                                                                                      |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Any change                                    | everything below in this file, plus [docs/development/feature-development-workflow.md](docs/development/feature-development-workflow.md)                        |
+| How the CLI works                             | [docs/architecture/system-overview.md](docs/architecture/system-overview.md)                                                                                    |
+| Where files belong                            | [docs/architecture/repository-structure.md](docs/architecture/repository-structure.md)                                                                          |
+| Engine/composition/token/merge details        | [docs/architecture/template-engine.md](docs/architecture/template-engine.md)                                                                                    |
+| New runtime/framework/stack                   | [docs/templates/adding-a-stack.md](docs/templates/adding-a-stack.md) + [docs/templates/template-contract.md](docs/templates/template-contract.md)               |
+| New database/ORM/extra                        | [docs/templates/adding-an-integration.md](docs/templates/adding-an-integration.md)                                                                              |
+| What is actually supported (and its evidence) | [docs/templates/stack-support-matrix.md](docs/templates/stack-support-matrix.md)                                                                                |
+| Test requirements per change type             | [docs/development/testing-strategy.md](docs/development/testing-strategy.md)                                                                                    |
+| Which docs change with which code             | [docs/development/documentation-standards.md](docs/development/documentation-standards.md)                                                                      |
+| Coding rules (incl. Windows subprocess law)   | [docs/development/coding-standards.md](docs/development/coding-standards.md)                                                                                    |
+| Contributing + release process                | [CONTRIBUTING.md](CONTRIBUTING.md)                                                                                                                              |
+| Current release status and priorities         | [ROADMAP.md](ROADMAP.md)                                                                                                                                        |
+| Active v1.0.7 polish / generated-app scope    | [Polish plan](docs/plans/active/omnicraft-v107-polish-plan.md) + [generated-app follow-up](docs/plans/active/omnicraft-generated-app-quality-follow-up-plan.md) |
 
 Docs index: [docs/index.md](docs/index.md). Status vocabulary: Supported / Scaffold-verified /
 Selectable — unverified / Rejected — unsupported combination / Planned — never describe a combination

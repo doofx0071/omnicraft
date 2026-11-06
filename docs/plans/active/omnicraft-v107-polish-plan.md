@@ -1,6 +1,6 @@
 # OmniCraft v1.0.7 Polish Plan
 
-**Status:** Active — core reliability and documentation slices merged; generated-app and CI polish remain in progress<br>
+**Status:** Active — verified core, docs, CI-reliability and structural slices merged; remaining behavior fixes and hosted gate still open<br>
 **Opened:** 6 November 2026<br>
 **Repository:** <https://github.com/doofx0071/omnicraft><br>
 **Basis:** five parallel round-2 audits at `83fb898` (core source, templates, tests/CI, docs, open-source
@@ -19,64 +19,80 @@ practice, and adopt the peer-proven UX patterns that fit the evidence-first phil
 
 **Completed in merged commits:**
 
-- Production generation now uses pinned `create-expo-app@5.0.0`, `create-tauri-app@4.7.5`,
-  `shadcn@4.23.0`, and `prettier@3.9.10` constants; update the support-matrix wording only where it
-  now exactly matches production behavior.
+- Production generation uses pinned `create-expo-app@5.0.0`, `create-tauri-app@4.7.5`,
+  `shadcn@4.23.0`, and `prettier@3.9.10` constants.
 - Creation-time Better Auth persists `authentication: "better-auth"`, creates a blank
-  `BETTER_AUTH_SECRET=` placeholder in the server env files, prints module next steps, and remains
-  idempotent for a later `omnicraft add auth`.
-- Captured commands have a 300-second default timeout; all six official generator calls use a
-  600-second timeout and shared 64 MiB output ceiling.
-- Composer's visible Sanctum install is not wrapped in a spinner; patch replacements treat `$` text
-  literally; create-flow failures identify the target path and recovery action.
-- Tauri's generator does not offer a dependency-install/skip-install flag. The CLI handles its
-  optional npm installation separately, records the actual package manager, and honors
-  `--skip-install`.
-- Update checks skip non-TTY runs and use the cache directory correctly; `validateStackFlags` is
-  pure; collision previews use an explicit safe-file list; stale Livewire database hint is corrected.
+  `BETTER_AUTH_SECRET=` placeholder in server env files, prints module next steps, and is idempotent
+  with a later `omnicraft add auth`.
+- Captured commands use a 300-second default timeout; all six official generator calls pass a
+  600-second timeout and the shared 64 MiB output ceiling.
+- Patch replacements insert literal `$` sequences. Unit tests cover the update-check predicate and
+  `dirname` cache-directory creation, the explicit collision-directory prune list (while keeping
+  `.github` visible), and the partial-scaffold formatter helper.
 
-**Deferred from this polish cycle:**
+**Remaining core items:**
 
-- AI-agent detection hint, scaffold-wide `--dry-run`, and a `--no` decline-defaults flag.
-- Remaining support-evidence registry behavior is unchanged; structural split is complete.
+- Wire the update-check TTY/CI/opt-out predicate at the entry point; validate malformed-but-valid JSON
+  cache shapes.
+- Make `validateStackFlags` pure (it currently appends `tailwind` to the parsed `extras` array).
+- Wire partial-scaffold guidance into create failures; the formatter helper is tested but the create-flow
+  failure path does not call it.
+- Stop the Sanctum visible Composer command from running beneath an active spinner.
+- Resolve native install/package-manager behavior before claiming `--skip-install` or install success:
+  Expo passes `--no-install` to its generator but hardcodes npm for the optional post-scaffold install;
+  Tauri passes `--manager npm`, has no explicit CLI install step or `--skip-install` branch, yet logs
+  that dependencies were installed. The manifest still records the caller-detected manager, and native
+  manager helpers are not wired into production. Verify generator output, then align install behavior,
+  skip semantics, status messages, and manifest values with regression tests.
+- AI-agent hint, scaffold-wide `--dry-run`, and `--no` remain deferred.
+
+The `support-evidence.ts` structural split is complete; matrix behavior and support statuses are unchanged.
 
 ### B — Generated-app quality (`codex/polish-templates`)
 
 **Completed:** native Expo/Tauri `_env.example` files, with engine tests proving each variable is
 rendered and copied to `.env`; renderer allowlist and `__init__.py` behavior remain covered.
 
-**Deferred after dependency-metadata review:** per-stack `engines`/`.nvmrc`/`.editorconfig` and
-manifest descriptions; generated eslint CI; Node/Python/PHP test/lint harnesses; JSON 404 parity,
-security headers and rate limiting; `.vscode` recommendations; generated `AGENTS.md`;
-`SKIP_ENV_VALIDATION`; port troubleshooting; auth busy-state unification; Supabase exact-pin note.
-The required Node floors vary by actual selected dependency graph (Vite/ESLint, better-sqlite3,
-Expo, and Laravel Vite Plus have different floors), so a universal root declaration would be false.
-These need a per-composition design and generated-output tests rather than a broad shared fragment.
+The native `.env.example` files are copied to local `.env`, but the official Expo/Tauri `.gitignore`
+does not currently ignore that generated file. **In flight:** native `.env` ignore preservation is being
+implemented in the generated-api worktree; no commit is recorded yet. Keep this bounded fix in v1.0.7,
+not in the broader generated-app follow-up, and verify both generated files and ignore behavior before
+closing the item.
 
-**Still required before closing this plan:** choose and implement the next smallest safe generated-app
-polish slice (recommended: JSON 404 parity plus package-manager-independent env docs) or create a
-follow-up plan that lists the deferred items with exact validation scope.
+**Deferred to the linked [generated-app quality follow-up](omnicraft-generated-app-quality-follow-up-plan.md):**
+per-composition `engines`/`.nvmrc`/`.editorconfig`/descriptions; generated ESLint CI and per-stack test/lint
+harnesses; security headers and rate limits; `.vscode` recommendations; generated `AGENTS.md`;
+`SKIP_ENV_VALIDATION`; port troubleshooting; auth busy-state unification; and the Supabase exact-pin note.
+Dependency engine floors differ by composition (Vite/ESLint, better-sqlite3, Expo and Laravel Vite Plus),
+so a universal root declaration would be false. The follow-up requires per-composition floors and
+runtime/build tests before documenting them.
+
+The first bounded template slice is native `.env` ignore preservation (in flight above); follow it with
+the separately scoped JSON 404 contract for unmatched `/api/*` routes in the Node/FastAPI APIs. Neither
+changes support status without the existing hosted runtime evidence. Broader engine metadata, generated
+lint/test defaults, security middleware, and agent/editor guidance are tracked in the
+[generated-app quality follow-up](omnicraft-generated-app-quality-follow-up-plan.md).
 
 ### C — CI, flake, and packaging (`codex/polish-ci`)
 
-**Completed:** `fail-fast: false` on the Unix matrix, 30-second Vitest/hook timeouts, a single
-cross-ref serialized CI queue with no cancellation (release tags cannot be cancelled by a main push),
-bounded pinned Livewire retrieval retry (fetch + output marker only; no Composer/migration retry), one
-bounded Tauri relaunch with diagnostic inventory, `dwait` adoption in both remaining Docker scripts,
-Node 20 helper docstring fix, package bin-shim check, and update-check temp cleanup. Strict release
-required-job set remains unchanged.
+**Completed:** `fail-fast: false` on the Unix matrix, 30-second Vitest/hook timeouts, one cross-ref
+serialized CI queue with `queue: max` and `cancel-in-progress: false`, bounded pinned Livewire retrieval
+retry (retrieval/output-marker step only), one bounded Tauri relaunch with diagnostics, `dwait` adoption
+in the remaining Docker waiters, Node 20 helper docstring fix, package bin-shim check, and update-check
+temp cleanup. Strict release required-job set remains unchanged.
 
-**Deferred:** Composer/Rust/Gradle caches, Actions-major SHA bumps, PR-gate tiering, a scaffold/build
-freshness matrix for the selectable tail, and a written flake/rerun policy. The freshness matrix was
-kept out of this release to avoid increasing CI cost and failure surface before the current gate is
-stable; consider it separately after v1.0.7 main/tag runs are green.
+**Deferred:** Composer/Rust/Gradle caches, Actions-major SHA bumps, PR-gate tiering, and a
+scaffold/build freshness matrix for the selectable tail. CI concurrency serializes all refs but GitHub
+permits up to 100 queued runs and does not promise release-tag priority. The freshness matrix remains
+out of this release to avoid increasing CI cost/failure surface. Rerun policy is recorded in the
+[testing strategy](../../development/testing-strategy.md) and [contributor guide](../../../CONTRIBUTING.md).
 
 ### D — Documentation truth (`codex/polish-docs`)
 
 **Completed:** v1.0.6 release-state and 244/42 evidence counts; removed stale Next.js pending-CI claim;
 documented the dotfile allowlist and Win32 command quoting; corrected capability registry paths;
-updated contributor command/test inventories and broken links; recorded C4 (add help) as deferred;
-clarified `{{authSetup}}` in both token catalogs.
+updated contributor command/test inventories and broken links; documented the `omnicraft add` command
+in `HELP_TEXT` and README Options with parity coverage; clarified `{{authSetup}}` in both token catalogs.
 
 ### F — Structural (`codex/polish-structural`)
 
@@ -85,19 +101,19 @@ all exports preserved; typecheck, unit suite, and checker passed. Matrix behavio
 
 ## Definition of done
 
-- [x] Completed slices merged; `tsc` clean; full unit suite green (**337 tests**); smoke self-asserts
-      22/22; `check-support-evidence` green (49 Supported rows). Re-run after any further code changes.
-- [ ] Remaining intended polish items are either implemented with tests or explicitly moved to a
-      linked follow-up plan with rationale and owner.
-- [ ] Independent generated-output audit covers each changed template family (native env, root defaults,
-      and any added security/testing layers); no unresolved tokens or incorrect engine claims.
-- [x] Current docs for merged slices reflect the landed code; README Options and HELP_TEXT parity
-      passes. Add-command help remains explicitly deferred (C4) and must be finished or split before
-      plan closure.
-- [ ] Hosted CI main gate is green on the final polish commit; tag path repeats the strict gate without
-      main/tag cancellation or missing required jobs.
-- [ ] v1.0.7 prepared per CONTRIBUTING (version, CHANGELOG, ROADMAP), then published through the
-      automated Trusted Publishing pipeline with GitHub Release and bot snapshot verification.
+- [ ] Re-run typecheck, the full unit suite, smoke (22 listed paths), and
+      `check-support-evidence` (49 Supported rows) after the remaining source/template fixes. Historical
+      pass counts do not substitute for a check on the final head.
+- [ ] Remaining correctness items in this plan are implemented with focused tests; broader generated-app
+      work is assigned to the linked follow-up with a maintainer owner and per-item validation scope.
+- [ ] Independent generated-output audit covers native `.env` ignore behavior and the unmatched-API 404
+      contract; no unresolved tokens, tracked local `.env`, or incorrect engine claims.
+- [x] Documentation workstream: README Options and HELP_TEXT parity passes; `omnicraft add` is documented;
+      54 Markdown pages/links were checked in the docs workstream.
+- [ ] Hosted CI main gate is green on the final pushed continuation commit; the tag path must preserve and
+      pass the strict required-job set.
+- [ ] Prepare v1.0.7 version, CHANGELOG, and ROADMAP only after release content and exact-head hosted
+      evidence are confirmed; verify npm publication, GitHub Release, and the bot snapshot after release.
 
 ## Explicit non-goals
 
