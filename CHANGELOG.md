@@ -6,6 +6,43 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [1.0.7] — 2026-11-06
+
+### Added
+
+- Unmatched `/api` routes return a unified JSON 404 (`{ "error": "Not found" }`) across Express,
+  Fastify, Hono, and FastAPI separate-API scaffolds; `/apix` and known-resource 404 bodies keep their
+  framework semantics, and Node/FastAPI runtime integrations assert the exact contract.
+- Native Expo and Tauri scaffolds generate `.env` from a documented `.env.example` and ignore the
+  local file in git while preserving the official generators' own ignore rules.
+- Native scaffolds record the package manager that actually installed dependencies, and Tauri desktop
+  projects install their npm dependencies through OmniCraft unless `--skip-install` is passed.
+- Captured subprocess commands default to a 300-second timeout; official generator runs use an
+  explicit 600-second timeout and shared 64 MiB output ceiling.
+- A hosted-CI rerun policy and a serialized CI queue that protects release-tag runs from main-push
+  cancellation; the unix matrix no longer cancels sibling jobs on one failure.
+- Bounded retries for pinned Laravel starter retrieval and one bounded Tauri relaunch with
+  WebView2/crash diagnostics on hosted Windows runners.
+
+### Changed
+
+- `validateStackFlags` no longer mutates the parsed extras array; shadcn still implies Tailwind.
+- Official generators are pinned (`create-expo-app` 5.0.0, `create-tauri-app` 4.7.5, `shadcn` 4.23.0,
+  `prettier` 3.9.10), and `tailwindcss`/`@tailwindcss/vite` are pinned to the exact 4.3.4 pair over
+  the broken upstream 4.3.5 release.
+- Update checks run only for interactive TTY sessions; cached update data is shape-validated and
+  future-dated entries refetch.
+- The Sanctum Composer install no longer runs beneath an active spinner; module patch replacements
+  insert `$` sequences literally; scaffold failures name the target directory and recovery action;
+  the collision preview surfaces existing `.github` workflows.
+- `support-evidence.ts` is split into focused `support/` modules behind a stable barrel.
+
+### Fixed
+
+- Tailwind-bearing scaffolds resolve `@tailwindcss/oxide` again after the upstream 4.3.5 release
+  shipped without its platform package.
+- Livewire starter retrieval retries transient registry failures instead of failing the whole gate.
+
 ## [1.0.6] — 2026-11-05
 
 ### Added

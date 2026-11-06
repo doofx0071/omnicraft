@@ -6,21 +6,22 @@
 
 ## Progress overview
 
-| Version | Theme                                        | Progress             | Issues  |
-| ------- | -------------------------------------------- | -------------------- | ------- |
-| v0.1.0  | Public launch                                | ✅ 6/6               | #1–#6   |
-| v0.2.0  | Scaffolder hardening                         | ✅ 5/5               | #7–#11  |
-| v0.3.0  | Backend & database expansion                 | ✅ 5/5               | #12–#16 |
-| v0.3.1  | Hardening (master-plan PR 2/3/5)             | ✅ tag               | —       |
-| v0.4.0  | Frontend expansion                           | ✅ 4/4               | #17–#20 |
-| v0.5.0  | Platform expansion (mobile, desktop)         | ✅ 2/2               | #21–#22 |
-| v1.0.0  | First stable release                         | ✅ 5/5               | #23–#27 |
-| v1.0.1  | SQLite first-run fix                         | ✅ published         | —       |
-| v1.0.2  | Reliability fixes and runtime evidence       | ✅ published         | —       |
-| v1.0.3  | Laravel Livewire, auth, and runtime evidence | 🟡 consolidated into v1.0.5 | —       |
-| v1.0.4  | Laravel Inertia React scaffolding            | 🟡 consolidated into v1.0.5 | —       |
-| v1.0.5  | Auth integrations and verified stack updates | ✅ published         | —       |
-| v1.0.6  | Audit remediation and release-process repair | ✅ published | —       |
+| Version | Theme                                            | Progress                    | Issues  |
+| ------- | ------------------------------------------------ | --------------------------- | ------- |
+| v0.1.0  | Public launch                                    | ✅ 6/6                      | #1–#6   |
+| v0.2.0  | Scaffolder hardening                             | ✅ 5/5                      | #7–#11  |
+| v0.3.0  | Backend & database expansion                     | ✅ 5/5                      | #12–#16 |
+| v0.3.1  | Hardening (master-plan PR 2/3/5)                 | ✅ tag                      | —       |
+| v0.4.0  | Frontend expansion                               | ✅ 4/4                      | #17–#20 |
+| v0.5.0  | Platform expansion (mobile, desktop)             | ✅ 2/2                      | #21–#22 |
+| v1.0.0  | First stable release                             | ✅ 5/5                      | #23–#27 |
+| v1.0.1  | SQLite first-run fix                             | ✅ published                | —       |
+| v1.0.2  | Reliability fixes and runtime evidence           | ✅ published                | —       |
+| v1.0.3  | Laravel Livewire, auth, and runtime evidence     | 🟡 consolidated into v1.0.5 | —       |
+| v1.0.4  | Laravel Inertia React scaffolding                | 🟡 consolidated into v1.0.5 | —       |
+| v1.0.5  | Auth integrations and verified stack updates     | ✅ published                | —       |
+| v1.0.6  | Audit remediation and release-process repair     | ✅ published                | —       |
+| v1.0.7  | Gate reliability, CLI correctness, API contracts | 🟡 release candidate        | —       |
 
 ---
 
@@ -125,6 +126,24 @@ checks at the Node 20 CLI floor; see the [testing strategy](docs/development/tes
 The tag workflow published through npm Trusted Publishing and updated the release snapshot in the
 [system overview](docs/architecture/system-overview.md). The publication state above records npm
 `latest` and the Git tag as checked on 2026-11-06.
+
+## v1.0.7 — Gate reliability, CLI correctness, and API contracts (release candidate)
+
+Prepares a release from the [v1.0.7 polish plan](docs/plans/active/omnicraft-v107-polish-plan.md):
+hosted-gate reliability fixes (serialized CI queue, unix `fail-fast`, Vitest timeouts, bounded
+Laravel starter-retrieval retry, Tauri window-check relaunch with diagnostics), CLI correctness
+(pure flag validation, TTY-gated update checks with validated caching, truthful Tauri install
+handling and package-manager recording, Sanctum spinner discipline, literal module patch
+replacement, target-aware scaffold failure guidance), a unified JSON 404 contract for unmatched
+`/api` routes across the Node and FastAPI separate-API scaffolds with runtime assertions, native
+Expo/Tauri `.env` generation and ignore coverage, pinned official generators, a `tailwindcss`
+4.3.4 pin over the broken upstream 4.3.5 release, `support-evidence.ts` split into focused
+modules, and reconciled documentation including the `omnicraft add` command surface and a hosted
+CI rerun policy. Broader generated-app quality work is tracked in the
+[generated-app quality follow-up](docs/plans/active/omnicraft-generated-app-quality-follow-up-plan.md).
+
+The release PR must pass the `supported-stack-release-gate` on its exact versioned commit before it
+is merged. Pushing the matching `v1.0.7` tag will trigger the npm publishing workflow.
 
 ## v1.0.3 and v1.0.4 — candidate scopes consolidated into v1.0.5
 
