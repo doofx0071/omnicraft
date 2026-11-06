@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 
 const REGISTRY_URL = 'https://registry.npmjs.org/create-omnicraft/latest'
@@ -77,7 +77,7 @@ function readCache(cacheFile: string, now: number): string | null {
 
 function writeCache(cacheFile: string, latest: string, now: number): void {
   try {
-    mkdirSync(join(cacheFile, '..'), { recursive: true })
+    mkdirSync(dirname(cacheFile), { recursive: true })
     writeFileSync(cacheFile, JSON.stringify({ checkedAt: now, latest } satisfies CacheShape))
   } catch {
     // cache is best-effort
@@ -88,6 +88,14 @@ export interface CheckDeps {
   fetchFn?: typeof fetch
   now?: () => number
   cacheFile?: string
+}
+
+/** Update notices are interactive-only and can be disabled in CI or by env. */
+export function shouldCheckForUpdate(
+  isInteractive: boolean,
+  env: Partial<Pick<NodeJS.ProcessEnv, 'NO_UPDATE_NOTIFIER' | 'CI'>> = process.env,
+): boolean {
+  return isInteractive && !env.NO_UPDATE_NOTIFIER && !env.CI
 }
 
 /**

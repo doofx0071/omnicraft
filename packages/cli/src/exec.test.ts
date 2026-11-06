@@ -5,6 +5,8 @@ import { spawnSync } from 'node:child_process'
 import { afterAll, describe, expect, it, vi } from 'vitest'
 import {
   assertGeneratorOutput,
+  GENERATOR_MAX_BUFFER,
+  GENERATOR_TIMEOUT_MS,
   joinWin32Command,
   quoteWin32Token,
   runCommand,
@@ -25,7 +27,7 @@ describe('exec helpers', () => {
     expect(result.exitCode).toBe(0)
   })
 
-  it('passes the default timeout to captured commands when none is specified', () => {
+  it('passes the default timeout and output ceiling to captured commands when none is specified', () => {
     vi.mocked(spawnSync).mockReturnValueOnce({
       pid: 1,
       output: [],
@@ -41,6 +43,18 @@ describe('exec helpers', () => {
     expect(spawnSync).toHaveBeenLastCalledWith(
       ...(process.platform === 'win32' ? [expect.any(String)] : ['node', ['--version']]),
       expect.objectContaining({ timeout: 300_000 }),
+    )
+
+    runCommand('node', ['--version'], process.cwd(), {
+      maxBuffer: GENERATOR_MAX_BUFFER,
+      timeoutMs: GENERATOR_TIMEOUT_MS,
+    })
+    expect(spawnSync).toHaveBeenLastCalledWith(
+      ...(process.platform === 'win32' ? [expect.any(String)] : ['node', ['--version']]),
+      expect.objectContaining({
+        maxBuffer: 64 * 1024 * 1024,
+        timeout: 600_000,
+      }),
     )
   })
 

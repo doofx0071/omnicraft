@@ -20,7 +20,7 @@ vi.mock("@clack/prompts", () => ({
 }));
 
 import { applyModuleToProject, runAdd } from "./add-run.js";
-import { loadManifest, saveManifest } from "./add.js";
+import { loadManifest, MODULES, saveManifest } from "./add.js";
 
 let tempRoot = "";
 
@@ -166,11 +166,38 @@ describe("omnicraft add", () => {
       path,
       readFileSync(join(tempRoot, path), "utf8"),
     ]);
+    expect(applyModuleToProject("auth", tempRoot).status).toBe("already-installed");
     await runAdd("auth", tempRoot, false);
     expect(
       filesUnder(".").map((path) => [path, readFileSync(join(tempRoot, path), "utf8")]),
     ).toEqual(before);
     expect(loadManifest(tempRoot).modules).toEqual([]);
+  });
+
+  it("inserts patch replacements literally when they contain dollar patterns", () => {
+    createAuthProject();
+    const original = MODULES.find(({ id }) => id === "auth")!;
+    const moduleIndex = MODULES.indexOf(original);
+    MODULES[moduleIndex] = {
+      ...original,
+      patches: [
+        {
+          file: "server/src/index.ts",
+          find: 'import { apiRouter } from "./routes/index.js";',
+          replace: "$&\\n$1 $` $' $$",
+        },
+      ],
+    };
+
+    try {
+      const result = applyModuleToProject("auth", tempRoot);
+      expect(result.status).toBe("applied");
+      expect(readFileSync(join(tempRoot, "server/src/index.ts"), "utf8")).toContain(
+        "$&\\n$1 $` $' $$",
+      );
+    } finally {
+      MODULES[moduleIndex] = original;
+    }
   });
 
   it("is idempotent and leaves the second invocation unchanged", async () => {

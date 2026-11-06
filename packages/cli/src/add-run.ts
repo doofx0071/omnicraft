@@ -187,7 +187,7 @@ export function applyModuleToProject(
   for (const patch of renderedPatches) {
     const abs = join(targetDir, patch.file)
     const current = changes.get(patch.file) ?? readFileSync(abs, 'utf8')
-    changes.set(patch.file, current.replace(patch.find, patch.replace))
+    changes.set(patch.file, current.replace(patch.find, () => patch.replace))
   }
   for (const [path, content] of files) {
     if (changes.has(path)) throw new Error(`Module definition writes "${path}" more than once.`)

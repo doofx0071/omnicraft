@@ -73,17 +73,24 @@ describe('findCollisions', () => {
     expect(protectedFiles).toEqual([])
   })
 
-  it('ignores node_modules, dist, and dot-directories during the walk', () => {
+  it('prunes known generated directories and previews hidden template directories', () => {
     touch('client/node_modules/vite/index.js')
     touch('client/dist/bundle.js')
     touch('client/.vite/deps/react.js')
+    touch('client/.next/cache/index')
     touch('.git/HEAD')
+    touch('.github/workflows/ci.yml')
+    touch('.local-settings/config.json')
     touch('server/dist/index.js')
     touch('client/src/index.tsx')
 
     const { collisions, protectedFiles } = findCollisions(target, ['.', 'client', 'server'])
 
-    expect(collisions).toEqual(['client/src/index.tsx'])
+    expect(collisions).toEqual([
+      '.github/workflows/ci.yml',
+      '.local-settings/config.json',
+      'client/src/index.tsx',
+    ])
     expect(protectedFiles).toEqual([])
   })
 
