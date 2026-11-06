@@ -6,10 +6,14 @@ import { applyModuleToProject, runAdd } from "./add-run.js";
 import {
   CLI_VERSION,
   CNA_PACKAGE,
+  CREATE_EXPO_APP_PACKAGE,
+  CREATE_TAURI_APP_PACKAGE,
   LARAVEL_INERTIA_REACT_STARTER_KITS,
   LARAVEL_LIVEWIRE_STARTER_KITS,
+  PRETTIER_PACKAGE,
   SHADCN_BASE,
   SHADCN_COMPONENTS,
+  SHADCN_PACKAGE,
   SHADCN_PRESET,
   TEMPLATES_ROOT,
   TIGED_PACKAGE,
@@ -173,7 +177,7 @@ async function main(): Promise<void> {
         "npx",
         [
           "--yes",
-          "create-expo-app@latest",
+          CREATE_EXPO_APP_PACKAGE,
           answers.targetDir,
           "--template",
           "default@sdk-58",
@@ -200,7 +204,7 @@ async function main(): Promise<void> {
         "npx",
         [
           "--yes",
-          "create-tauri-app@latest",
+          CREATE_TAURI_APP_PACKAGE,
           answers.targetDir,
           "--template",
           "react-ts",
@@ -717,7 +721,7 @@ async function main(): Promise<void> {
               "npx",
               [
                 "--yes",
-                "shadcn@latest",
+                SHADCN_PACKAGE,
                 "init",
                 "--base",
                 SHADCN_BASE,
@@ -732,18 +736,18 @@ async function main(): Promise<void> {
               init.ok &&
               runCommand(
                 "npx",
-                ["--yes", "shadcn@latest", "add", ...SHADCN_COMPONENTS, "--yes", "--overwrite"],
+                ["--yes", SHADCN_PACKAGE, "add", ...SHADCN_COMPONENTS, "--yes", "--overwrite"],
                 clientDir,
               ).ok;
             if (init.ok && add) {
               // The shadcn CLI emits its own formatting — normalize to the
               // project's prettier config so the lint gates stay clean.
-              runCommand("npx", ["--yes", "prettier@latest", "--write", "."], clientDir);
+              runCommand("npx", ["--yes", PRETTIER_PACKAGE, "--write", "."], clientDir);
               spinner.stop(`shadcn/ui ready (${SHADCN_PRESET}: ${SHADCN_COMPONENTS.join(", ")})`);
             } else {
               spinner.stop("shadcn setup failed");
               p.log.warn(
-                `Run manually inside ${answers.fullStack ? "client/" : "the project"}:\n  npx shadcn@latest init --base ${SHADCN_BASE} --preset ${SHADCN_PRESET} --no-monorepo --force\n  npx shadcn@latest add ${SHADCN_COMPONENTS.join(" ")}`,
+                `Run manually inside ${answers.fullStack ? "client/" : "the project"}:\n  npx ${SHADCN_PACKAGE} init --base ${SHADCN_BASE} --preset ${SHADCN_PRESET} --no-monorepo --force\n  npx ${SHADCN_PACKAGE} add ${SHADCN_COMPONENTS.join(" ")}`,
               );
             }
           }
