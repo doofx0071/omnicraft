@@ -133,6 +133,19 @@ describe("validateStackFlags", () => {
     ).not.toThrow();
   });
 
+  it("keeps validation pure and implies Tailwind while resolving answers", () => {
+    const args = parseArgs(["--extras", "shadcn"]);
+    Object.freeze(args.extras);
+
+    validateStackFlags(args);
+    expect(args.extras).toEqual(["shadcn"]);
+
+    const answers = resolveAnswers(args, "demo", "/tmp/demo");
+
+    expect(args.extras).toEqual(["shadcn"]);
+    expect(answers.extras).toEqual({ tailwind: true, eslintPrettier: false, shadcn: true });
+  });
+
   it("accepts the native TypeScript selection", () => {
     expect(() =>
       validateStackFlags(parseArgs(["--platform", "mobile", "--lang", "typescript"])),
