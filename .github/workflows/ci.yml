@@ -15,12 +15,13 @@ on:
   schedule:
     - cron: '17 2 * * *'
 
-# One gate per ref: a second push to the same branch/tag supersedes the
-# in-flight run instead of racing it for the scarce macOS runner pool
-# (two full gates started 17s apart on 5 November and collided).
+# Serialize all CI refs so a main push cannot cancel a release-tag gate (or
+# race it for scarce macOS runners). Keep pending runs instead of replacing
+# them; GitHub allows up to 100 queued runs in this group.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: omnicraft-ci
+  queue: max
+  cancel-in-progress: false
 
 jobs:
   # Hosted runners on 3 OSes x Node {20 (declared minimum), 24}.
