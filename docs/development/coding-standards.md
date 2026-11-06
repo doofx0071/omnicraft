@@ -90,3 +90,6 @@ Template dependency versions are chosen for peer compatibility, not recency. Bef
 - `typescript` is pinned to `^5.9.3` — typescript-eslint peers require `<6.1` (TS 7 breaks it).
 - `prisma`/`@prisma/client` pinned to `^7.10.1` — npm's `latest` tag currently points at an 8.0 RC.
   Check peer ranges of the dependent packages before changing either.
+- `tailwindcss`/`@tailwindcss/vite` are pinned to the exact `4.3.4` — Tailwind's 4.3.5 release did not publish the
+  matching `@tailwindcss/oxide@4.3.5` platform package, so fresh installs resolving `^4.3.5` fail with
+  ETARGET. Revisit only when a Tailwind release publishes a complete version pair.
