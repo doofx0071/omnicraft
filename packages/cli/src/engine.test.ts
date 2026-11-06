@@ -343,7 +343,7 @@ describe("composition compatibility", () => {
     },
   );
 
-  it("scaffolds None without Better Auth files or dependencies", () => {
+  it("scaffolds None without Better Auth files, dependencies, or secret placeholders", () => {
     const dir = makeTempDir("auth-none");
     scaffoldInto(dir, makeAnswers({ authentication: "none" }));
 
@@ -357,6 +357,12 @@ describe("composition compatibility", () => {
     expect(dependencies["better-auth"]).toBeUndefined();
     expect(dependencies["@better-auth/drizzle-adapter"]).toBeUndefined();
     expect(serverIndex).not.toContain("/api/auth/");
+    expect(readFileSync(join(dir, "server", ".env.example"), "utf8")).not.toContain(
+      "BETTER_AUTH_SECRET=",
+    );
+    expect(readFileSync(join(dir, "server", ".env"), "utf8")).not.toContain(
+      "BETTER_AUTH_SECRET=",
+    );
   });
 
   it.each(["none", "laravel-native"] as const)(

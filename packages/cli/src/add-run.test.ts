@@ -148,8 +148,14 @@ describe("omnicraft add", () => {
 
   it("applies creation-time auth without recording it as an added module", async () => {
     createAuthProject();
+    const projectManifest = loadManifest(tempRoot);
+    projectManifest.authentication = "better-auth";
+    saveManifest(tempRoot, projectManifest);
 
-    const result = applyModuleToProject("auth", tempRoot, { recordModule: false });
+    const result = applyModuleToProject("auth", tempRoot, {
+      recordModule: false,
+      applyConfiguredAuth: true,
+    });
 
     expect(result.status).toBe("applied");
     expect(loadManifest(tempRoot).authentication).toBe("better-auth");
