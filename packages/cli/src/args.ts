@@ -58,6 +58,10 @@ Options:
   -h, --help           Show this help
   -v, --version        Show version
 
+Commands:
+  omnicraft add <auth|docker|testing> [target] [--dry-run]
+                       Add a module to an existing OmniCraft project
+
 Examples:
   npm create omnicraft@latest
   npm create omnicraft@latest my-app

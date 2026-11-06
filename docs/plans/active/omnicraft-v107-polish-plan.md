@@ -1,6 +1,6 @@
 # OmniCraft v1.0.7 Polish Plan
 
-**Status:** Active — round-2 scan complete; execution starting<br>
+**Status:** Active — core reliability and documentation slices merged; generated-app and CI polish remain in progress<br>
 **Opened:** 6 November 2026<br>
 **Repository:** <https://github.com/doofx0071/omnicraft><br>
 **Basis:** five parallel round-2 audits at `83fb898` (core source, templates, tests/CI, docs, open-source
@@ -17,82 +17,87 @@ practice, and adopt the peer-proven UX patterns that fit the evidence-first phil
 
 ### A — CLI surface and robustness (`codex/polish-core`)
 
-- Use the pinned generator constants in the shipped path (`src/index.ts` hardcodes `@latest` while
-  `src/config.ts` pins exist for CI only); add a `create-tauri-app` pin constant. The support matrix
-  currently claims a pin users do not get.
-- Close the Better Auth create-flow guidance loop: print the auth module's next steps after
-  "Configured Better Auth", template a `BETTER_AUTH_SECRET=` placeholder into `server/.env`, and make
-  `omnicraft add auth` report idempotent after create-time Better Auth instead of refusing on a
-  collision (manifest records `authentication: "none"` today).
-- Spinner discipline in the separate-API Laravel flow (stop the spinner before visible composer
-  output — the repo's own subprocess law).
-- Production default timeouts in `src/exec.ts` (no child process blocks forever behind a spinner);
-  extract the repeated 64 MB buffer constant; one-line `$`-pattern fix in add-run patch replacement.
-- Create-flow failure guidance (print target dir + remediation hint; contrast with add-run rollback).
-- `--skip-install` desktop behavior stated and honored where the generator allows; manifest records
-  the package manager that actually installed.
-- HELP_TEXT and README Options gain the `omnicraft add <module> [target] [--dry-run]` section (kept
-  identical per the coupling rule — closes the untruthful C4 checkbox).
-- Agent-detection hint printing the one-shot `--yes` command (create-vite pattern); `--dry-run` for the
-  scaffold flow; a `--no` decline-defaults counterpart (create-astro pair).
-- Update check skipped for non-TTY scripted runs; `dirname` fix; `validateStackFlags` made pure;
-  collision-preview safelist (create-astro pattern); stale Livewire "SQLite only" hint refreshed.
+**Completed in merged commits:**
+
+- Production generation now uses pinned `create-expo-app@5.0.0`, `create-tauri-app@4.7.5`,
+  `shadcn@4.23.0`, and `prettier@3.9.10` constants; update the support-matrix wording only where it
+  now exactly matches production behavior.
+- Creation-time Better Auth persists `authentication: "better-auth"`, creates a blank
+  `BETTER_AUTH_SECRET=` placeholder in the server env files, prints module next steps, and remains
+  idempotent for a later `omnicraft add auth`.
+- Captured commands have a 300-second default timeout; all six official generator calls use a
+  600-second timeout and shared 64 MiB output ceiling.
+- Composer's visible Sanctum install is not wrapped in a spinner; patch replacements treat `$` text
+  literally; create-flow failures identify the target path and recovery action.
+- Tauri's generator does not offer a dependency-install/skip-install flag. The CLI handles its
+  optional npm installation separately, records the actual package manager, and honors
+  `--skip-install`.
+- Update checks skip non-TTY runs and use the cache directory correctly; `validateStackFlags` is
+  pure; collision previews use an explicit safe-file list; stale Livewire database hint is corrected.
+
+**Deferred from this polish cycle:**
+
+- AI-agent detection hint, scaffold-wide `--dry-run`, and a `--no` decline-defaults flag.
+- Remaining support-evidence registry behavior is unchanged; structural split is complete.
 
 ### B — Generated-app quality (`codex/polish-templates`)
 
-- Native `_env.example` for Expo (`EXPO_PUBLIC_API_URL`) and Tauri (`VITE_API_URL`) — still-open
-  round-1 item breaking physical-device first runs.
-- `engines` + `_nvmrc` (new dotfile-allowlist entry) + `.editorconfig` + `description` fields in
-  generated manifests; Node floor per stack (22 for SQLite roots per `better-sqlite3`, 20.12+ elsewhere).
-- ESLint extra enforces itself: generated CI gains a lint step when the extra is selected.
-- JSON 404 fallback for Express and Hono (response-shape parity); helmet-equivalent security headers
-  and one rate-limited route for Express/Fastify/Hono/FastAPI with exact cross-framework parity.
-- Minimal test harness per stack: vitest health test for Node bases, pytest for FastAPI, ruff dev group
-  for FastAPI, pint + artisan test steps in generated PHP CI.
-- `.vscode/extensions.json` recommendations layered per extra (create-vue pattern); generated
-  `AGENTS.md` per project with stack-specific commands and doc links (create-astro pattern);
-  `SKIP_ENV_VALIDATION` escape hatch in generated `env.ts` so the shipped CI can build (T3 pattern).
-- Port 3000/5173 troubleshooting rows; busy-state pattern unified via the shared helper; supabase-js
-  exact-pin documented; `{{authSetup}}` added to the contract token list.
+**Completed:** native Expo/Tauri `_env.example` files, with engine tests proving each variable is
+rendered and copied to `.env`; renderer allowlist and `__init__.py` behavior remain covered.
+
+**Deferred after dependency-metadata review:** per-stack `engines`/`.nvmrc`/`.editorconfig` and
+manifest descriptions; generated eslint CI; Node/Python/PHP test/lint harnesses; JSON 404 parity,
+security headers and rate limiting; `.vscode` recommendations; generated `AGENTS.md`;
+`SKIP_ENV_VALIDATION`; port troubleshooting; auth busy-state unification; Supabase exact-pin note.
+The required Node floors vary by actual selected dependency graph (Vite/ESLint, better-sqlite3,
+Expo, and Laravel Vite Plus have different floors), so a universal root declaration would be false.
+These need a per-composition design and generated-output tests rather than a broad shared fragment.
+
+**Still required before closing this plan:** choose and implement the next smallest safe generated-app
+polish slice (recommended: JSON 404 parity plus package-manager-independent env docs) or create a
+follow-up plan that lists the deferred items with exact validation scope.
 
 ### C — CI, flake, and packaging (`codex/polish-ci`)
 
-- Landed immediately on main: `fail-fast: false` on the unix matrix, `testTimeout`/`hookTimeout` 30s,
-  workflow-level `concurrency` with `cancel-in-progress`.
-- Bounded 3-attempt retry around pinned starter-kit retrieval; one bounded Tauri relaunch inside the
-  window wait with real diagnostics capture (nightly still fails with empty output).
-- Composer/rust/gradle caches for the heavy jobs; checkout/setup-node major bumps (SHA-pinned);
-  `dwait` adoption in the two remaining Docker scripts; node20 docstring fix; bin-shim step in the
-  package job; temp-dir hygiene in update-check tests.
-- Tier the PR gate (fast subset for PRs, full gate for main/tag/nightly) and document the flake/rerun
-  policy in testing-strategy + CONTRIBUTING.
-- T3-style generated matrix script (driven by `capabilities.ts`/`compatibility.ts` so it cannot drift)
-  scaffold + build-verifying the Scaffold-verified long tail on PRs.
+**Completed:** `fail-fast: false` on the Unix matrix, 30-second Vitest/hook timeouts, a single
+cross-ref serialized CI queue with no cancellation (release tags cannot be cancelled by a main push),
+bounded pinned Livewire retrieval retry (fetch + output marker only; no Composer/migration retry), one
+bounded Tauri relaunch with diagnostic inventory, `dwait` adoption in both remaining Docker scripts,
+Node 20 helper docstring fix, package bin-shim check, and update-check temp cleanup. Strict release
+required-job set remains unchanged.
 
-### D — Documentation truth (`codex/polish-docs`, runs after A–C)
+**Deferred:** Composer/Rust/Gradle caches, Actions-major SHA bumps, PR-gate tiering, a scaffold/build
+freshness matrix for the selectable tail, and a written flake/rerun policy. The freshness matrix was
+kept out of this release to avoid increasing CI cost and failure surface before the current gate is
+stable; consider it separately after v1.0.7 main/tag runs are green.
 
-- ROADMAP v1.0.6 section rewritten in past tense; rejection re-scope (254/52 → 244/42) reconciled in
-  README + testing-strategy; "still pending hosted CI" deleted; dotfile allowlist rule rewritten in
-  AGENTS/contract/engine docs; coding-standards subprocess law updated for quoted target-path args;
-  `AVAILABLE` references corrected; CONTRIBUTING command list completed; broken plan links fixed;
-  repository-structure and AGENTS refreshed for everything A–C landed.
+### D — Documentation truth (`codex/polish-docs`)
 
-### F — Structural (`codex/polish-structural`, parallel with D)
+**Completed:** v1.0.6 release-state and 244/42 evidence counts; removed stale Next.js pending-CI claim;
+documented the dotfile allowlist and Win32 command quoting; corrected capability registry paths;
+updated contributor command/test inventories and broken links; recorded C4 (add help) as deferred;
+clarified `{{authSetup}}` in both token catalogs.
 
-- Split `support-evidence.ts` (1,515 lines, five concerns) into `support/` modules behind a barrel;
-  checker and tests unchanged in behavior.
+### F — Structural (`codex/polish-structural`)
+
+**Completed:** split `support-evidence.ts` into five `support/` modules behind the stable barrel;
+all exports preserved; typecheck, unit suite, and checker passed. Matrix behavior unchanged.
 
 ## Definition of done
 
-- [ ] All workstreams merged; `tsc` clean; full unit suite green; smoke self-asserts 22/22;
-      `check-support-evidence` green.
-- [ ] Main's gate returns green and stays green across the polish PRs (no repeat of the observed
-      flake modes).
-- [ ] Generated outputs for affected combos re-verified (empirical spot audit before release).
-- [ ] Docs (AGENTS, contract, engine, matrix-adjacent, testing-strategy, CONTRIBUTING) match the
-      landed code; HELP_TEXT and README Options identical.
-- [ ] v1.0.7 prepared per the CONTRIBUTING checklist (version, CHANGELOG, ROADMAP) and released
-      through the automated pipeline.
+- [x] Completed slices merged; `tsc` clean; full unit suite green (**337 tests**); smoke self-asserts
+      22/22; `check-support-evidence` green (49 Supported rows). Re-run after any further code changes.
+- [ ] Remaining intended polish items are either implemented with tests or explicitly moved to a
+      linked follow-up plan with rationale and owner.
+- [ ] Independent generated-output audit covers each changed template family (native env, root defaults,
+      and any added security/testing layers); no unresolved tokens or incorrect engine claims.
+- [x] Current docs for merged slices reflect the landed code; README Options and HELP_TEXT parity
+      passes. Add-command help remains explicitly deferred (C4) and must be finished or split before
+      plan closure.
+- [ ] Hosted CI main gate is green on the final polish commit; tag path repeats the strict gate without
+      main/tag cancellation or missing required jobs.
+- [ ] v1.0.7 prepared per CONTRIBUTING (version, CHANGELOG, ROADMAP), then published through the
+      automated Trusted Publishing pipeline with GitHub Release and bot snapshot verification.
 
 ## Explicit non-goals
 
