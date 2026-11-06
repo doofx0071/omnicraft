@@ -2,7 +2,16 @@ import { mkdtempSync, existsSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { checkForUpdate, compareVersions } from './update-check.js'
+import { checkForUpdate, compareVersions, shouldCheckForUpdate } from './update-check.js'
+
+describe('shouldCheckForUpdate', () => {
+  it('skips non-interactive runs, CI, and an explicit opt-out', () => {
+    expect(shouldCheckForUpdate(false, {})).toBe(false)
+    expect(shouldCheckForUpdate(true, { CI: '1' })).toBe(false)
+    expect(shouldCheckForUpdate(true, { NO_UPDATE_NOTIFIER: '1' })).toBe(false)
+    expect(shouldCheckForUpdate(true, {})).toBe(true)
+  })
+})
 
 describe('compareVersions', () => {
   it('orders plain semver', () => {
@@ -54,6 +63,18 @@ afterAll(() => {
 })
 
 describe('checkForUpdate', () => {
+  it('creates the cache in the cache file parent directory', async () => {
+    const root = freshCacheDir()
+    const nested = join(root, 'subdirectory')
+    const cacheFile = join(nested, 'cache.json')
+    const fetchFn = (async () => ({ ok: true, json: async () => ({ version: '9.9.9' }) })) as unknown as typeof fetch
+
+    await checkForUpdate('0.1.0', { fetchFn, cacheFile })
+
+    expect(existsSync(cacheFile)).toBe(true)
+    rmSync(root, { recursive: true, force: true })
+  })
+
   it('returns the newer version from the registry payload', async () => {
     const fetchFn = (async () =>
       ({ ok: true, json: async () => ({ version: '9.9.9' }) })) as unknown as typeof fetch

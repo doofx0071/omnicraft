@@ -63,14 +63,14 @@ export function isProtectedPath(relativePath: string): boolean {
 }
 
 /**
- * Directories that template layers never write into: dependency trees and
- * build output. They are pruned from the collision walk so previewing a
- * project that already carries node_modules/dist stays fast and quiet.
+ * Directories that template layers never write into: dependency trees,
+ * build output, Git state, and known local caches. Hidden template directories
+ * such as `.github` must still appear in the collision preview.
  */
-const PRUNED_DIRECTORY_NAMES = new Set(['node_modules', 'dist'])
+const PRUNED_DIRECTORY_NAMES = new Set(['node_modules', 'dist', '.git', '.vite', '.next'])
 
 function isPrunedDirectoryName(name: string): boolean {
-  return PRUNED_DIRECTORY_NAMES.has(name) || name.startsWith('.')
+  return PRUNED_DIRECTORY_NAMES.has(name)
 }
 
 /**
