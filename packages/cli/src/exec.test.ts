@@ -1,7 +1,8 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterAll, describe, expect, it } from 'vitest'
+import { spawnSync } from 'node:child_process'
+import { afterAll, describe, expect, it, vi } from 'vitest'
 import {
   assertGeneratorOutput,
   joinWin32Command,
@@ -10,6 +11,11 @@ import {
   startCommand,
 } from './exec.js'
 
+vi.mock('node:child_process', async (importOriginal) => {
+  const original = await importOriginal<typeof import('node:child_process')>()
+  return { ...original, spawnSync: vi.fn(original.spawnSync) }
+})
+
 describe('exec helpers', () => {
   it('captures a fixed command result and applies its timeout', () => {
     const result = runCommand('node', ['--version'], process.cwd(), { timeoutMs: 5_000 })
@@ -17,6 +23,25 @@ describe('exec helpers', () => {
     expect(result.ok).toBe(true)
     expect(result.output).toMatch(/^v\d+\./)
     expect(result.exitCode).toBe(0)
+  })
+
+  it('passes the default timeout to captured commands when none is specified', () => {
+    vi.mocked(spawnSync).mockReturnValueOnce({
+      pid: 1,
+      output: [],
+      stdout: 'ok',
+      stderr: '',
+      status: 0,
+      signal: null,
+    })
+
+    const result = runCommand('node', ['--version'], process.cwd())
+
+    expect(result.ok).toBe(true)
+    expect(spawnSync).toHaveBeenLastCalledWith(
+      ...(process.platform === 'win32' ? [expect.any(String)] : ['node', ['--version']]),
+      expect.objectContaining({ timeout: 300_000 }),
+    )
   })
 
   it('stops a running command and exposes its captured output', async () => {
@@ -56,9 +81,14 @@ describe('win32 command quoting', () => {
   })
 
   it('joins a command into the single win32 shell string', () => {
-    expect(joinWin32Command('npx', ['--yes', 'create-expo-app@latest', 'C:\\apps\\my app', '--no-install'])).toBe(
-      'npx --yes create-expo-app@latest "C:\\apps\\my app" --no-install',
-    )
+    expect(
+      joinWin32Command('npx', [
+        '--yes',
+        'create-expo-app@latest',
+        'C:\\apps\\my app',
+        '--no-install',
+      ]),
+    ).toBe('npx --yes create-expo-app@latest "C:\\apps\\my app" --no-install')
   })
 
   it('runs a command with spaced args from a spaced cwd like John Doe', () => {

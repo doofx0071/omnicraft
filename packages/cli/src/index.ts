@@ -27,7 +27,13 @@ import { createEnvFiles } from "./scaffold/env.js";
 import { applyLayers } from "./scaffold/engine.js";
 import { createLaravelSqliteMigrationEnv } from "./scaffold/laravel-env.js";
 import { gitInit } from "./scaffold/git.js";
-import { assertGeneratorOutput, runCommand, runCommandVisible } from "./exec.js";
+import {
+  assertGeneratorOutput,
+  GENERATOR_MAX_BUFFER,
+  GENERATOR_TIMEOUT_MS,
+  runCommand,
+  runCommandVisible,
+} from "./exec.js";
 import { detectPackageManager, installDependencies } from "./scaffold/pkg-manager.js";
 import { fetchRemoteTemplates } from "./scaffold/remote.js";
 import { validateStackFlags } from "./prefill.js";
@@ -186,7 +192,7 @@ async function main(): Promise<void> {
           "--no-agents-md",
         ],
         dirname(answers.targetDir),
-        64 * 1024 * 1024,
+        { maxBuffer: GENERATOR_MAX_BUFFER, timeoutMs: GENERATOR_TIMEOUT_MS },
       );
       if (!cea.ok) {
         spinner.stop("create-expo-app failed");
@@ -215,7 +221,7 @@ async function main(): Promise<void> {
           identifier,
         ],
         dirname(answers.targetDir),
-        64 * 1024 * 1024,
+        { maxBuffer: GENERATOR_MAX_BUFFER, timeoutMs: GENERATOR_TIMEOUT_MS },
       );
       if (!cta.ok) {
         spinner.stop("create-tauri-app failed");
@@ -310,7 +316,7 @@ async function main(): Promise<void> {
           "--no-progress",
         ],
         answers.targetDir,
-        64 * 1024 * 1024,
+        { maxBuffer: GENERATOR_MAX_BUFFER, timeoutMs: GENERATOR_TIMEOUT_MS },
       );
       if (!starterCreated.ok) {
         spinner.stop("Laravel Inertia React starter retrieval failed");
@@ -377,7 +383,7 @@ async function main(): Promise<void> {
         "npx",
         ["--yes", TIGED_PACKAGE, starterKit, "server"],
         answers.targetDir,
-        64 * 1024 * 1024,
+        { maxBuffer: GENERATOR_MAX_BUFFER, timeoutMs: GENERATOR_TIMEOUT_MS },
       );
       if (!cloned.ok) {
         spinner.stop("Laravel Livewire starter retrieval failed");
@@ -478,7 +484,7 @@ async function main(): Promise<void> {
         // create-next-app refuses to write into an existing non-empty dir, but
         // the empty target itself is fine — it fills exactly that directory.
         dirname(answers.targetDir),
-        64 * 1024 * 1024,
+        { maxBuffer: GENERATOR_MAX_BUFFER, timeoutMs: GENERATOR_TIMEOUT_MS },
       );
       if (!cna.ok) {
         spinner.stop("create-next-app failed");
@@ -515,7 +521,8 @@ async function main(): Promise<void> {
         ],
         answers.targetDir,
         {
-          maxBuffer: 64 * 1024 * 1024,
+          maxBuffer: GENERATOR_MAX_BUFFER,
+          timeoutMs: GENERATOR_TIMEOUT_MS,
           env: createLaravelSqliteMigrationEnv(process.env, starterSqliteFile),
         },
       );
@@ -694,7 +701,11 @@ async function main(): Promise<void> {
       } else if (answers.backendRuntime === "php") {
         p.log.step("PHP dependencies already installed by Composer");
       } else {
-        const shouldInstall = await confirmOrYes(args.yes, `Install dependencies with ${pm} now?`, p.confirm);
+        const shouldInstall = await confirmOrYes(
+          args.yes,
+          `Install dependencies with ${pm} now?`,
+          p.confirm,
+        );
         if (shouldInstall) {
           p.log.step(
             `Installing dependencies with ${pm} — live output below (this can take a minute)`,
