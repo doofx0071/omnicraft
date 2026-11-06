@@ -663,6 +663,13 @@ jobs:
           test -f my-pkg-app/.github/workflows/ci.yml
           echo "package e2e OK"
 
+      # The published entrypoint is the bin shim, not dist/index.js: prove the
+      # installed package's bin resolves through npx and the bundled shebang runs.
+      - name: Bin shim check (npx create-omnicraft --version)
+        run: |
+          cd "$RUNNER_TEMP/pkg-test"
+          npx --no-install create-omnicraft --version
+
   supported-matrix:
     name: supported-stack-release-gate
     if: ${{ always() }}

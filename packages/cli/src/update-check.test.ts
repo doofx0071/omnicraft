@@ -1,7 +1,7 @@
-import { mkdtempSync, existsSync, readFileSync } from 'node:fs'
+import { mkdtempSync, existsSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { afterAll, describe, expect, it } from 'vitest'
 import { checkForUpdate, compareVersions } from './update-check.js'
 
 describe('compareVersions', () => {
@@ -39,9 +39,19 @@ describe('compareVersions', () => {
   })
 })
 
+const tempDirs: string[] = []
+
 function freshCacheDir(): string {
-  return mkdtempSync(join(tmpdir(), 'omnicraft-update-'))
+  const dir = mkdtempSync(join(tmpdir(), 'omnicraft-update-'))
+  tempDirs.push(dir)
+  return dir
 }
+
+afterAll(() => {
+  for (const dir of tempDirs) {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+  }
+})
 
 describe('checkForUpdate', () => {
   it('returns the newer version from the registry payload', async () => {
