@@ -414,6 +414,44 @@ describe("composition compatibility", () => {
   );
 });
 
+describe("native platform environments", () => {
+  it.each([
+    {
+      platform: "mobile",
+      projectType: "mobile",
+      variable: "EXPO_PUBLIC_API_URL",
+    },
+    {
+      platform: "desktop",
+      projectType: "desktop",
+      variable: "VITE_API_URL",
+    },
+  ] as const)("copies the $variable example into .env", ({ platform, projectType, variable }) => {
+    const dir = makeTempDir(`native-${platform}-env`);
+    const answers: Answers = {
+      projectName: `demo-${platform}`,
+      targetDir: dir,
+      projectType,
+      frontend: "react",
+      language: "typescript",
+      fullStack: false,
+      backendRuntime: null,
+      backendFramework: null,
+      orm: null,
+      database: null,
+      authentication: "none",
+      extras: { tailwind: false, eslintPrettier: false, shadcn: false },
+      architecture: { kind: "native-app", platform },
+    };
+
+    scaffoldInto(dir, answers);
+
+    const example = readFileSync(join(dir, ".env.example"), "utf8");
+    expect(example).toContain(`${variable}=`);
+    expect(readFileSync(join(dir, ".env"), "utf8")).toBe(example);
+  });
+});
+
 describe("full-stack combos", () => {
   const matrix = [
     { framework: "express", orm: "drizzle", db: "postgres" },
