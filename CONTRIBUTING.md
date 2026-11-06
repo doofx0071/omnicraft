@@ -26,23 +26,23 @@ npm install              # installs the workspace
 
 All from `packages/cli/` unless noted:
 
-| Command                              | What                                                          |
-| ------------------------------------ | ------------------------------------------------------------- |
-| `npm run dev`                        | Run the CLI from source (interactive — needs a real terminal) |
-| `npx tsc --noEmit`                   | Typecheck                                                     |
-| `npx vitest run`                     | Tests (or `npm test` from the root)                           |
-| `npx tsup`                           | Build → `dist/index.js`                                       |
-| `npx tsx scripts/smoke-e2e.ts <dir>` | Scaffold the combinations currently listed in the smoke script |
-| `npm run check:support-matrix` | Check every Supported row against its registered scenario and CI release gate |
-| `npm run test:integration:db -- --database sqlite` | Generated Express + Drizzle + SQLite (no Docker) |
-| `npm run test:integration:node -- --scenario express-prisma-postgres` | Generated Express + Prisma + PostgreSQL |
-| `npm run test:integration:node` | Generated Express, Fastify, and Hono Prisma/Drizzle/raw-SQL scenarios (Docker for PostgreSQL/MySQL) |
-| `npm run test:integration:nextjs` | Generated Next.js integrated full-stack with SQLite, PostgreSQL, and MySQL |
-| `npm run test:integration:python` | Generated FastAPI + SQLAlchemy + SQLite/PostgreSQL (Python 3.12 + uv; PostgreSQL requires Docker) |
-| `npm run test:integration:php -- --database sqlite` | Generated Laravel + SQLite (Docker PHP/Composer image) |
-| `npm run test:integration:db` | All supported Node databases (requires Docker for PostgreSQL/MySQL) |
-| `npm run test:integration:php` | Laravel SQLite, PostgreSQL, and MySQL (requires Docker for PHP image and networked DBs) |
-| `npm run demo` (root)                | Regenerate `docs/demo.gif` + `docs/demo.html`                 |
+| Command                                                               | What                                                                                                |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `npm run dev`                                                         | Run the CLI from source (interactive — needs a real terminal)                                       |
+| `npx tsc --noEmit`                                                    | Typecheck                                                                                           |
+| `npx vitest run`                                                      | Tests (or `npm test` from the root)                                                                 |
+| `npx tsup`                                                            | Build → `dist/index.js`                                                                             |
+| `npx tsx scripts/smoke-e2e.ts <dir>`                                  | Scaffold the combinations currently listed in the smoke script                                      |
+| `npm run check:support-matrix`                                        | Check every Supported row against its registered scenario and CI release gate                       |
+| `npm run test:integration:db -- --database sqlite`                    | Generated Express + Drizzle + SQLite (no Docker)                                                    |
+| `npm run test:integration:node -- --scenario express-prisma-postgres` | Generated Express + Prisma + PostgreSQL                                                             |
+| `npm run test:integration:node`                                       | Generated Express, Fastify, and Hono Prisma/Drizzle/raw-SQL scenarios (Docker for PostgreSQL/MySQL) |
+| `npm run test:integration:nextjs`                                     | Generated Next.js integrated full-stack with SQLite, PostgreSQL, and MySQL                          |
+| `npm run test:integration:python`                                     | Generated FastAPI + SQLAlchemy + SQLite/PostgreSQL (Python 3.12 + uv; PostgreSQL requires Docker)   |
+| `npm run test:integration:php -- --database sqlite`                   | Generated Laravel + SQLite (Docker PHP/Composer image)                                              |
+| `npm run test:integration:db`                                         | All supported Node databases (requires Docker for PostgreSQL/MySQL)                                 |
+| `npm run test:integration:php`                                        | Laravel SQLite, PostgreSQL, and MySQL (requires Docker for PHP image and networked DBs)             |
+| `npm run demo` (root)                                                 | Regenerate `docs/demo.gif` + `docs/demo.html`                                                       |
 
 Try your changes like a user would: `npx tsup && node dist/index.js` (or `--yes --skip-install my-app`
 for a promptless run).
@@ -62,6 +62,13 @@ Checklist:
 - [ ] No unresolved `{{tokens}}`, no secrets, prettier-clean
 - [ ] The `supported-stack-release-gate` check is green for the exact commit being released; it aggregates
       the Windows/Ubuntu/macOS matrix, package artifact, evidence consistency, and full supported runtime jobs
+
+### Hosted CI reruns
+
+Diagnose the failed step and run metadata before retrying. Rerun only failed job(s), at most twice after
+the initial attempt. If they still fail, file an issue with the workflow run ID, failed job/step, and
+diagnosis before retrying after a fix. A rerun is diagnostic, not a waiver; do not treat it as evidence
+unless the required gate passes for the exact commit.
 
 ## PR expectations
 

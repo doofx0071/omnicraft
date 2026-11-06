@@ -111,7 +111,7 @@ The current suite covers:
 
 | File                                                | Coverage                                                                                                                                                                                                                                                                                                                                                                                  |
 | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/args.test.ts`                                  | Flag parsing, Livewire/Inertia React auth help text, and help/README option parity. The current `HELP_TEXT` does not yet document the `omnicraft add` command surface.                                                                                                                                                                                                                       |
+| `src/args.test.ts`                                  | Flag parsing, Livewire/Inertia React auth help text, help/README option parity, and the documented `omnicraft add` command surface.                                                                                                                                                                                                                                                       |
 | `src/validators.test.ts`                            | Project-name normalization and npm-name validation.                                                                                                                                                                                                                                                                                                                                       |
 | `src/renderer.test.ts`                              | Token substitution, unresolved-token detection, dotfile renaming, and binary detection.                                                                                                                                                                                                                                                                                                   |
 | `src/merge.test.ts`                                 | `package.json` deep merge semantics.                                                                                                                                                                                                                                                                                                                                                      |
@@ -303,6 +303,13 @@ verify other framework/database combinations. The matrix marks a stack Supported
 links to a concrete scenario in `src/support-evidence.ts` and the corresponding CI target passes. The
 self-hosted Windows runner is restricted to main-branch pushes and same-repository pull requests; fork
 pull requests, release tags, and scheduled runs use hosted runners only.
+
+### Hosted CI reruns
+
+Inspect the failed step and run metadata; diagnose code, environment, or transient infrastructure causes
+before retrying. If a rerun is warranted, file an issue with the workflow run ID, failed job/step, and
+diagnosis. Rerun only failed jobs, at most twice after the initial attempt. A rerun is diagnostic, not a
+waiver: it does not erase the original failure or replace a successful required gate on the exact commit.
 
 ## Support statuses
 
