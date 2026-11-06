@@ -22,6 +22,11 @@ import { composeLayers, planLayerApplication, templateVariables } from "./scaffo
 import { createEnvFiles } from "./scaffold/env.js";
 import { applyLayers } from "./scaffold/engine.js";
 import { createLaravelSqliteMigrationEnv } from "./scaffold/laravel-env.js";
+import {
+  createLivewireStarterRetrievalError,
+  LIVEWIRE_STARTER_RETRIEVAL_ATTEMPTS,
+  retryLivewireStarterRetrieval,
+} from "./scaffold/livewire-starter-retrieval.js";
 import { gitInit } from "./scaffold/git.js";
 import { assertGeneratorOutput, runCommand, runCommandVisible } from "./exec.js";
 import { detectPackageManager, installDependencies } from "./scaffold/pkg-manager.js";
@@ -369,19 +374,35 @@ async function main(): Promise<void> {
       spinner.start("Creating the Laravel Livewire app from its pinned official starter kit...");
       mkdirSync(answers.targetDir, { recursive: true });
       const starterKit = LARAVEL_LIVEWIRE_STARTER_KITS[answers.authentication];
-      const cloned = runCommand(
-        "npx",
-        ["--yes", TIGED_PACKAGE, starterKit, "server"],
+      await retryLivewireStarterRetrieval(
         answers.targetDir,
-        64 * 1024 * 1024,
-      );
-      if (!cloned.ok) {
+        () => {
+          const cloned = runCommand(
+            "npx",
+            ["--yes", TIGED_PACKAGE, starterKit, "server"],
+            answers.targetDir,
+            64 * 1024 * 1024,
+          );
+          if (!cloned.ok) throw createLivewireStarterRetrievalError(cloned.output);
+          assertGeneratorOutput(
+            answers.targetDir,
+            "server/composer.json",
+            "the Laravel Livewire starter clone",
+          );
+          return cloned;
+        },
+        {
+          onRetry: (attempt, error) => {
+            p.log.warn(
+              `Livewire starter retrieval failed transiently; retrying (${attempt}/${LIVEWIRE_STARTER_RETRIEVAL_ATTEMPTS}).`,
+            );
+            if (args.debug && error instanceof Error) p.log.message(error.message);
+          },
+        },
+      ).catch((error: unknown) => {
         spinner.stop("Laravel Livewire starter retrieval failed");
-        throw new Error(
-          `Could not retrieve the pinned Laravel Livewire starter kit — check your connection and Node.js.\n${cloned.output.split("\n").slice(-10).join("\n")}`,
-        );
-      }
-      assertGeneratorOutput(answers.targetDir, "server/composer.json", "the Laravel Livewire starter clone");
+        throw error;
+      });
       applyLayers(templatesRoot, layerPlan.afterOfficialGenerator, variables, answers.targetDir);
       const serverDir = join(answers.targetDir, "server");
       const sqliteFile = join(serverDir, "database", "database.sqlite");
