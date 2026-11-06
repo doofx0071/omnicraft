@@ -1,6 +1,6 @@
 # OmniCraft Codebase Audit Remediation Plan
 
-**Status:** Complete — all workstreams implemented, verified, and merged to main<br>
+**Status:** Closed — implementation workstreams merged to main; C4 help/README documentation was deferred and is recorded below<br>
 **Opened:** 4 November 2026<br>
 **Closed:** 5 November 2026<br>
 **Repository:** <https://github.com/doofx0071/omnicraft><br>
@@ -16,8 +16,8 @@ Fix the defects the audit found before any new capability expansion. The CLI's c
 CLI surface, and release process carry three P0 bugs that ship broken projects or hang advertised
 modes, several selectable-but-broken combinations, and a growing set of undocumented selectable
 states. This plan owns remediation only; new stacks, providers, and auth targets remain owned by the
-[auth provider and PHP next-target plan](omnicraft-auth-provider-php-next-targets-plan.md), and
-physical-device evidence by the [native platform follow-up](omnicraft-native-platform-evidence-follow-up-plan.md).
+[auth provider and PHP next-target plan](../active/omnicraft-auth-provider-php-next-targets-plan.md), and
+physical-device evidence by the [native platform follow-up](../active/omnicraft-native-platform-evidence-follow-up-plan.md).
 
 Severity vocabulary: **P0** breaks users in shipped paths; **P1** breaks advertised or selectable
 combinations, or breaks process integrity; **P2** hardening and polish.
@@ -100,9 +100,12 @@ or more audits (highest confidence). Empirical claims were reproduced against re
 - [x] **C3 · `add` route robustness (P2).** No non-TTY guard (bare `omnicraft add` hangs in CI);
       `--dry-run=true` is not recognized and silently filtered; extra positionals are silently
       dropped. Guard, reject unknown forms, reject extra positionals.
-- [x] **C4 · HELP_TEXT and README document the `add` surface (P2).** `omnicraft add <module>
-      [target] [--dry-run]` is absent from both; per the change-coupling rules the README Options
-      block and `HELP_TEXT` change together and stay identical.
+- [ ] **C4 · Document the `add` command in CLI help and README Options (P2; docs portion deferred).**
+      The `omnicraft add` parser and handler are implemented, but `HELP_TEXT` and the README Options
+      block still omit `omnicraft add <module> [target] [--dry-run]`. `args.test.ts` proves parity only
+      for the existing create-flow options; it does not prove the add surface is documented. Keep the
+      paired help/README update together; this remains an explicit follow-up in the active v1.0.7 polish
+      plan, not a completed item in this remediation.
 - [x] **C5 · Dead and duplicated code (P2).** Delete `describeStack`/`PROJECT_TYPE_LABELS`; fold
       `hasStackFlags` (prefill) into `hasFullStackFlags` (compatibility) — they already disagree on
       `--extras`; decide `startCommand`'s fate (wire up or drop with its test).
@@ -212,8 +215,10 @@ has one obvious fix.
       path count and no artifacts left in the repo tree.
 - [x] `check-support-evidence` and `support-evidence.test.ts` green with symmetric Rejected-row
       coverage; every selectable combination has an explicit matrix status.
-- [x] Docs updated in the same PR as the code they describe (change-coupling rules); README Options
-      identical to `HELP_TEXT`; relative link check clean; doc counts reconciled to source.
+- [x] Docs updated in the same PR as the code they describe (change-coupling rules); README create-flow
+      Options remain identical to `HELP_TEXT`; relative link check clean; doc counts reconciled to source.
+      C4's paired add-command help/documentation update was not completed and is recorded as an open
+      deviation above.
 - [x] v1.0.6 prepared per the CONTRIBUTING publish checklist; ROADMAP records the true publication
       state of v1.0.5.
 - [x] This plan moves to `docs/plans/completed/` with per-workstream results recorded, and
@@ -251,10 +256,12 @@ entry keep the checker symmetric after B2.
 
 Open follow-ups recorded for the next plan: the CLI `engines >=20.12` floor conflicts with
 generated SQLite projects (`better-sqlite3@^13` needs Node ≥22) — decide engines bump vs
-`better-sqlite3@12`; `pullfrog.yml` still references ~13 provider secrets of which zero exist in
-GitHub Actions settings (every `${{ secrets.* }}` is unset) — trim or wire them deliberately;
-and npm Trusted Publisher for `doofx0071/omnicraft` + `ci.yml` must be configured before the
-`v1.0.6` tag — the `v1.0.5` publish job failed with a 404 there and the package was published
+`better-sqlite3@12`; `pullfrog.yml` now maps only four documented provider names
+(`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `KIMI_API_KEY`, and `OPENCODE_API_KEY`) and requires at least
+one configured provider credential for a run. The workflow file cannot establish whether those GitHub
+Actions secrets are configured; check repository settings before use rather than claim they are unset.
+The npm Trusted Publisher for `doofx0071/omnicraft` + `ci.yml` was configured and verified before the
+`v1.0.6` tag; the earlier `v1.0.5` publish job had failed with a 404 and its package was published
 manually, skipping the bot documentation commit.
 
 ## Explicit non-goals
