@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deepMergePackageJson } from './scaffold/merge.js'
+import { deepMergePackageJson, mergeExtensionsJson } from './scaffold/merge.js'
 
 describe('deepMergePackageJson', () => {
   it('unions dependencies and scripts across layers', () => {
@@ -67,5 +67,48 @@ describe('deepMergePackageJson', () => {
     const merged = deepMergePackageJson({ name: 'base' }, override)
     expect(Object.getPrototypeOf(merged)).toBe(Object.prototype)
     expect(merged).toEqual({ name: 'x' })
+  })
+})
+
+describe('mergeExtensionsJson', () => {
+  it('unions, dedupes, and sorts recommendations across fragments', () => {
+    const merged = mergeExtensionsJson(
+      { recommendations: ['prisma.prisma', 'bradlc.vscode-tailwindcss'] },
+      { recommendations: ['bradlc.vscode-tailwindcss', 'Vue.volar'] },
+    )
+    expect(merged.recommendations).toEqual([
+      'Vue.volar',
+      'bradlc.vscode-tailwindcss',
+      'prisma.prisma',
+    ])
+  })
+
+  it('starts fresh when a fragment has no recommendations array', () => {
+    expect(mergeExtensionsJson({}, { recommendations: ['dbaeumer.vscode-eslint'] })).toEqual({
+      recommendations: ['dbaeumer.vscode-eslint'],
+    })
+    expect(mergeExtensionsJson({ recommendations: ['a'] }, {}).recommendations).toEqual(['a'])
+  })
+
+  it('ignores non-array recommendations values', () => {
+    expect(
+      mergeExtensionsJson({ recommendations: 'bogus' }, { recommendations: 42 }).recommendations,
+    ).toEqual([])
+  })
+
+  it('keeps other keys with override-wins semantics', () => {
+    expect(mergeExtensionsJson({ other: 1, keep: 'x' }, { other: 2 })).toEqual({
+      other: 2,
+      keep: 'x',
+      recommendations: [],
+    })
+  })
+
+  it('does not mutate its inputs', () => {
+    const base = { recommendations: ['b'] }
+    const override = { recommendations: ['a'] }
+    mergeExtensionsJson(base, override)
+    expect(base).toEqual({ recommendations: ['b'] })
+    expect(override).toEqual({ recommendations: ['a'] })
   })
 })

@@ -1,8 +1,19 @@
 import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, relative } from 'node:path'
 import { isProtectedPath } from '../validators.js'
-import { deepMergePackageJson } from './merge.js'
+import { deepMergePackageJson, mergeExtensionsJson } from './merge.js'
 import { assertNoUnresolvedTokens, isBinaryFile, renderString, restoreDotfileName } from './renderer.js'
+
+/**
+ * Layer-relative path of the one non-manifest file the engine merges instead
+ * of overwriting. Fragments from any layer (client, extras, db) land in the
+ * TARGET ROOT's `.vscode/extensions.json` with their `recommendations` arrays
+ * unioned, so a workspace opened at the root sees one combined list — the
+ * same relocation idea as `mergeManifestAtRoot`, restricted to exactly this
+ * path pattern. `.vscode` is a normal publishable directory: npm's special
+ * dotfile rules do not apply to it, so no `_`-prefixed name is needed.
+ */
+const EXTENSIONS_JSON_FRAGMENT_PATH = '.vscode/extensions.json'
 
 /** A template layer: a directory under the templates root copied into `dest` relative to the target. */
 export interface Layer {
@@ -50,9 +61,8 @@ export function applyLayer(
 
     const destPath = join(targetDir, layer.dest, ...renamed)
 
-    mkdirSync(dirname(destPath), { recursive: true })
-
     if (isBinaryFile(entry)) {
+      mkdirSync(dirname(destPath), { recursive: true })
       writeFileSync(destPath, readFileSync(srcPath))
       continue
     }
@@ -63,6 +73,17 @@ export function applyLayer(
     if (!basename(destPath).endsWith('.vue')) {
       assertNoUnresolvedTokens(content, destRelToTarget)
     }
+
+    // extensions.json fragments merge into the target root instead of
+    // overwriting each other (client + extras + db fragments coexist). This
+    // runs before the fragment's own destination mkdir so no stray empty
+    // directory is left at the layer's dest.
+    if (renamed.join('/') === EXTENSIONS_JSON_FRAGMENT_PATH) {
+      mergeExtensionsJsonAtRoot(targetDir, content)
+      continue
+    }
+
+    mkdirSync(dirname(destPath), { recursive: true })
 
     const manifestTarget =
       basename(destPath) === 'package.json'
@@ -87,6 +108,20 @@ function statSyncSafe(path: string): boolean {
   } catch {
     return false
   }
+}
+
+/** Unions a rendered extensions.json fragment into the target root's file. */
+function mergeExtensionsJsonAtRoot(targetDir: string, content: string): void {
+  const rootExtensionsPath = join(targetDir, '.vscode', 'extensions.json')
+  const existing = existsAndIsFile(rootExtensionsPath)
+    ? (JSON.parse(readFileSync(rootExtensionsPath, 'utf8')) as Record<string, unknown>)
+    : {}
+  const incoming = JSON.parse(content) as Record<string, unknown>
+  mkdirSync(dirname(rootExtensionsPath), { recursive: true })
+  writeFileSync(
+    rootExtensionsPath,
+    `${JSON.stringify(mergeExtensionsJson(existing, incoming), null, 2)}\n`,
+  )
 }
 
 function existsAndIsFile(path: string): boolean {

@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -9,6 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createRequire } from "node:module";
 import { afterAll, describe, expect, it } from "vitest";
 // transitive dependency (vite/tsup) used here only to validate generated YAML
 import { parse } from "yaml";
@@ -1280,6 +1282,475 @@ describe("per-composition Node requirements", () => {
       expectNodeFloor(dir, "^22.18.0 || ^24.11.0 || >=26.0.0", "22.18");
     },
   );
+});
+describe("SKIP_ENV_VALIDATION escape hatch", () => {
+  const require = createRequire(import.meta.url);
+  const tsxCli = require.resolve("tsx/cli");
+
+  /**
+   * Minimal stand-in for the zod surface the generated env.ts uses
+   * (object / coerce.number().default / string().min / string().default /
+   * prettifyError). It lets the REAL generated env.ts run in a child process
+   * without an npm install inside the scaffold target — the point under test
+   * is the escape-hatch wiring, not zod itself.
+   */
+  const ZOD_STUB = `
+function makeString(options) {
+  const s = { kind: "string", min: 0, message: "", defaultValue: undefined, ...options };
+  return {
+    __schema: s,
+    min(length, message) {
+      return makeString({ ...s, min: length, message });
+    },
+    default(value) {
+      return makeString({ ...s, defaultValue: value });
+    },
+  };
+}
+function makeNumber(options) {
+  const s = { kind: "number", defaultValue: undefined, ...options };
+  return {
+    __schema: s,
+    default(value) {
+      return makeNumber({ ...s, defaultValue: value });
+    },
+  };
+}
+export const z = {
+  string: () => makeString({}),
+  coerce: { number: () => makeNumber({}) },
+  object(shape) {
+    return {
+      safeParse(input) {
+        const data = {};
+        const issues = [];
+        for (const [key, schema] of Object.entries(shape)) {
+          const s = schema.__schema;
+          const raw = input[key];
+          if (s.kind === "number") {
+            const numeric = raw === undefined || raw === "" ? NaN : Number(raw);
+            if (Number.isNaN(numeric)) {
+              if (s.defaultValue === undefined) issues.push({ key, message: "required" });
+              else data[key] = s.defaultValue;
+            } else {
+              data[key] = numeric;
+            }
+          } else {
+            const value = typeof raw === "string" ? raw : "";
+            if (value.length < s.min) {
+              issues.push({ key, message: s.message });
+            } else if (value === "" && s.defaultValue !== undefined) {
+              data[key] = s.defaultValue;
+            } else {
+              data[key] = value;
+            }
+          }
+        }
+        return issues.length === 0 ? { success: true, data } : { success: false, error: { issues } };
+      },
+    };
+  },
+  prettifyError(error) {
+    return error.issues.map((issue) => issue.key + ": " + issue.message).join("\\n");
+  },
+};
+export default z;
+`;
+
+  /** Installs the zod stub and a runner that imports the generated env.ts and prints it. */
+  function prepareEnvRuntime(dir: string): string {
+    mkdirSync(join(dir, "node_modules", "zod"), { recursive: true });
+    writeFileSync(join(dir, "node_modules", "zod", "package.json"), JSON.stringify({
+      name: "zod",
+      version: "4.0.0-stub",
+      type: "module",
+      main: "index.js",
+    }));
+    writeFileSync(join(dir, "node_modules", "zod", "index.js"), ZOD_STUB);
+    const runner = join(dir, "env-runner.mjs");
+    writeFileSync(runner, 'import { env } from "./server/src/env.ts";\nconsole.log(JSON.stringify(env));\n');
+    return runner;
+  }
+
+  function runEnvProcess(
+    dir: string,
+    runner: string,
+    overrides: Record<string, string>,
+  ): { code: number; stdout: string; stderr: string } {
+    // The child never inherits DATABASE_URL, so "no bypass" means a genuinely
+    // missing required variable.
+    const childEnv: NodeJS.ProcessEnv = { ...process.env };
+    delete childEnv.DATABASE_URL;
+    for (const [key, value] of Object.entries(overrides)) childEnv[key] = value;
+    try {
+      const stdout = execFileSync(process.execPath, [tsxCli, runner], {
+        cwd: dir,
+        env: childEnv,
+        encoding: "utf8",
+      });
+      return { code: 0, stdout, stderr: "" };
+    } catch (error) {
+      const err = error as { status?: number; stdout?: unknown; stderr?: unknown };
+      return {
+        code: err.status ?? -1,
+        stdout: typeof err.stdout === "string" ? err.stdout : "",
+        stderr: typeof err.stderr === "string" ? err.stderr : String(err.stderr ?? ""),
+      };
+    }
+  }
+
+  it("exports placeholder env instead of exiting when SKIP_ENV_VALIDATION is set", { timeout: 30_000 }, () => {
+    for (const value of ["1", "true"]) {
+      const dir = makeTempDir(`skip-env-on-${value}`);
+      scaffoldInto(dir, makeAnswers());
+      expect(readFileSync(join(dir, "README.md"), "utf8")).toContain("SKIP_ENV_VALIDATION=1");
+      const runner = prepareEnvRuntime(dir);
+      const result = runEnvProcess(dir, runner, { SKIP_ENV_VALIDATION: value });
+      expect(result.code).toBe(0);
+      expect(result.stderr).not.toContain("Invalid environment variables");
+      expect(JSON.parse(result.stdout)).toEqual({
+        PORT: 3000,
+        CORS_ORIGIN: "http://localhost:5173",
+        DATABASE_URL: "SKIP_ENV_VALIDATION_PLACEHOLDER",
+      });
+    }
+  });
+
+  it("still exits on a missing DATABASE_URL without the escape hatch", { timeout: 30_000 }, () => {
+    const dir = makeTempDir("skip-env-off");
+    scaffoldInto(dir, makeAnswers());
+    const runner = prepareEnvRuntime(dir);
+    const result = runEnvProcess(dir, runner, {});
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("Invalid environment variables");
+  });
+
+  it("still parses real variables when the escape hatch is unset", { timeout: 30_000 }, () => {
+    const dir = makeTempDir("skip-env-real");
+    scaffoldInto(dir, makeAnswers());
+    const runner = prepareEnvRuntime(dir);
+    const result = runEnvProcess(dir, runner, {
+      DATABASE_URL: "postgres://omnicraft:omnicraft@localhost:5432/demo_app",
+    });
+    expect(result.code).toBe(0);
+    expect(JSON.parse(result.stdout).DATABASE_URL).toBe(
+      "postgres://omnicraft:omnicraft@localhost:5432/demo_app",
+    );
+  });
+
+  it("ships the guard in every node env validator template and the next.js mysql adapter", () => {
+    const nodeRoot = join(TEMPLATES_ROOT, "server", "node");
+    for (const framework of readdirSync(nodeRoot)) {
+      for (const variant of readdirSync(join(nodeRoot, framework))) {
+        const envTemplatePath = join(nodeRoot, framework, variant, "src", "env.ts");
+        expect(existsSync(envTemplatePath), envTemplatePath).toBe(true);
+        expect(readFileSync(envTemplatePath, "utf8")).toContain("SKIP_ENV_VALIDATION");
+      }
+    }
+    expect(readFileSync(join(TEMPLATES_ROOT, "web", "nextjs", "db-mysql", "index.ts"), "utf8")).toContain(
+      "SKIP_ENV_VALIDATION",
+    );
+  });
+
+  it("documents the variable in the affected generated READMEs' troubleshooting sections", () => {
+    for (const readme of [
+      "root/fullstack/postgres/README.md",
+      "root/fullstack/mysql/README.md",
+      "root/fullstack/sqlite/README.md",
+      "root/fullstack-next/mysql/README.md",
+    ]) {
+      expect(readFileSync(join(TEMPLATES_ROOT, ...readme.split("/")), "utf8")).toContain(
+        "SKIP_ENV_VALIDATION=1",
+      );
+    }
+  });
+});
+describe(".vscode/extensions.json recommendations", () => {
+  function readRecommendations(dir: string): string[] {
+    return (
+      JSON.parse(readFileSync(join(dir, ".vscode", "extensions.json"), "utf8")) as {
+        recommendations: string[];
+      }
+    ).recommendations;
+  }
+
+  it("unions fragments from the client, extras, and db layers into the target root file", () => {
+    const dir = makeTempDir("vscode-fullstack");
+    scaffoldInto(dir, makeAnswers({ orm: "prisma" }));
+
+    // React ships no framework extension; tailwind/eslint extras and the
+    // prisma db adapter each contribute one, merged and sorted at the root.
+    expect(readRecommendations(dir)).toEqual([
+      "bradlc.vscode-tailwindcss",
+      "dbaeumer.vscode-eslint",
+      "prisma.prisma",
+    ]);
+    // fragments are merged at the workspace root — no stray per-workspace copies
+    expect(existsSync(join(dir, "client", ".vscode"))).toBe(false);
+    expect(existsSync(join(dir, "server", ".vscode"))).toBe(false);
+  });
+
+  it("merges the framework fragment for vue and svelte frontend-only clients", () => {
+    const vueDir = makeTempDir("vscode-vue");
+    scaffoldInto(vueDir, makeAnswers({ frontend: "vue", fullStack: false }));
+    expect(readRecommendations(vueDir)).toEqual([
+      "Vue.volar",
+      "bradlc.vscode-tailwindcss",
+      "dbaeumer.vscode-eslint",
+    ]);
+
+    const svelteDir = makeTempDir("vscode-svelte");
+    scaffoldInto(svelteDir, makeAnswers({ frontend: "svelte", fullStack: false }));
+    expect(readRecommendations(svelteDir)).toEqual([
+      "bradlc.vscode-tailwindcss",
+      "dbaeumer.vscode-eslint",
+      "svelte.svelte-vscode",
+    ]);
+  });
+
+  it("produces byte-identical output for identical answers (sorted union)", () => {
+    const first = makeTempDir("vscode-deterministic-1");
+    const second = makeTempDir("vscode-deterministic-2");
+    scaffoldInto(first, makeAnswers({ orm: "prisma" }));
+    scaffoldInto(second, makeAnswers({ orm: "prisma" }));
+    expect(readFileSync(join(first, ".vscode", "extensions.json"), "utf8")).toBe(
+      readFileSync(join(second, ".vscode", "extensions.json"), "utf8"),
+    );
+  });
+
+  it("creates no .vscode file when no fragment composes", () => {
+    const dir = makeTempDir("vscode-absent");
+    scaffoldInto(
+      dir,
+      makeAnswers({ extras: { tailwind: false, eslintPrettier: false, shadcn: false } }),
+    );
+    expect(existsSync(join(dir, ".vscode"))).toBe(false);
+  });
+
+  it("leaves a generator-owned .vscode/extensions.json untouched on the next.js path", () => {
+    const dir = makeTempDir("vscode-nextjs");
+    mkdirSync(join(dir, ".vscode"), { recursive: true });
+    const cnaExtensions = `${JSON.stringify(
+      { recommendations: ["ms-vscode.vscode-typescript-next"] },
+      null,
+      2,
+    )}\n`;
+    writeFileSync(join(dir, ".vscode", "extensions.json"), cnaExtensions);
+
+    const nextAnswers = makeAnswers({
+      frontend: "nextjs",
+      backendRuntime: null,
+      backendFramework: null,
+      orm: "none",
+      database: "sqlite",
+      extras: { tailwind: true, eslintPrettier: true, shadcn: false },
+      architecture: { kind: "integrated-fullstack", framework: "nextjs" },
+    });
+    nextAnswers.targetDir = dir;
+    applyLayers(
+      TEMPLATES_ROOT,
+      planLayerApplication(composeLayers(nextAnswers), nextAnswers.architecture)
+        .afterOfficialGenerator,
+      templateVariables(nextAnswers),
+      dir,
+    );
+
+    // no nextjs layer ships a fragment, so create-next-app's file survives
+    expect(readFileSync(join(dir, ".vscode", "extensions.json"), "utf8")).toBe(cnaExtensions);
+  });
+});
+describe("generated AGENTS.md", () => {
+  const SUPPORT_MATRIX_URL =
+    "https://github.com/doofx0071/omnicraft/blob/main/docs/templates/stack-support-matrix.md";
+
+  /** Shared shape assertions; returns the rendered AGENTS.md for content checks. */
+  function expectAgentsMd(dir: string): string {
+    const agents = readFileSync(join(dir, "AGENTS.md"), "utf8");
+    expect(agents).not.toContain("{{");
+    expect(agents).toContain(SUPPORT_MATRIX_URL);
+    expect(agents.split("\n").length).toBeLessThanOrEqual(60);
+    // every documented command must exist in the root manifest's scripts
+    const scripts = Object.keys(
+      (readJson(join(dir, "package.json")).scripts ?? {}) as Record<string, string>,
+    );
+    const documented = [...agents.matchAll(/`npm run ([a-z:.-]+)`/g)].map((m) => m[1]);
+    expect(documented.length).toBeGreaterThan(0);
+    for (const command of documented) {
+      expect(scripts, `AGENTS.md documents npm run ${command}`).toContain(command);
+    }
+    return agents;
+  }
+
+  it("renders the fullstack postgres agent guide for express + drizzle", () => {
+    const dir = makeTempDir("agents-fullstack-pg");
+    scaffoldInto(dir, makeAnswers());
+    const agents = expectAgentsMd(dir);
+    expect(agents).toContain("React + Vite + TypeScript");
+    expect(agents).toContain("express");
+    expect(agents).toContain("PostgreSQL");
+    expect(agents).toContain("drizzle");
+    expect(agents).toContain("docker compose up -d");
+    expect(agents).toContain("3000");
+    expect(agents).toContain("5173");
+    expect(agents).toContain("server/.env");
+    expect(agents).toContain("SKIP_ENV_VALIDATION=1");
+  });
+
+  it("renders the fullstack sqlite agent guide without docker", () => {
+    const dir = makeTempDir("agents-fullstack-sqlite");
+    scaffoldInto(dir, makeAnswers({ database: "sqlite" }));
+    const agents = expectAgentsMd(dir);
+    expect(agents).toContain("SQLite");
+    expect(agents).not.toContain("docker compose up -d");
+  });
+
+  it("renders the FastAPI agent guide with uv/alembic commands", () => {
+    const dir = makeTempDir("agents-python-pg");
+    scaffoldInto(
+      dir,
+      makeAnswers({
+        backendRuntime: "python",
+        backendFramework: "fastapi",
+        orm: null,
+        database: "postgres",
+      }),
+    );
+    const agents = expectAgentsMd(dir);
+    expect(agents).toContain("FastAPI");
+    expect(agents).toContain("Alembic");
+    expect(agents).toContain("npm run dev:server");
+    expect(agents).toContain("docker compose up -d");
+  });
+
+  it("renders the Laravel API agent guide with artisan commands and no db:migrate", () => {
+    const dir = makeTempDir("agents-php-sqlite");
+    scaffoldInto(
+      dir,
+      makeAnswers({
+        backendRuntime: "php",
+        backendFramework: "laravel",
+        orm: null,
+        database: "sqlite",
+      }),
+    );
+    const agents = expectAgentsMd(dir);
+    expect(agents).toContain("Laravel");
+    expect(agents).toContain("artisan serve");
+    // the php root variant has no db:migrate script — the guide must not claim one
+    expect(agents).not.toContain("npm run db:migrate");
+    expect(agents).toContain("database.sqlite");
+  });
+
+  it.each(["none", "laravel-native"] as const)(
+    "renders the integrated Livewire agent guide for %s",
+    (authentication) => {
+      const dir = makeTempDir(`agents-livewire-${authentication}`);
+      scaffoldInto(dir, makeLivewireAnswers(authentication));
+      const agents = expectAgentsMd(dir);
+      expect(agents).toContain("Laravel 13 + Livewire 4");
+      expect(agents).toContain(authentication === "laravel-native" ? "Fortify" : "| None ");
+      expect(agents).toContain("npm run test");
+      expect(agents).not.toContain("docker compose up -d");
+    },
+  );
+
+  it("renders the integrated Inertia React agent guide", () => {
+    const dir = makeTempDir("agents-inertia");
+    scaffoldInto(dir, makeInertiaReactAnswers());
+    const agents = expectAgentsMd(dir);
+    expect(agents).toContain("Laravel 13 + Inertia + React + TypeScript");
+    expect(agents).toContain("npm run test");
+  });
+
+  it("renders the frontend-only agent guide without backend sections", () => {
+    const dir = makeTempDir("agents-frontend-only");
+    scaffoldInto(dir, makeAnswers({ fullStack: false }));
+    const agents = expectAgentsMd(dir);
+    expect(agents).toContain("npm run preview");
+    expect(agents).not.toContain("docker compose up -d");
+    expect(agents).not.toContain("3000");
+  });
+
+  it("ships AGENTS.md in every root variant template except fullstack-next", () => {
+    const withAgents = [
+      "root/fullstack/postgres",
+      "root/fullstack/mysql",
+      "root/fullstack/sqlite",
+      "root/fullstack-python/postgres",
+      "root/fullstack-python/sqlite",
+      "root/fullstack-php/postgres",
+      "root/fullstack-php/mysql",
+      "root/fullstack-php/sqlite",
+      "root/frontend-only",
+      "root/fullstack-laravel-livewire",
+      "root/fullstack-laravel-inertia-react",
+    ];
+    for (const variant of withAgents) {
+      expect(
+        existsSync(join(TEMPLATES_ROOT, ...variant.split("/"), "AGENTS.md")),
+        `${variant} must ship AGENTS.md`,
+      ).toBe(true);
+    }
+    // create-next-app (16.2+) generates AGENTS.md and `next dev` actively
+    // manages it — the fullstack-next overlay must not clobber that file.
+    expect(existsSync(join(TEMPLATES_ROOT, "root", "fullstack-next", "postgres", "AGENTS.md"))).toBe(
+      false,
+    );
+  });
+
+  it("ships no AGENTS.md on the integrated next.js path", () => {
+    const dir = makeTempDir("agents-nextjs");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ name: "demo-app", dependencies: { next: "16.4.3" } }),
+    );
+    const nextAnswers = makeAnswers({
+      frontend: "nextjs",
+      backendRuntime: null,
+      backendFramework: null,
+      orm: "none",
+      database: "sqlite",
+      architecture: { kind: "integrated-fullstack", framework: "nextjs" },
+    });
+    nextAnswers.targetDir = dir;
+    applyLayers(
+      TEMPLATES_ROOT,
+      planLayerApplication(composeLayers(nextAnswers), nextAnswers.architecture)
+        .afterOfficialGenerator,
+      templateVariables(nextAnswers),
+      dir,
+    );
+    expect(existsSync(join(dir, "AGENTS.md"))).toBe(false);
+  });
+
+  it("ships no AGENTS.md for native apps, whose OMNICRAFT.md notes stay as-is", () => {
+    const dir = makeTempDir("agents-native");
+    scaffoldInto(dir, {
+      projectName: "demo-mobile",
+      targetDir: dir,
+      projectType: "mobile",
+      frontend: "react",
+      language: "typescript",
+      fullStack: false,
+      backendRuntime: null,
+      backendFramework: null,
+      orm: null,
+      database: null,
+      authentication: "none",
+      extras: { tailwind: false, eslintPrettier: false, shadcn: false },
+      architecture: { kind: "native-app", platform: "mobile" },
+    });
+    expect(existsSync(join(dir, "AGENTS.md"))).toBe(false);
+    expect(existsSync(join(dir, "OMNICRAFT.md"))).toBe(true);
+  });
+
+  it("keeps AGENTS.md when the Sanctum SPA root README overlay applies", () => {
+    const dir = makeTempDir("agents-sanctum");
+    scaffoldInto(dir, makeLaravelApiAuthAnswers("laravel-native", "sqlite"));
+    expect(existsSync(join(dir, "AGENTS.md"))).toBe(true);
+    expect(readFileSync(join(dir, "README.md"), "utf8")).toContain("personal access tokens");
+  });
 });
 describe("layer composition edge cases", () => {
   it("throws MissingLayerError for unknown layers", async () => {

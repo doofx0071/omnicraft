@@ -1,11 +1,23 @@
 import mysql from "mysql2/promise";
 
 const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
+
+// CI/build-time escape hatch: `next build` evaluates route modules, so this
+// import-time check would fail a build that runs without real credentials.
+// When SKIP_ENV_VALIDATION is "1" or "true", a placeholder URL is used
+// instead of throwing. NEVER enable this in production — the placeholder is
+// intentionally unusable and real configuration would go unvalidated.
+const skipEnvValidation = ["1", "true"].includes(
+  (process.env.SKIP_ENV_VALIDATION ?? "").toLowerCase(),
+);
+
+if (!databaseUrl && !skipEnvValidation) {
   throw new Error("DATABASE_URL is required — copy .env.example to .env");
 }
 
-export const pool = mysql.createPool(databaseUrl);
+export const pool = mysql.createPool(
+  databaseUrl ?? "mysql://SKIP_ENV_VALIDATION_PLACEHOLDER@localhost:3306/placeholder",
+);
 
 /**
  * Uniform raw-SQL entry point used by the routes: pass SQL with ?/? and

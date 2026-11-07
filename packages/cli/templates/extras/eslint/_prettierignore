@@ -7,5 +7,6 @@ bun.lock
 server/src/generated
 # table padding is generated per-project
 README.md
+AGENTS.md
 # machine-written manifest
 .omnicraft

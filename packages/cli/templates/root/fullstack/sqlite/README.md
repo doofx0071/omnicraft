@@ -64,6 +64,7 @@ DATABASE_URL=file:./data/app.db
 | Schema changed but columns look stale      | Re-run `npm run db:push`                                                                                                           |
 | Server fails with `EADDRINUSE` (port 3000) | Something holds port 3000 — stop it, or set another `PORT` in `server/.env` and update the proxy target in `client/vite.config.ts` |
 | Client logs `Port 5173 is in use`          | Stop the other dev server, or use the port Vite prints — the `/api` proxy still targets the API server                             |
+| Server exits with `Invalid environment variables` | Fix the values in `server/.env` (compare `server/.env.example`). CI/build-time only: set `SKIP_ENV_VALIDATION=1` to skip validation — never in production |
 
 ## Useful commands
 
