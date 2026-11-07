@@ -2,11 +2,11 @@
 
 Integrated full-stack Next.js app scaffolded by [OmniCraft](https://github.com/doofx0071/omnicraft) ⚡
 
-| Layer    | Tech                        |
-| -------- | --------------------------- |
+| Layer    | Tech                                 |
+| -------- | ------------------------------------ |
 | App      | Next.js 16 (App Router) + TypeScript |
-| Styling  | Tailwind CSS 4              |
-| Database | SQLite + raw SQL (parameterized) |
+| Styling  | Tailwind CSS 4                       |
+| Database | SQLite + raw SQL (parameterized)     |
 
 Next.js **is** the server: the users page and its API route handlers live in one app. No separate API process.
 
@@ -52,28 +52,28 @@ DATABASE_URL=file:./data/app.db
 
 ## API
 
-| Method | Path               | Description    |
-| ------ | ------------------ | -------------- |
-| GET    | /api/users         | List users     |
-| POST   | /api/users         | Create a user  |
-| DELETE | /api/users/:id     | Delete a user  |
+| Method | Path           | Description   |
+| ------ | -------------- | ------------- |
+| GET    | /api/users     | List users    |
+| POST   | /api/users     | Create a user |
+| DELETE | /api/users/:id | Delete a user |
 
 ## Troubleshooting
 
-| Symptom                                | Fix                                                          |
-| -------------------------------------- | ------------------------------------------------------------ |
-| API errors on /api                      | Re-run `npm run db:push`; check `DATABASE_URL` in `.env`      |
-| `SQLITE_CANTOPEN`                       | The database path is not writable — fix path or permissions   |
-| Dev server logs `Port 5173 is in use`   | Stop the other process, or change the port in the root `dev` script (`package.json`) — page and API run together in Next.js |
+| Symptom                               | Fix                                                                                                                         |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| API errors on /api                    | Re-run `npm run db:push`; check `DATABASE_URL` in `.env`                                                                    |
+| `SQLITE_CANTOPEN`                     | The database path is not writable — fix path or permissions                                                                 |
+| Dev server logs `Port 5173 is in use` | Stop the other process, or change the port in the root `dev` script (`package.json`) — page and API run together in Next.js |
 
 ## Useful commands
 
-| Command             | What it does               |
-| ------------------- | -------------------------- |
-| `npm run dev`       | Run the app (page + API)   |
-| `npm run build`     | Production build           |
-| `npm run lint`      | ESLint                     |
-| `npm run db:push`   | Apply SQL migrations       |
-| `npm run db:seed`   | Insert sample data         |
+| Command           | What it does             |
+| ----------------- | ------------------------ |
+| `npm run dev`     | Run the app (page + API) |
+| `npm run build`   | Production build         |
+| `npm run lint`    | ESLint                   |
+| `npm run db:push` | Apply SQL migrations     |
+| `npm run db:seed` | Insert sample data       |
 
 Crafted with OmniCraft — add route handlers under `app/api`, pages under `app`, and SQL migrations in `app/db/migrations`.

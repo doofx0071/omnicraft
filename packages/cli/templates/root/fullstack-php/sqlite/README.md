@@ -57,14 +57,14 @@ DB_CONNECTION=sqlite
 
 ## Troubleshooting
 
-| Symptom                               | Fix                                                                      |
-| ------------------------------------- | ------------------------------------------------------------------------ |
-| API returns `Database unavailable`    | Check `DB_CONNECTION` in `server/.env`                                   |
-| `SQLSTATE[HY000]` in the Laravel logs | The SQLite database file is not writable — check the path or permissions |
-| Schema changed but columns look stale | Re-run `npm run db:push`                                                 |
-| `php: command not found`              | Install PHP 8.4+ and Composer                                            |
+| Symptom                                           | Fix                                                                                                                                            |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| API returns `Database unavailable`                | Check `DB_CONNECTION` in `server/.env`                                                                                                         |
+| `SQLSTATE[HY000]` in the Laravel logs             | The SQLite database file is not writable — check the path or permissions                                                                       |
+| Schema changed but columns look stale             | Re-run `npm run db:push`                                                                                                                       |
+| `php: command not found`                          | Install PHP 8.4+ and Composer                                                                                                                  |
 | Server fails with `address already in use` (3000) | Something holds port 3000 — stop it, or change `--port` in the root `dev:server` script and update the proxy target in `client/vite.config.ts` |
-| Client logs `Port 5173 is in use`     | Stop the other dev server, or use the port Vite prints — the `/api` proxy still targets the API server |
+| Client logs `Port 5173 is in use`                 | Stop the other dev server, or use the port Vite prints — the `/api` proxy still targets the API server                                         |
 
 ## Useful commands
 
