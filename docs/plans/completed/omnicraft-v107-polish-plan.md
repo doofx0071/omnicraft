@@ -1,11 +1,12 @@
 # OmniCraft v1.0.7 Polish Plan
 
-**Status:** Active — verified core, docs, CI-reliability and structural slices merged; remaining behavior fixes and hosted gate still open<br>
+**Status:** Complete — shipped in v1.0.7 (npm `latest` 1.0.7 from `ed76478`, published 2026-11-06); residuals owned by the [generated-app quality follow-up](../active/omnicraft-generated-app-quality-follow-up-plan.md)<br>
 **Opened:** 6 November 2026<br>
+**Closed:** 7 November 2026<br>
 **Repository:** <https://github.com/doofx0071/omnicraft><br>
 **Basis:** five parallel round-2 audits at `83fb898` (core source, templates, tests/CI, docs, open-source
 research across create-t3-app, create-astro, create-vite/vue, sv, shadcn CLI, giget, Wasp). Auth-provider
-expansion stays deferred to the [next-targets plan](omnicraft-auth-provider-php-next-targets-plan.md).
+expansion stays deferred to the [next-targets plan](../active/omnicraft-auth-provider-php-next-targets-plan.md).
 
 ## Goal
 
@@ -101,19 +102,32 @@ all exports preserved; typecheck, unit suite, and checker passed. Matrix behavio
 
 ## Definition of done
 
-- [ ] Re-run typecheck, the full unit suite, smoke (22 listed paths), and
-      `check-support-evidence` (49 Supported rows) after the remaining source/template fixes. Historical
-      pass counts do not substitute for a check on the final head.
-- [ ] Remaining correctness items in this plan are implemented with focused tests; broader generated-app
-      work is assigned to the linked follow-up with a maintainer owner and per-item validation scope.
-- [ ] Independent generated-output audit covers native `.env` ignore behavior and the unmatched-API 404
-      contract; no unresolved tokens, tracked local `.env`, or incorrect engine claims.
+- [x] Re-run typecheck, the full unit suite, smoke (22 listed paths), and
+      `check-support-evidence` (49 Supported rows) on the final integrated head before pushing
+      (358/358 tests across 24 files at integration; re-verified on `main` after release).
+- [x] Remaining correctness items implemented with focused tests; broader generated-app work moved to
+      the linked [generated-app quality follow-up](../active/omnicraft-generated-app-quality-follow-up-plan.md)
+      with per-item validation scope.
+- [x] Independent generated-output audit covers native `.env` ignore behavior and the unmatched-API 404
+      contract; `/apix` and known-resource 404 semantics preserved; no unresolved tokens or tracked local
+      `.env`.
 - [x] Documentation workstream: README Options and HELP_TEXT parity passes; `omnicraft add` is documented;
       54 Markdown pages/links were checked in the docs workstream.
-- [ ] Hosted CI main gate is green on the final pushed continuation commit; the tag path must preserve and
-      pass the strict required-job set.
-- [ ] Prepare v1.0.7 version, CHANGELOG, and ROADMAP only after release content and exact-head hosted
-      evidence are confirmed; verify npm publication, GitHub Release, and the bot snapshot after release.
+- [x] Hosted CI gates green on the exact heads: PR gate run 42246819578 (78 jobs, on `8e1cc1c`), main
+      release-commit run 42252215088 (attempt 2 — attempt 1's single failure was the diagnosed
+      npm/cli#4828 transient, [#64](https://github.com/doofx0071/omnicraft/issues/64)), and tag run
+      42264033428.
+- [x] v1.0.7 published: npm `latest` = 1.0.7 from `ed76478`; GitHub Release created from the CHANGELOG;
+      bot snapshot commit `84ce7ad` recorded the release state in ROADMAP and the system overview.
+
+## Post-release residuals
+
+- Broader generated-app quality work (per-composition Node floors, generated CI lint/test tooling,
+  security baselines, project guidance) is owned by the
+  [generated-app quality follow-up](../active/omnicraft-generated-app-quality-follow-up-plan.md).
+- Two starter-pin staleness events (Tiged resolves named refs only) and the Tailwind 4.3.5 upstream
+  incident are documented at their pin sites; revisit pins on the next retrieval failure per the
+  documented procedure.
 
 ## Explicit non-goals
 

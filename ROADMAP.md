@@ -127,23 +127,27 @@ The tag workflow published through npm Trusted Publishing and updated the releas
 [system overview](docs/architecture/system-overview.md). The publication state above records npm
 `latest` and the Git tag as checked on 2026-11-06.
 
-## v1.0.7 — Gate reliability, CLI correctness, and API contracts (release candidate)
+## v1.0.7 — Gate reliability, CLI correctness, and API contracts (published 2026-11-06)
 
-Prepares a release from the [v1.0.7 polish plan](docs/plans/active/omnicraft-v107-polish-plan.md):
-hosted-gate reliability fixes (serialized CI queue, unix `fail-fast`, Vitest timeouts, bounded
-Laravel starter-retrieval retry, Tauri window-check relaunch with diagnostics), CLI correctness
-(pure flag validation, TTY-gated update checks with validated caching, truthful Tauri install
-handling and package-manager recording, Sanctum spinner discipline, literal module patch
-replacement, target-aware scaffold failure guidance), a unified JSON 404 contract for unmatched
-`/api` routes across the Node and FastAPI separate-API scaffolds with runtime assertions, native
-Expo/Tauri `.env` generation and ignore coverage, pinned official generators, a `tailwindcss`
-4.3.4 pin over the broken upstream 4.3.5 release, `support-evidence.ts` split into focused
-modules, and reconciled documentation including the `omnicraft add` command surface and a hosted
-CI rerun policy. Broader generated-app quality work is tracked in the
+Published to npm as `1.0.7` from commit `ed76478`; tag `v1.0.7` points to that commit. The release
+shipped the [v1.0.7 polish plan](docs/plans/completed/omnicraft-v107-polish-plan.md): hosted-gate
+reliability fixes (serialized CI queue, unix `fail-fast`, Vitest timeouts, bounded Laravel
+starter-retrieval retry, Tauri window-check relaunch with diagnostics), CLI correctness (pure flag
+validation, TTY-gated update checks with validated caching, truthful Tauri install handling and
+package-manager recording, Sanctum spinner discipline, literal module patch replacement,
+target-aware scaffold failure guidance), a unified JSON 404 contract for unmatched `/api` routes
+across the Node and FastAPI separate-API scaffolds with runtime assertions, native Expo/Tauri
+`.env` generation and ignore coverage, pinned official generators, a `tailwindcss` 4.3.4 pin over
+the broken upstream 4.3.5 release, `support-evidence.ts` split into focused modules, and
+reconciled documentation including the `omnicraft add` command surface and a hosted CI rerun
+policy (exercised in-gate: one npm/cli#4828 transient, diagnosed in
+[#64](https://github.com/doofx0071/omnicraft/issues/64), rerun failed jobs once). Broader
+generated-app quality work is tracked in the
 [generated-app quality follow-up](docs/plans/active/omnicraft-generated-app-quality-follow-up-plan.md).
 
-The release PR must pass the `supported-stack-release-gate` on its exact versioned commit before it
-is merged. Pushing the matching `v1.0.7` tag will trigger the npm publishing workflow.
+The release PR and the tag workflow each passed the `supported-stack-release-gate` on their exact
+commits. The tag workflow published through npm Trusted Publishing and updated the release snapshot
+in the [system overview](docs/architecture/system-overview.md).
 
 ## v1.0.3 and v1.0.4 — candidate scopes consolidated into v1.0.5
 
