@@ -69,6 +69,8 @@ DB_PASSWORD=omnicraft
 | `SQLSTATE[08006]` in the Laravel logs              | Wrong database credentials in `server/.env`, or the database container is down                   |
 | `port 3306 is already in use` when starting Docker | Another MySQL owns the port — change the host port in `docker-compose.yml` **and** `server/.env` |
 | `php: command not found`                           | Install PHP 8.4+ and Composer                                                                    |
+| Server fails with `address already in use` (3000)  | Something holds port 3000 — stop it, or change `--port` in the root `dev:server` script and update the proxy target in `client/vite.config.ts` |
+| Client logs `Port 5173 is in use`                  | Stop the other dev server, or use the port Vite prints — the `/api` proxy still targets the API server |
 
 ## Useful commands
 

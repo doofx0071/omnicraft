@@ -64,6 +64,7 @@ DATABASE_URL=file:./data/app.db
 | -------------------------------------- | ------------------------------------------------------------ |
 | API errors on /api                      | Re-run `npm run db:push`; check `DATABASE_URL` in `.env`      |
 | `SQLITE_CANTOPEN`                       | The database path is not writable — fix path or permissions   |
+| Dev server logs `Port 5173 is in use`   | Stop the other process, or change the port in the root `dev` script (`package.json`) — page and API run together in Next.js |
 
 ## Useful commands
 

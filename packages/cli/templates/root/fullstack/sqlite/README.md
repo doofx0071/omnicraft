@@ -62,6 +62,8 @@ DATABASE_URL=file:./data/app.db
 | API returns `Database unavailable`    | Check `DATABASE_URL` in `server/.env` — the folder is created automatically |
 | `SQLITE_CANTOPEN` in the server logs  | The database file path is not writable — fix the path or permissions        |
 | Schema changed but columns look stale | Re-run `npm run db:push`                                                    |
+| Server fails with `EADDRINUSE` (port 3000) | Something holds port 3000 — stop it, or set another `PORT` in `server/.env` and update the proxy target in `client/vite.config.ts` |
+| Client logs `Port 5173 is in use`     | Stop the other dev server, or use the port Vite prints — the `/api` proxy still targets the API server |
 
 ## Useful commands
 
