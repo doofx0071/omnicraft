@@ -3,6 +3,9 @@ import { z } from "zod";
 const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
+  // Generous defaults — a dev/CRUD baseline, not a hard guard.
+  RATE_LIMIT_MAX: z.coerce.number().default(300),
+  RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().default(15),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required — copy .env.example to .env"),
 });
 
@@ -29,6 +32,8 @@ export const env = skipEnvValidation
   ? ({
       PORT: 3000,
       CORS_ORIGIN: "http://localhost:5173",
+      RATE_LIMIT_MAX: 300,
+      RATE_LIMIT_WINDOW_MINUTES: 15,
       DATABASE_URL: "SKIP_ENV_VALIDATION_PLACEHOLDER",
     } satisfies z.infer<typeof envSchema>)
   : parseEnv();

@@ -57,14 +57,15 @@ DATABASE_URL=file:./data/app.db
 
 ## Troubleshooting
 
-| Symptom                                    | Fix                                                                                                                                |
-| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| API returns `Database unavailable`         | Check `DATABASE_URL` in `server/.env` — the folder is created automatically                                                        |
-| `SQLITE_CANTOPEN` in the server logs       | The database file path is not writable — fix the path or permissions                                                               |
-| Schema changed but columns look stale      | Re-run `npm run db:push`                                                                                                           |
-| Server fails with `EADDRINUSE` (port 3000) | Something holds port 3000 — stop it, or set another `PORT` in `server/.env` and update the proxy target in `client/vite.config.ts` |
-| Client logs `Port 5173 is in use`          | Stop the other dev server, or use the port Vite prints — the `/api` proxy still targets the API server                             |
+| Symptom                                           | Fix                                                                                                                                                       |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API returns `Database unavailable`                | Check `DATABASE_URL` in `server/.env` — the folder is created automatically                                                                               |
+| `SQLITE_CANTOPEN` in the server logs              | The database file path is not writable — fix the path or permissions                                                                                      |
+| Schema changed but columns look stale             | Re-run `npm run db:push`                                                                                                                                  |
+| Server fails with `EADDRINUSE` (port 3000)        | Something holds port 3000 — stop it, or set another `PORT` in `server/.env` and update the proxy target in `client/vite.config.ts`                        |
+| Client logs `Port 5173 is in use`                 | Stop the other dev server, or use the port Vite prints — the `/api` proxy still targets the API server                                                    |
 | Server exits with `Invalid environment variables` | Fix the values in `server/.env` (compare `server/.env.example`). CI/build-time only: set `SKIP_ENV_VALIDATION=1` to skip validation — never in production |
+| API returns 429 `Too many requests`               | The per-IP rate limit was hit — raise `RATE_LIMIT_MAX` or `RATE_LIMIT_WINDOW_MINUTES` in `server/.env`                                                    |
 
 ## Useful commands
 
