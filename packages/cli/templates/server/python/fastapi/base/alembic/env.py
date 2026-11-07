@@ -2,12 +2,12 @@ import asyncio
 from logging.config import fileConfig
 from pathlib import Path
 
-from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlalchemy.engine.url import make_url
+from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from alembic import context
 from app.config import settings
 from app.models import Base
 
@@ -23,7 +23,10 @@ if config.config_file_name is not None:
 config.set_main_option("sqlalchemy.url", settings.database_url)
 
 database_url = make_url(settings.database_url)
-if database_url.get_backend_name() == "sqlite" and database_url.database not in (None, "", ":memory:"):
+if (
+    database_url.get_backend_name() == "sqlite"
+    and database_url.database not in (None, "", ":memory:")
+):
     Path(database_url.database).parent.mkdir(parents=True, exist_ok=True)
 
 target_metadata = Base.metadata

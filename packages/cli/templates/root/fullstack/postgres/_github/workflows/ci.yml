@@ -31,3 +31,10 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # The health test never queries the database; DATABASE_URL only keeps
+      # the server's env validation (and ORM client construction) happy.
+      - name: Test server
+        run: npm test -w server
+        env:
+          DATABASE_URL: postgres://ci:ci@localhost:5432/ci

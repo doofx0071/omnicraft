@@ -41,3 +41,14 @@ jobs:
         working-directory: server
         env:
           DB_CONNECTION: sqlite
+
+      - name: Code style (Pint)
+        run: vendor/bin/pint --test
+        working-directory: server
+
+      # phpunit.xml pins the test database to SQLite in memory, so the
+      # suite runs the same way on every host regardless of the app's
+      # runtime database.
+      - name: API tests
+        run: php artisan test
+        working-directory: server

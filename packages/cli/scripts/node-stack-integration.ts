@@ -336,6 +336,11 @@ async function runScenario(scenario: NodeRuntimeScenario): Promise<void> {
       runRequired('Build and frontend-check generated client', 'npm', ['run', 'build', '--workspace=client'], projectRoot, env, secrets, diagnostics, 180_000)
     }
     runRequired('Typecheck generated API', 'npx', ['tsc', '--noEmit', '-p', 'server'], projectRoot, env, secrets, diagnostics, 120_000)
+    // The generated vitest health harness — same command the generated CI runs.
+    // The health route never queries the database, so this runs before setup;
+    // non-sqlite scenarios carry DATABASE_URL in env, sqlite falls back to a
+    // local file the adapter creates on demand.
+    runRequired('Run generated API tests', 'npm', ['test', '--workspace=server'], projectRoot, env, secrets, diagnostics, 120_000)
     console.log(`[node:${scenario.id}] generated client and API checks completed`)
     console.log(`[node:${scenario.id}] applying ${scenario.orm} database setup`)
     initializeDatabase(scenario, projectRoot, env, secrets, diagnostics)
