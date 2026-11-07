@@ -107,11 +107,35 @@ frontend-only and fullstack probes ran `npm run lint` successfully. Verified by 
 
 ### 3. API response and baseline security consistency
 
-- After the initial v1.0.7 unmatched-API 404 slice lands, decide whether to extend its JSON error contract
-  to additional stacks (Next.js/Laravel) without touching page/UI routing or known-resource 404 behavior.
-- Decide a minimal security-header and rate-limit baseline per runtime. Any new package/middleware must
-  be peer-checked and exercised by generated-project integration tests, including 429/error response
-  shapes; do not infer security from the Sanctum-only throttle.
+**Implemented (November 2026):** the unified JSON 404 contract (`{ "error": "Not found" }`,
+method-agnostic) now also covers the Next.js integrated overlay (an optional `app/api/[[...notfound]]`
+catch-all that loses to static and `[id]` routes by Next specificity and leaves page routing untouched)
+and the Laravel 12 API (a `Route::any('/{any?}', …)->where('any', '.*')` catch-all, because Laravel 12's
+`Route::fallback()` registers GET/HEAD only and cannot match bare `/api`; known-resource 404s keep
+Laravel's exception body). The four JSON API runtimes also gained a generated security baseline:
+Express ships `helmet` + `express-rate-limit`, Fastify ships `@fastify/helmet` +
+`@fastify/rate-limit` (with the error handler registered before plugin registration — Fastify freezes
+error-handler contexts at boot), Hono uses its built-in `secureHeaders()` plus a dependency-free
+in-memory fixed-window limiter, and FastAPI uses two pure-ASGI middlewares with CORS kept outermost so
+429s still carry CORS headers. Rate limits are per-IP, env-configurable via `RATE_LIMIT_MAX` /
+`RATE_LIMIT_WINDOW_MINUTES` (documented in each stack's `.env.example` and root README
+troubleshooting), and every 429 returns JSON `{ "error": "Too many requests" }` with a numeric
+`Retry-After`. CSP is deliberately left off (JSON APIs; the SPA is served by the Vite client).
+Peer/engines evidence for each new dependency is recorded in the slice commits. Local probes passed for
+express/fastify/hono raw-SQLite, FastAPI SQLite, Next.js SQLite, and the Laravel 12 API SQLite php-e2e
+(fixing a pre-existing win32 double-quoting bug in `scripts/php-laravel-e2e.ts` along the way);
+hosted-gate evidence and any matrix wording updates follow the next strict-gate run.
+
+Residuals for this work item:
+
+- Integrated Laravel 13 (Livewire/Inertia) and the Laravel 12 API have no OmniCraft security
+  header/rate-limit baseline (Sanctum's route throttle remains its own scope); adding one means
+  deciding Laravel-native middleware against the generated apps' session/CSRF behavior.
+- The rate limiters are per-process by design (in-memory Map / module state). Multi-worker,
+  multi-instance, or serverless deployments need a shared store; generated guidance says so in code
+  comments rather than a README claim.
+- `.env.example` for FastAPI lives in the SQLAlchemy db adapters (the base has none); a future base
+  env file must keep the two adapter files as the effective override.
 
 ### 4. Generated-project guidance and UX
 

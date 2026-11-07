@@ -178,8 +178,16 @@ boot the generated application, and exercise a successful database operation plu
 case. Examples include:
 
 - Node: install, typecheck client and server, start server, check `/api/health`, and perform a CRUD cycle.
-- Python: `uv sync`, apply Alembic migrations, boot Uvicorn, and exercise API/database behavior.
+  The separate-API Node scenarios also assert the generated security baseline (security headers on
+  `/api/health`) and the shared 429 contract — a bounded burst against the isolated boot environment's
+  low `RATE_LIMIT_MAX` must return 429 JSON `{ "error": "Too many requests" }` with a numeric
+  `Retry-After` — plus the method-agnostic unmatched-API 404 JSON contract.
+- Python: `uv sync`, apply Alembic migrations, boot Uvicorn, and exercise API/database behavior. The
+  FastAPI scenarios assert the same security-header and 429 contract as the Node scenarios.
 - Laravel: install through Composer, migrate/seed, boot Artisan, and exercise API/database behavior.
+  The Laravel 12 API feature tests assert the shared unmatched-API 404 JSON contract for `/api` and
+  `/api/*` on every verb while known-resource 404s keep Laravel's exception body. Laravel has no
+  OmniCraft security-header/rate-limit baseline yet.
 - Frontend-only React/Vite: database operations do not apply; install and build the generated app, boot
   its preview server, load the emitted JavaScript bundle, and verify that a missing asset fails.
 - Native apps: record the scaffold, web build (when applicable), native build, and launch as separate
@@ -220,8 +228,10 @@ The current workflow:
 6. Runs hosted Ubuntu `nextjs-runtime-integration` for integrated Next.js + raw SQL on SQLite,
    PostgreSQL, and MySQL. It runs the pinned-major `create-next-app@16`, applies OmniCraft's exact
    production layers, installs, builds and typechecks the project, runs SQL migrations, boots the
-   production server, and verifies CRUD and failure cases. All three database scenarios passed hosted
-   run #40614408163 on commit `336622e`; Next.js hosted runtime evidence is not pending.
+   production server, and verifies CRUD and failure cases. The CRUD pass also asserts the
+   method-agnostic unmatched-API 404 JSON contract against the Next.js integrated overlay. All three
+   database scenarios passed hosted run #40614408163 on commit `336622e`; Next.js hosted runtime
+   evidence is not pending.
 7. Runs hosted Ubuntu `frontend-runtime-integration` for React/Vite JavaScript frontend-only. It
    installs, builds, boots Vite preview, fetches the generated bundle, and checks missing-asset
    behavior; database operations do not apply. The generated-project check passed hosted run

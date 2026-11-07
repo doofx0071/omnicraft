@@ -6,6 +6,34 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added
+
+- Generated root `package.json` files declare per-composition `engines.node` floors and ship `.nvmrc`
+  files; `concurrently` is held at `^9.2.5` so the floors stay satisfiable on Node 20.
+- The ESLint extra ships a generated `.github/workflows/lint.yml` that runs the root lint script on
+  push/PR for every non-integrated composition (Next.js integrated keeps create-next-app's own lint).
+- Node separate-API scaffolds ship a Vitest health test harness (`npm test`), the FastAPI scaffold
+  ships pytest + ruff, and generated CI for Node, Python, and PHP stacks runs the corresponding test
+  and lint/test steps (Pint/PHPUnit for Laravel).
+- Generated fullstack compositions include a deterministic `AGENTS.md` with exact stack commands,
+  ports, database setup, and environment guidance; `.vscode/extensions.json` fragments from template
+  layers merge (union, dedupe, sort) into the generated root.
+- Node `env.ts` scaffolds support `SKIP_ENV_VALIDATION=1|true` as a CI/build-time escape hatch with
+  explicit placeholder values.
+- The unified JSON 404 contract (`{ "error": "Not found" }`, method-agnostic) extends to the Next.js
+  integrated overlay and the Laravel 12 API without touching page routing or known-resource 404s.
+- The four JSON API runtimes (Express, Fastify, Hono, FastAPI) generate a security baseline:
+  security headers on every response and a per-IP API rate limit configured by `RATE_LIMIT_MAX` /
+  `RATE_LIMIT_WINDOW_MINUTES`, with 429 responses returning JSON
+  `{ "error": "Too many requests" }` and a numeric `Retry-After`. Runtime integrations assert the
+  headers and the 429 contract.
+- The Laravel 12 API php-e2e suite asserts the shared 404 contract for `/api` and `/api/*`.
+
+### Fixed
+
+- `scripts/php-laravel-e2e.ts` no longer double-quotes the Composer version constraint on Windows,
+  which made every local Windows Laravel e2e run fail with an unparseable constraint.
+
 ## [1.0.7] — 2026-11-06
 
 ### Added

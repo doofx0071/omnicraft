@@ -46,7 +46,7 @@ All from `packages/cli/` unless noted:
 
 ## Template rules
 
-- The renderer restores only the npm-hostile template names `_gitignore`, `_prettierignore`, `_env.example`, and `_github` to `.gitignore`, `.prettierignore`, `.env.example`, and `.github/`. This is an explicit allowlist, not a rule for every leading underscore; ordinary names such as Python `__init__.py` stay unchanged.
+- The renderer restores only the npm-hostile template names `_gitignore`, `_prettierignore`, `_env.example`, `_github`, and `_nvmrc` to `.gitignore`, `.prettierignore`, `.env.example`, `.github/`, and `.nvmrc`. This is an explicit allowlist, not a rule for every leading underscore; ordinary names such as Python `__init__.py` stay unchanged.
 - Template variables: `projectName`, `clientPackageName`, `serverPackageName`, `databaseName` (underscores for database identifiers), `backendFramework`, and `orm`; `dbConfig` is the Laravel-only multi-line DB env block rendered by the PHP overlay `.env.example` files (`server/php/laravel/`, `server/php/laravel-sanctum-spa/`). Unknown `{{token}}` expressions fail generation in non-`.vue` files; Vue interpolation is intentionally exempt.
 - Dependency versions in templates are chosen for peer-compat, not "latest tag": TypeScript `^5.9.3` (typescript-eslint peers require <6.1 — TS7 breaks it), Prisma `^7.10.1` (npm's `latest` tag currently points at an 8.0 RC). Check peers before bumping.
 - Prisma 7 specifics: schema datasource has **no `url` property** (P1012 error if added) — URL lives in `prisma.config.ts`; `prisma-client` generator with `output = "../src/generated/prisma"`; `@prisma/adapter-pg`; `postinstall: prisma generate` requires `server/.env` to exist, which the CLI creates from `.env.example` **before** installing deps.
