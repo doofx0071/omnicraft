@@ -183,7 +183,50 @@ function assertRecord(value: unknown, label: string): Record<string, unknown> {
   return value as Record<string, unknown>
 }
 
+async function verifySecurityHeaders(origin: string): Promise<void> {
+  const health = await fetch(`${origin}/api/health`, { signal: AbortSignal.timeout(HTTP_TIMEOUT_MS) })
+  assert.equal(health.status, 200, 'The health endpoint should answer before the rate limit engages.')
+  for (const header of ['x-content-type-options', 'x-frame-options']) {
+    assert(
+      (health.headers.get(header) ?? '').length > 0,
+      `The generated API must send the ${header} security header on /api/health.`,
+    )
+  }
+}
+
+// The boot environment sets RATE_LIMIT_* low, so a bounded burst must hit
+// the shared 429 contract. Runs last in verifyCrud — the limiter keeps
+// rejecting afterwards.
+async function verifyRateLimit(origin: string): Promise<void> {
+  let limited = false
+  for (let attempt = 0; attempt < 30 && !limited; attempt += 1) {
+    const response = await fetch(`${origin}/api/health`, { signal: AbortSignal.timeout(HTTP_TIMEOUT_MS) })
+    if (response.status === 429) {
+      limited = true
+      assert.equal(
+        response.headers.get('content-type')?.split(';')[0],
+        'application/json',
+        'The 429 response should be JSON.',
+      )
+      assert.deepEqual(await response.json(), { error: 'Too many requests' })
+      const retryAfter = Number(response.headers.get('retry-after'))
+      assert(
+        Number.isFinite(retryAfter) && retryAfter >= 0,
+        'The 429 response must include a numeric Retry-After header.',
+      )
+      break
+    }
+    assert.equal(response.status, 200, 'Unexpected response while exercising the rate limit.')
+  }
+  assert(
+    limited,
+    'The generated API never returned 429 within 30 /api/health requests — check the RATE_LIMIT_* wiring.',
+  )
+}
+
 async function verifyCrud(origin: string, database: TestDatabase): Promise<void> {
+  await verifySecurityHeaders(origin)
+
   for (const path of ['/api', '/api/__unknown']) {
     const missingRoute = await request(origin, path)
     assert.equal(missingRoute.response.status, 404, `Unknown API route ${path} should return HTTP 404.`)
@@ -243,6 +286,8 @@ async function verifyCrud(origin: string, database: TestDatabase): Promise<void>
   assert.equal(deleted.response.status, 200)
   const missing = await request(origin, `/api/users/${id}`, { method: 'DELETE' })
   assert.equal(missing.response.status, 404)
+
+  await verifyRateLimit(origin)
 }
 
 async function ensureDockerAvailable(): Promise<void> {
@@ -302,6 +347,10 @@ async function runDatabaseCase(database: TestDatabase): Promise<void> {
           ...envOverrides,
           PORT: `${port}`,
           CORS_ORIGIN: origin,
+          // Keeps the 429 probe fast while leaving headroom above the ~12
+          // /api requests health polling + CRUD + 404 probes consume first.
+          RATE_LIMIT_MAX: '20',
+          RATE_LIMIT_WINDOW_MINUTES: '15',
         }),
       },
     )
