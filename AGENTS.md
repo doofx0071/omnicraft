@@ -18,7 +18,7 @@ Interactive project-scaffolding CLI. npm package **`create-omnicraft`** → user
 | Coding rules (incl. Windows subprocess law)   | [docs/development/coding-standards.md](docs/development/coding-standards.md)                                                                                       |
 | Contributing + release process                | [CONTRIBUTING.md](CONTRIBUTING.md)                                                                                                                                 |
 | Current release status and priorities         | [ROADMAP.md](ROADMAP.md)                                                                                                                                           |
-| Active v1.0.7 polish / generated-app scope    | [Polish plan](docs/plans/completed/omnicraft-v107-polish-plan.md) + [generated-app follow-up](docs/plans/active/omnicraft-generated-app-quality-follow-up-plan.md) |
+| v1.0.7 polish / v1.0.8 generated-app scope    | [Polish plan](docs/plans/completed/omnicraft-v107-polish-plan.md) + [generated-app follow-up](docs/plans/completed/omnicraft-generated-app-quality-follow-up-plan.md) |
 
 Docs index: [docs/index.md](docs/index.md). Status vocabulary: Supported / Scaffold-verified /
 Selectable — unverified / Rejected — unsupported combination / Planned — never describe a combination

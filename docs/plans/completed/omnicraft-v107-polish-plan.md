@@ -1,6 +1,6 @@
 # OmniCraft v1.0.7 Polish Plan
 
-**Status:** Complete — shipped in v1.0.7 (npm `latest` 1.0.7 from `ed76478`, published 2026-11-06); residuals owned by the [generated-app quality follow-up](../active/omnicraft-generated-app-quality-follow-up-plan.md)<br>
+**Status:** Complete — shipped in v1.0.7 (npm `latest` 1.0.7 from `ed76478`, published 2026-11-06); residuals owned by the [generated-app quality follow-up](omnicraft-generated-app-quality-follow-up-plan.md)<br>
 **Opened:** 6 November 2026<br>
 **Closed:** 7 November 2026<br>
 **Repository:** <https://github.com/doofx0071/omnicraft><br>

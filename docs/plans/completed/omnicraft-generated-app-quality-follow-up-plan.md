@@ -1,7 +1,8 @@
 # OmniCraft Generated-App Quality Follow-up
 
-**Status:** Planned — owner: OmniCraft maintainer<br>
+**Status:** Complete — shipped in v1.0.8 (npm `latest` 1.0.8 from `fb6a990`, published 2026-11-08); residuals remain per work item (exact-minimum Node boot proof, Laravel security-baseline decision, generated root package.json descriptions)<br>
 **Opened:** 6 November 2026<br>
+**Closed:** 8 November 2026<br>
 **Repository:** <https://github.com/doofx0071/omnicraft><br>
 **Prerequisite:** v1.0.7 polish plan closes with its exact-head hosted release gate green.<br>
 **Scope note:** Native `.env` ignore preservation is an in-flight v1.0.7 item in the generated-api
