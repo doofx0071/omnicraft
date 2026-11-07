@@ -262,7 +262,10 @@ async function runDatabaseCase(database: TestDatabase, composeDir: string): Prom
       'php-test',
       'composer',
       'create-project',
-      process.platform === 'win32' ? '"laravel/laravel:^12.0"' : 'laravel/laravel:^12.0',
+      // No manual win32 quoting: runCommandVisible/joinWin32Command already
+      // quotes the ^ metacharacter, and the extra quotes reach Composer
+      // literally ('Could not parse version constraint ^12.0"').
+      'laravel/laravel:^12.0',
       'server',
       '--no-interaction',
       '--prefer-dist',
