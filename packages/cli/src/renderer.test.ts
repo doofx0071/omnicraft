@@ -24,6 +24,7 @@ describe('restoreDotfileName', () => {
     expect(restoreDotfileName('_prettierignore')).toBe('.prettierignore')
     expect(restoreDotfileName('_env.example')).toBe('.env.example')
     expect(restoreDotfileName('_github')).toBe('.github')
+    expect(restoreDotfileName('_nvmrc')).toBe('.nvmrc')
   })
 
   it('leaves underscore-prefixed template files alone', () => {
