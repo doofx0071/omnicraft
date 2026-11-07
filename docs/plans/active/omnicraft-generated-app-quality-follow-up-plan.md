@@ -90,12 +90,20 @@ Residuals for this work item:
 
 ### 2. Generated CI and test harnesses
 
-- Decide which stack families ship a default health/API test (Vitest for Node, pytest for FastAPI,
-  framework tests for Laravel) and keep the command present only where the harness is actually added.
-- Make the optional ESLint/Prettier extra enforce `npm run lint` in generated CI when selected; preserve
-  create-next-app's own lint workflow and avoid duplicate jobs.
-- Add Python lint/test and PHP Pint/Pest steps only with pinned or bounded tooling and a clean
-  generated-project runtime job.
+**Partially implemented (November 2026):** the ESLint extra now ships a separate
+`extras/eslint/_github/workflows/lint.yml` (a distinct file, since the engine overwrites rather than
+merges same-path workflows) that runs `npm run lint` from the repo root on push/PR for every
+non-integrated composition — the script lands in the root `package.json` on all of them. Next.js
+integrated is excluded (create-next-app owns lint there and the root CI template already lints).
+Engine tests assert placement, YAML validity, trigger parity, and the Next.js exclusion; real
+frontend-only and fullstack probes ran `npm run lint` successfully. Verified by hosted gate run
+42374012979 (all 77 jobs green).
+
+- Still open: decide which stack families ship a default health/API test (Vitest for Node, pytest for
+  FastAPI, framework tests for Laravel) and keep the command present only where the harness is actually
+  added.
+- Still open: Python lint/test and PHP Pint/Pest steps in generated CI, with pinned or bounded tooling
+  and a clean generated-project runtime job.
 
 ### 3. API response and baseline security consistency
 
