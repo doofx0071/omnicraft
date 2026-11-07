@@ -70,6 +70,8 @@ DATABASE_URL=postgresql+asyncpg://omnicraft:omnicraft@localhost:5432/{{databaseN
 | `ConnectionRefusedError` in the server logs        | Wrong `DATABASE_URL` in `server/.env`, or the database container is down                              |
 | `port 5432 is already in use` when starting Docker | Another PostgreSQL owns the port — change the host port in `docker-compose.yml` **and** `server/.env` |
 | `uv: command not found`                            | Install uv: `pip install uv` or `winget install astral-sh.uv`                                         |
+| Server fails with `address already in use` (3000)  | Something holds port 3000 — stop it, or change `--port` in the root `dev:server` script and update the proxy target in `client/vite.config.ts` |
+| Client logs `Port 5173 is in use`                  | Stop the other dev server, or use the port Vite prints — the `/api` proxy still targets the API server |
 
 ## Useful commands
 

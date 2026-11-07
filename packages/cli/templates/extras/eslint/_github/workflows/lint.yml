@@ -1,0 +1,30 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # DATABASE_URL is only needed so `prisma generate` can run during
+      # postinstall in Prisma compositions — it does not connect to the
+      # database and is unused elsewhere.
+      - name: Install dependencies
+        run: npm ci
+        env:
+          DATABASE_URL: postgres://ci:ci@localhost:5432/ci
+
+      # The eslint extra adds the `lint` script to the root package.json, so
+      # the workflow always runs from the repository root.
+      - name: Lint
+        run: npm run lint

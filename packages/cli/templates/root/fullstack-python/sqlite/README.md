@@ -67,6 +67,8 @@ DATABASE_URL=sqlite+aiosqlite:///data/app.db
 | `unable to open database file`        | The path in `DATABASE_URL` is not writable — fix the path or permissions    |
 | Schema changed but columns look stale | Re-run `npm run db:push`, or autogenerate one with `npm run db:migrate`     |
 | `uv: command not found`               | Install uv: `pip install uv` or `winget install astral-sh.uv`               |
+| Server fails with `address already in use` (3000) | Something holds port 3000 — stop it, or change `--port` in the root `dev:server` script and update the proxy target in `client/vite.config.ts` |
+| Client logs `Port 5173 is in use`     | Stop the other dev server, or use the port Vite prints — the `/api` proxy still targets the API server |
 
 ## Useful commands
 

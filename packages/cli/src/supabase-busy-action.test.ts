@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { runBusyAction } from "../templates/auth/supabase-react-vite/src/run-busy-action.js";
+import { runBusyAction } from "../templates/web/react/client/src/lib/run-busy-action.js";
 
 describe("generated Supabase busy action", () => {
   it("always clears busy state and reports a rejected request", async () => {

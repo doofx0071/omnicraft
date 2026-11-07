@@ -65,6 +65,7 @@ DATABASE_URL=postgres://omnicraft:omnicraft@localhost:5432/{{databaseName}}
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | API returns `Database unavailable` / 500 on /api  | PostgreSQL isn't running — `docker compose up -d`, or wrong `DATABASE_URL` in `.env`           |
 | `port 5432 is already in use`                      | Change the host port in `docker-compose.yml` **and** `.env`                                    |
+| Dev server logs `Port 5173 is in use`              | Stop the other process, or change the port in the root `dev` script (`package.json`) — page and API run together in Next.js |
 
 ## Useful commands
 

@@ -65,6 +65,7 @@ DATABASE_URL=mysql://omnicraft:omnicraft@localhost:3306/{{databaseName}}
 | ------------------------------------------------- | -------------------------------------------------------------------------------- |
 | API returns errors on /api                         | MySQL isn't running (`docker compose up -d`) or wrong `DATABASE_URL` in `.env`    |
 | `port 3306 is already in use`                      | Change the host port in `docker-compose.yml` **and** `.env`                       |
+| Dev server logs `Port 5173 is in use`              | Stop the other process, or change the port in the root `dev` script (`package.json`) — page and API run together in Next.js |
 
 ## Useful commands
 
