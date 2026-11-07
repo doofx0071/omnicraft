@@ -1559,6 +1559,199 @@ describe(".vscode/extensions.json recommendations", () => {
     expect(readFileSync(join(dir, ".vscode", "extensions.json"), "utf8")).toBe(cnaExtensions);
   });
 });
+describe("generated AGENTS.md", () => {
+  const SUPPORT_MATRIX_URL =
+    "https://github.com/doofx0071/omnicraft/blob/main/docs/templates/stack-support-matrix.md";
+
+  /** Shared shape assertions; returns the rendered AGENTS.md for content checks. */
+  function expectAgentsMd(dir: string): string {
+    const agents = readFileSync(join(dir, "AGENTS.md"), "utf8");
+    expect(agents).not.toContain("{{");
+    expect(agents).toContain(SUPPORT_MATRIX_URL);
+    expect(agents.split("\n").length).toBeLessThanOrEqual(60);
+    // every documented command must exist in the root manifest's scripts
+    const scripts = Object.keys(
+      (readJson(join(dir, "package.json")).scripts ?? {}) as Record<string, string>,
+    );
+    const documented = [...agents.matchAll(/`npm run ([a-z:.-]+)`/g)].map((m) => m[1]);
+    expect(documented.length).toBeGreaterThan(0);
+    for (const command of documented) {
+      expect(scripts, `AGENTS.md documents npm run ${command}`).toContain(command);
+    }
+    return agents;
+  }
+
+  it("renders the fullstack postgres agent guide for express + drizzle", () => {
+    const dir = makeTempDir("agents-fullstack-pg");
+    scaffoldInto(dir, makeAnswers());
+    const agents = expectAgentsMd(dir);
+    expect(agents).toContain("React + Vite + TypeScript");
+    expect(agents).toContain("express");
+    expect(agents).toContain("PostgreSQL");
+    expect(agents).toContain("drizzle");
+    expect(agents).toContain("docker compose up -d");
+    expect(agents).toContain("3000");
+    expect(agents).toContain("5173");
+    expect(agents).toContain("server/.env");
+    expect(agents).toContain("SKIP_ENV_VALIDATION=1");
+  });
+
+  it("renders the fullstack sqlite agent guide without docker", () => {
+    const dir = makeTempDir("agents-fullstack-sqlite");
+    scaffoldInto(dir, makeAnswers({ database: "sqlite" }));
+    const agents = expectAgentsMd(dir);
+    expect(agents).toContain("SQLite");
+    expect(agents).not.toContain("docker compose up -d");
+  });
+
+  it("renders the FastAPI agent guide with uv/alembic commands", () => {
+    const dir = makeTempDir("agents-python-pg");
+    scaffoldInto(
+      dir,
+      makeAnswers({
+        backendRuntime: "python",
+        backendFramework: "fastapi",
+        orm: null,
+        database: "postgres",
+      }),
+    );
+    const agents = expectAgentsMd(dir);
+    expect(agents).toContain("FastAPI");
+    expect(agents).toContain("Alembic");
+    expect(agents).toContain("npm run dev:server");
+    expect(agents).toContain("docker compose up -d");
+  });
+
+  it("renders the Laravel API agent guide with artisan commands and no db:migrate", () => {
+    const dir = makeTempDir("agents-php-sqlite");
+    scaffoldInto(
+      dir,
+      makeAnswers({
+        backendRuntime: "php",
+        backendFramework: "laravel",
+        orm: null,
+        database: "sqlite",
+      }),
+    );
+    const agents = expectAgentsMd(dir);
+    expect(agents).toContain("Laravel");
+    expect(agents).toContain("artisan serve");
+    // the php root variant has no db:migrate script — the guide must not claim one
+    expect(agents).not.toContain("npm run db:migrate");
+    expect(agents).toContain("database.sqlite");
+  });
+
+  it.each(["none", "laravel-native"] as const)(
+    "renders the integrated Livewire agent guide for %s",
+    (authentication) => {
+      const dir = makeTempDir(`agents-livewire-${authentication}`);
+      scaffoldInto(dir, makeLivewireAnswers(authentication));
+      const agents = expectAgentsMd(dir);
+      expect(agents).toContain("Laravel 13 + Livewire 4");
+      expect(agents).toContain(authentication === "laravel-native" ? "Fortify" : "| None ");
+      expect(agents).toContain("npm run test");
+      expect(agents).not.toContain("docker compose up -d");
+    },
+  );
+
+  it("renders the integrated Inertia React agent guide", () => {
+    const dir = makeTempDir("agents-inertia");
+    scaffoldInto(dir, makeInertiaReactAnswers());
+    const agents = expectAgentsMd(dir);
+    expect(agents).toContain("Laravel 13 + Inertia + React + TypeScript");
+    expect(agents).toContain("npm run test");
+  });
+
+  it("renders the frontend-only agent guide without backend sections", () => {
+    const dir = makeTempDir("agents-frontend-only");
+    scaffoldInto(dir, makeAnswers({ fullStack: false }));
+    const agents = expectAgentsMd(dir);
+    expect(agents).toContain("npm run preview");
+    expect(agents).not.toContain("docker compose up -d");
+    expect(agents).not.toContain("3000");
+  });
+
+  it("ships AGENTS.md in every root variant template except fullstack-next", () => {
+    const withAgents = [
+      "root/fullstack/postgres",
+      "root/fullstack/mysql",
+      "root/fullstack/sqlite",
+      "root/fullstack-python/postgres",
+      "root/fullstack-python/sqlite",
+      "root/fullstack-php/postgres",
+      "root/fullstack-php/mysql",
+      "root/fullstack-php/sqlite",
+      "root/frontend-only",
+      "root/fullstack-laravel-livewire",
+      "root/fullstack-laravel-inertia-react",
+    ];
+    for (const variant of withAgents) {
+      expect(
+        existsSync(join(TEMPLATES_ROOT, ...variant.split("/"), "AGENTS.md")),
+        `${variant} must ship AGENTS.md`,
+      ).toBe(true);
+    }
+    // create-next-app (16.2+) generates AGENTS.md and `next dev` actively
+    // manages it — the fullstack-next overlay must not clobber that file.
+    expect(existsSync(join(TEMPLATES_ROOT, "root", "fullstack-next", "postgres", "AGENTS.md"))).toBe(
+      false,
+    );
+  });
+
+  it("ships no AGENTS.md on the integrated next.js path", () => {
+    const dir = makeTempDir("agents-nextjs");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ name: "demo-app", dependencies: { next: "16.4.3" } }),
+    );
+    const nextAnswers = makeAnswers({
+      frontend: "nextjs",
+      backendRuntime: null,
+      backendFramework: null,
+      orm: "none",
+      database: "sqlite",
+      architecture: { kind: "integrated-fullstack", framework: "nextjs" },
+    });
+    nextAnswers.targetDir = dir;
+    applyLayers(
+      TEMPLATES_ROOT,
+      planLayerApplication(composeLayers(nextAnswers), nextAnswers.architecture)
+        .afterOfficialGenerator,
+      templateVariables(nextAnswers),
+      dir,
+    );
+    expect(existsSync(join(dir, "AGENTS.md"))).toBe(false);
+  });
+
+  it("ships no AGENTS.md for native apps, whose OMNICRAFT.md notes stay as-is", () => {
+    const dir = makeTempDir("agents-native");
+    scaffoldInto(dir, {
+      projectName: "demo-mobile",
+      targetDir: dir,
+      projectType: "mobile",
+      frontend: "react",
+      language: "typescript",
+      fullStack: false,
+      backendRuntime: null,
+      backendFramework: null,
+      orm: null,
+      database: null,
+      authentication: "none",
+      extras: { tailwind: false, eslintPrettier: false, shadcn: false },
+      architecture: { kind: "native-app", platform: "mobile" },
+    });
+    expect(existsSync(join(dir, "AGENTS.md"))).toBe(false);
+    expect(existsSync(join(dir, "OMNICRAFT.md"))).toBe(true);
+  });
+
+  it("keeps AGENTS.md when the Sanctum SPA root README overlay applies", () => {
+    const dir = makeTempDir("agents-sanctum");
+    scaffoldInto(dir, makeLaravelApiAuthAnswers("laravel-native", "sqlite"));
+    expect(existsSync(join(dir, "AGENTS.md"))).toBe(true);
+    expect(readFileSync(join(dir, "README.md"), "utf8")).toContain("personal access tokens");
+  });
+});
 describe("layer composition edge cases", () => {
   it("throws MissingLayerError for unknown layers", async () => {
     const dir = makeTempDir("missing-layer");
