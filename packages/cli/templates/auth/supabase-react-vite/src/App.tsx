@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
-import { runBusyAction } from "./run-busy-action";
+import { runBusyAction } from "./lib/run-busy-action";
 
 type Note = {
   id: string;
@@ -79,22 +79,21 @@ export default function App() {
 
   async function submitCredentials(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setBusy(true);
     setError(null);
     setMessage(null);
-    try {
-      const result = signingUp
-        ? await supabase.auth.signUp({ email, password })
-        : await supabase.auth.signInWithPassword({ email, password });
-      if (result.error) throw result.error;
-      if (signingUp && !result.data.session) {
-        setMessage("Check your email to confirm your account, then sign in.");
-      }
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Authentication failed.");
-    } finally {
-      setBusy(false);
-    }
+    await runBusyAction(
+      async () => {
+        const result = signingUp
+          ? await supabase.auth.signUp({ email, password })
+          : await supabase.auth.signInWithPassword({ email, password });
+        if (result.error) throw result.error;
+        if (signingUp && !result.data.session) {
+          setMessage("Check your email to confirm your account, then sign in.");
+        }
+      },
+      setBusy,
+      (cause) => setError(cause instanceof Error ? cause.message : "Authentication failed."),
+    );
   }
 
   async function addNote(event: FormEvent<HTMLFormElement>) {

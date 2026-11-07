@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { api } from "./lib/api";
 import type { ApiUser, AuthUser } from "./lib/api";
+import { runBusyAction } from "./lib/run-busy-action";
 import "./auth.css";
 
 type AuthMode = "register" | "login";
@@ -54,66 +55,64 @@ export default function App() {
 
   async function submitAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setBusy(true);
     setError(null);
-    try {
-      const result =
-        authMode === "register"
-          ? await api.register({
-              name,
-              email,
-              password,
-              password_confirmation: passwordConfirmation,
-            })
-          : await api.login({ email, password });
-      setUser(result.user);
-      setPassword("");
-      setPasswordConfirmation("");
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Authentication failed.");
-    } finally {
-      setBusy(false);
-    }
+    await runBusyAction(
+      async () => {
+        const result =
+          authMode === "register"
+            ? await api.register({
+                name,
+                email,
+                password,
+                password_confirmation: passwordConfirmation,
+              })
+            : await api.login({ email, password });
+        setUser(result.user);
+        setPassword("");
+        setPasswordConfirmation("");
+      },
+      setBusy,
+      (cause) => setError(cause instanceof Error ? cause.message : "Authentication failed."),
+    );
   }
 
   async function signOut() {
-    setBusy(true);
     setError(null);
-    try {
-      await api.logout();
-      setUser(null);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not sign out.");
-    } finally {
-      setBusy(false);
-    }
+    await runBusyAction(
+      async () => {
+        await api.logout();
+        setUser(null);
+      },
+      setBusy,
+      (cause) => setError(cause instanceof Error ? cause.message : "Could not sign out."),
+    );
   }
 
   async function addUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setBusy(true);
-    try {
-      await api.createUser({ name: recordName, email: recordEmail });
-      setRecordName("");
-      setRecordEmail("");
-      await loadUsers();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not save the sample user.");
-    } finally {
-      setBusy(false);
-    }
+    await runBusyAction(
+      async () => {
+        await api.createUser({ name: recordName, email: recordEmail });
+        setRecordName("");
+        setRecordEmail("");
+        await loadUsers();
+      },
+      setBusy,
+      (cause) =>
+        setError(cause instanceof Error ? cause.message : "Could not save the sample user."),
+    );
   }
 
   async function removeUser(id: number) {
-    setBusy(true);
-    try {
-      await api.deleteUser(id);
-      await loadUsers();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not delete the sample user.");
-    } finally {
-      setBusy(false);
-    }
+    await runBusyAction(
+      async () => {
+        await api.deleteUser(id);
+        await loadUsers();
+      },
+      setBusy,
+      (cause) =>
+        setError(cause instanceof Error ? cause.message : "Could not delete the sample user."),
+    );
   }
 
   return (

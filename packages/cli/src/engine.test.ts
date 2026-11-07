@@ -329,6 +329,13 @@ describe("composition compatibility", () => {
       expect(clientApi).toContain("X-XSRF-TOKEN");
       expect(clientApi).toContain('credentials: "include"');
       expect(clientApp).toContain("Sign out");
+      // busy-state parity with the Supabase overlay: the shared helper comes
+      // from the base React client and wraps every overlay action
+      expect(readFileSync(join(dir, "client/src/lib/run-busy-action.ts"), "utf8")).toContain(
+        "export async function runBusyAction",
+      );
+      expect(clientApp).toContain('from "./lib/run-busy-action"');
+      expect(clientApp.match(/await runBusyAction\(/g)?.length).toBe(4);
       expect(corsConfig).toContain("'supports_credentials' => true");
       expect(corsConfig).toContain("'allowed_origins' => $allowedOrigins");
       expect(corsConfig).not.toContain("'allowed_origins' => ['*']");
@@ -718,6 +725,15 @@ describe("frontend-only", () => {
     expect(manifest.authentication).toBe("supabase-auth");
     expect(manifest.modules).toEqual([]);
     expect(existsSync(join(dir, "server"))).toBe(false);
+
+    // the busy-state helper is inherited from the base React client, not
+    // duplicated by the auth overlay, and every overlay action uses it
+    expect(readFileSync(join(dir, "src", "lib", "run-busy-action.ts"), "utf8")).toContain(
+      "export async function runBusyAction",
+    );
+    const app = readFileSync(join(dir, "src", "App.tsx"), "utf8");
+    expect(app).toContain('from "./lib/run-busy-action"');
+    expect(app.match(/await runBusyAction\(/g)?.length).toBe(4);
   });
 
   it("scaffolds the client at the project root without server artifacts", () => {

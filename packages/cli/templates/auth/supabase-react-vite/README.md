@@ -42,6 +42,14 @@ Use the local publishable key printed by the Supabase CLI only in your local `.e
 that file or paste local keys into issues, logs, or screenshots. Stop local services with
 `npx --yes supabase@2.122.0 stop --no-backup`.
 
+### Why these Supabase versions are pinned
+
+The local-stack scripts pin the Supabase CLI to 2.122.0 (`npx --yes supabase@2.122.0 …`) and
+`package.json` pins `@supabase/supabase-js` to exactly 2.118.0. The CLI's local services, this
+project's `supabase/config.toml`, and the browser library evolve together, so exact pins keep
+`npm install` and the local stack reproducible instead of drifting with npm's moving tags. Upgrade
+both deliberately, as a pair, and re-run `npm run supabase:reset` afterwards.
+
 ## Authentication and data behavior
 
 - Create an account or sign in with email/password.
