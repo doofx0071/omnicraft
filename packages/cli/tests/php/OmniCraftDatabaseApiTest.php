@@ -37,6 +37,23 @@ class OmniCraftDatabaseApiTest extends TestCase
         $user = \App\Models\User::query()->where('email', $email)->firstOrFail();
         $this->deleteJson('/api/users/' . $user->id)->assertOk()->assertJsonPath('email', $email);
         $this->assertDatabaseMissing('users', ['email' => $email]);
-        $this->deleteJson('/api/users/' . $user->id)->assertNotFound();
+
+        // A known resource's 404 keeps Laravel's exception-driven body — the
+        // shared contract must never replace it.
+        $missing = $this->deleteJson('/api/users/' . $user->id);
+        $missing->assertNotFound();
+        $missing->assertJsonStructure(['message']);
+        $missing->assertJsonMissing(['error' => 'Not found']);
+    }
+
+    public function test_unmatched_api_routes_return_the_shared_json_404_contract(): void
+    {
+        foreach (['/api', '/api/__unknown'] as $path) {
+            $response = $this->getJson($path);
+
+            $response->assertNotFound();
+            $this->assertSame('application/json', $response->headers->get('Content-Type'));
+            $response->assertExactJson(['error' => 'Not found']);
+        }
     }
 }
