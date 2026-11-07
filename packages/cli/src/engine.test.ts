@@ -1465,6 +1465,100 @@ export default z;
     }
   });
 });
+describe(".vscode/extensions.json recommendations", () => {
+  function readRecommendations(dir: string): string[] {
+    return (
+      JSON.parse(readFileSync(join(dir, ".vscode", "extensions.json"), "utf8")) as {
+        recommendations: string[];
+      }
+    ).recommendations;
+  }
+
+  it("unions fragments from the client, extras, and db layers into the target root file", () => {
+    const dir = makeTempDir("vscode-fullstack");
+    scaffoldInto(dir, makeAnswers({ orm: "prisma" }));
+
+    // React ships no framework extension; tailwind/eslint extras and the
+    // prisma db adapter each contribute one, merged and sorted at the root.
+    expect(readRecommendations(dir)).toEqual([
+      "bradlc.vscode-tailwindcss",
+      "dbaeumer.vscode-eslint",
+      "prisma.prisma",
+    ]);
+    // fragments are merged at the workspace root — no stray per-workspace copies
+    expect(existsSync(join(dir, "client", ".vscode"))).toBe(false);
+    expect(existsSync(join(dir, "server", ".vscode"))).toBe(false);
+  });
+
+  it("merges the framework fragment for vue and svelte frontend-only clients", () => {
+    const vueDir = makeTempDir("vscode-vue");
+    scaffoldInto(vueDir, makeAnswers({ frontend: "vue", fullStack: false }));
+    expect(readRecommendations(vueDir)).toEqual([
+      "Vue.volar",
+      "bradlc.vscode-tailwindcss",
+      "dbaeumer.vscode-eslint",
+    ]);
+
+    const svelteDir = makeTempDir("vscode-svelte");
+    scaffoldInto(svelteDir, makeAnswers({ frontend: "svelte", fullStack: false }));
+    expect(readRecommendations(svelteDir)).toEqual([
+      "bradlc.vscode-tailwindcss",
+      "dbaeumer.vscode-eslint",
+      "svelte.svelte-vscode",
+    ]);
+  });
+
+  it("produces byte-identical output for identical answers (sorted union)", () => {
+    const first = makeTempDir("vscode-deterministic-1");
+    const second = makeTempDir("vscode-deterministic-2");
+    scaffoldInto(first, makeAnswers({ orm: "prisma" }));
+    scaffoldInto(second, makeAnswers({ orm: "prisma" }));
+    expect(readFileSync(join(first, ".vscode", "extensions.json"), "utf8")).toBe(
+      readFileSync(join(second, ".vscode", "extensions.json"), "utf8"),
+    );
+  });
+
+  it("creates no .vscode file when no fragment composes", () => {
+    const dir = makeTempDir("vscode-absent");
+    scaffoldInto(
+      dir,
+      makeAnswers({ extras: { tailwind: false, eslintPrettier: false, shadcn: false } }),
+    );
+    expect(existsSync(join(dir, ".vscode"))).toBe(false);
+  });
+
+  it("leaves a generator-owned .vscode/extensions.json untouched on the next.js path", () => {
+    const dir = makeTempDir("vscode-nextjs");
+    mkdirSync(join(dir, ".vscode"), { recursive: true });
+    const cnaExtensions = `${JSON.stringify(
+      { recommendations: ["ms-vscode.vscode-typescript-next"] },
+      null,
+      2,
+    )}\n`;
+    writeFileSync(join(dir, ".vscode", "extensions.json"), cnaExtensions);
+
+    const nextAnswers = makeAnswers({
+      frontend: "nextjs",
+      backendRuntime: null,
+      backendFramework: null,
+      orm: "none",
+      database: "sqlite",
+      extras: { tailwind: true, eslintPrettier: true, shadcn: false },
+      architecture: { kind: "integrated-fullstack", framework: "nextjs" },
+    });
+    nextAnswers.targetDir = dir;
+    applyLayers(
+      TEMPLATES_ROOT,
+      planLayerApplication(composeLayers(nextAnswers), nextAnswers.architecture)
+        .afterOfficialGenerator,
+      templateVariables(nextAnswers),
+      dir,
+    );
+
+    // no nextjs layer ships a fragment, so create-next-app's file survives
+    expect(readFileSync(join(dir, ".vscode", "extensions.json"), "utf8")).toBe(cnaExtensions);
+  });
+});
 describe("layer composition edge cases", () => {
   it("throws MissingLayerError for unknown layers", async () => {
     const dir = makeTempDir("missing-layer");

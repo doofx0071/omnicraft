@@ -33,3 +33,20 @@ export function deepMergePackageJson(base: Json, override: Json): Json {
   }
   return result
 }
+
+/**
+ * The one non-manifest file the engine merges across layers (same-path files
+ * otherwise overwrite): `.vscode/extensions.json`. Every layer's fragment is
+ * merged into the TARGET ROOT's file so its `recommendations` array is the
+ * union of all fragments — deduped and sorted for deterministic output.
+ * Non-array `recommendations` values are ignored; other keys follow the
+ * ordinary override-wins rule (current fragments ship only recommendations).
+ */
+export function mergeExtensionsJson(base: Json, override: Json): Json {
+  const baseRecommendations = Array.isArray(base.recommendations) ? base.recommendations : []
+  const overrideRecommendations = Array.isArray(override.recommendations)
+    ? override.recommendations
+    : []
+  const recommendations = [...new Set([...baseRecommendations, ...overrideRecommendations])].sort()
+  return { ...base, ...override, recommendations }
+}
