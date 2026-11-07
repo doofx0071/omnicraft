@@ -22,6 +22,7 @@
 | v1.0.5  | Auth integrations and verified stack updates     | ✅ published                | —       |
 | v1.0.6  | Audit remediation and release-process repair     | ✅ published                | —       |
 | v1.0.7  | Gate reliability, CLI correctness, API contracts | ✅ published                | —       |
+| v1.0.8  | Generated-app quality                            | 🟡 release candidate        | —       |
 
 ---
 
@@ -148,6 +149,24 @@ generated-app quality work is tracked in the
 The release PR and the tag workflow each passed the `supported-stack-release-gate` on their exact
 commits. The tag workflow published through npm Trusted Publishing and updated the release snapshot
 in the [system overview](docs/architecture/system-overview.md).
+
+## v1.0.8 — Generated-app quality (release candidate)
+
+Prepares a release from the
+[generated-app quality follow-up plan](docs/plans/active/omnicraft-generated-app-quality-follow-up-plan.md):
+per-composition `engines.node` floors and `.nvmrc` files in every generated root (with `concurrently`
+held at `^9.2.5` so the floors stay satisfiable on Node 20), a generated lint workflow from the ESLint
+extra, default test harnesses per stack family (Vitest health tests for the Node separate-API bases,
+pytest + ruff for FastAPI, Pint/PHPUnit steps in generated PHP CI), deterministic generated
+`AGENTS.md` files, `.vscode/extensions.json` recommendation merging, a documented
+`SKIP_ENV_VALIDATION` escape hatch, the unified JSON 404 contract extended to the Next.js integrated
+overlay and the Laravel 12 API, and a security baseline for the four JSON API runtimes (security
+headers plus an env-configurable per-IP rate limit whose 429s share a JSON body and numeric
+`Retry-After`), all asserted by generated-project runtime integrations and engine tests. Also fixes a
+pre-existing Windows double-quoting bug in the Laravel e2e script.
+
+The release PR must pass the `supported-stack-release-gate` on its exact versioned commit before the
+`v1.0.8` tag is pushed. Pushing the tag triggers the npm publishing workflow.
 
 ## v1.0.3 and v1.0.4 — candidate scopes consolidated into v1.0.5
 

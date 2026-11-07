@@ -6,6 +6,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [1.0.8] — 2026-11-08
+
 ### Added
 
 - Generated root `package.json` files declare per-composition `engines.node` floors and ship `.nvmrc`
