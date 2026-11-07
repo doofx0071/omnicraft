@@ -369,9 +369,7 @@ describe("composition compatibility", () => {
     expect(readFileSync(join(dir, "server", ".env.example"), "utf8")).not.toContain(
       "BETTER_AUTH_SECRET=",
     );
-    expect(readFileSync(join(dir, "server", ".env"), "utf8")).not.toContain(
-      "BETTER_AUTH_SECRET=",
-    );
+    expect(readFileSync(join(dir, "server", ".env"), "utf8")).not.toContain("BETTER_AUTH_SECRET=");
   });
 
   it.each(["none", "laravel-native"] as const)(
@@ -593,9 +591,9 @@ describe("python + php runtimes", () => {
     ] as const;
     for (const [generated, template] of initFiles) {
       expect(existsSync(join(dir, ...generated.split("/")))).toBe(true);
-      expect(existsSync(join(dir, ...generated.replace("__init__.py", "._init__.py").split("/")))).toBe(
-        false,
-      );
+      expect(
+        existsSync(join(dir, ...generated.replace("__init__.py", "._init__.py").split("/"))),
+      ).toBe(false);
       expect(readFileSync(join(dir, ...generated.split("/")))).toEqual(
         readFileSync(join(TEMPLATES_ROOT, ...template.split("/"))),
       );
@@ -1018,6 +1016,164 @@ describe("eslint extra lint workflow", () => {
   });
 });
 
+describe("generated test harnesses", () => {
+  const noExtras = { tailwind: false, eslintPrettier: false, shadcn: false } as const;
+
+  function generatedCiSteps(dir: string): Array<Record<string, unknown>> {
+    const raw = readFileSync(join(dir, ".github", "workflows", "ci.yml"), "utf8");
+    const workflow = parse(raw) as { jobs: { ci: { steps: Array<Record<string, unknown>> } } };
+    return workflow.jobs.ci.steps;
+  }
+
+  function expectNodeHarness(dir: string): { testIndex: number; buildIndex: number } {
+    const serverPkg = readJson(join(dir, "server", "package.json"));
+    expect(serverPkg.scripts).toHaveProperty("test", "vitest run");
+    expect(serverPkg.devDependencies).toHaveProperty("vitest", "^3.2.7");
+    expect(existsSync(join(dir, "server", "src", "routes", "health.test.ts"))).toBe(true);
+    // the build must not emit test files into dist
+    expect(readJson(join(dir, "server", "tsconfig.json")).exclude).toEqual(["src/**/*.test.ts"]);
+
+    const steps = generatedCiSteps(dir);
+    const buildIndex = steps.findIndex((step) => step.run === "npm run build");
+    const testIndex = steps.findIndex((step) => step.run === "npm test -w server");
+    expect(testIndex).toBeGreaterThan(buildIndex);
+    return { testIndex, buildIndex };
+  }
+
+  function expectStepAt(
+    steps: Array<Record<string, unknown>>,
+    index: number,
+    expected: Record<string, unknown>,
+  ): void {
+    const step = steps[index];
+    expect(step).toMatchObject(expected);
+  }
+
+  it("ships a vitest health harness and CI test step for express + drizzle + postgres", () => {
+    const dir = makeTempDir("harness-express");
+    scaffoldInto(
+      dir,
+      makeAnswers({ backendFramework: "express", orm: "drizzle", database: "postgres" }),
+    );
+
+    const { testIndex } = expectNodeHarness(dir);
+    expectStepAt(generatedCiSteps(dir), testIndex, {
+      run: "npm test -w server",
+      env: { DATABASE_URL: "postgres://ci:ci@localhost:5432/ci" },
+    });
+  });
+
+  it("ships a vitest health harness and CI test step for fastify + none + mysql", () => {
+    const dir = makeTempDir("harness-fastify");
+    scaffoldInto(
+      dir,
+      makeAnswers({
+        backendFramework: "fastify",
+        orm: "none",
+        database: "mysql",
+        extras: { ...noExtras },
+      }),
+    );
+
+    const { testIndex } = expectNodeHarness(dir);
+    expectStepAt(generatedCiSteps(dir), testIndex, {
+      run: "npm test -w server",
+      env: { DATABASE_URL: "mysql://ci:ci@localhost:3306/ci" },
+    });
+  });
+
+  it("ships a vitest health harness and CI test step for hono + drizzle + sqlite", () => {
+    const dir = makeTempDir("harness-hono");
+    scaffoldInto(
+      dir,
+      makeAnswers({
+        backendFramework: "hono",
+        orm: "drizzle",
+        database: "sqlite",
+        extras: { ...noExtras },
+      }),
+    );
+
+    const { testIndex } = expectNodeHarness(dir);
+    expectStepAt(generatedCiSteps(dir), testIndex, {
+      run: "npm test -w server",
+      env: { DATABASE_URL: "file:./data/test.db" },
+    });
+  });
+
+  it("ships a pytest health harness and lint/test CI steps for FastAPI compositions", () => {
+    for (const database of ["sqlite", "postgres"] as const) {
+      const dir = makeTempDir(`harness-fastapi-${database}`);
+      scaffoldInto(
+        dir,
+        makeAnswers({
+          backendRuntime: "python",
+          backendFramework: "fastapi",
+          orm: null,
+          database,
+          extras: { ...noExtras },
+        }),
+      );
+
+      const pyproject = readFileSync(join(dir, "server", "pyproject.toml"), "utf8");
+      expect(pyproject).toContain("[dependency-groups]");
+      expect(pyproject).toContain('"pytest>=8.0"');
+      expect(pyproject).toContain('"httpx>=0.27"');
+      expect(pyproject).toContain('"ruff>=0.8"');
+      expect(pyproject).toContain("[tool.pytest.ini_options]");
+      expect(existsSync(join(dir, "server", "tests", "test_health.py"))).toBe(true);
+
+      const steps = generatedCiSteps(dir);
+      const migrateIndex = steps.findIndex(
+        (step) => typeof step.run === "string" && step.run.includes("alembic upgrade head"),
+      );
+      const lintIndex = steps.findIndex((step) => step.run === "uv run ruff check .");
+      const testIndex = steps.findIndex((step) => step.run === "uv run pytest");
+      expect(lintIndex).toBeGreaterThan(migrateIndex);
+      expect(testIndex).toBeGreaterThan(lintIndex);
+      expectStepAt(steps, lintIndex, { "working-directory": "server" });
+      expectStepAt(steps, testIndex, { "working-directory": "server" });
+    }
+  });
+
+  it("ships Pint and artisan test steps in the generated Laravel CI", () => {
+    for (const database of ["sqlite", "postgres", "mysql"] as const) {
+      const dir = makeTempDir(`harness-php-${database}`);
+      scaffoldInto(
+        dir,
+        makeAnswers({
+          backendRuntime: "php",
+          backendFramework: "laravel",
+          orm: null,
+          database,
+          extras: { ...noExtras },
+        }),
+      );
+
+      const steps = generatedCiSteps(dir);
+      const migrateIndex = steps.findIndex(
+        (step) => typeof step.run === "string" && step.run.includes("php artisan migrate --force"),
+      );
+      const pintIndex = steps.findIndex((step) => step.run === "vendor/bin/pint --test");
+      const testIndex = steps.findIndex((step) => step.run === "php artisan test");
+      expect(pintIndex).toBeGreaterThan(migrateIndex);
+      expect(testIndex).toBeGreaterThan(pintIndex);
+      expectStepAt(steps, pintIndex, { "working-directory": "server" });
+      expectStepAt(steps, testIndex, { "working-directory": "server" });
+    }
+  });
+
+  it("keeps the frontend-only CI free of test steps while no tests ship", () => {
+    const dir = makeTempDir("harness-frontend-only");
+    scaffoldInto(dir, makeAnswers({ fullStack: false, extras: { ...noExtras }, database: null }));
+
+    const steps = generatedCiSteps(dir);
+    expect(
+      steps.some((step) => typeof step.run === "string" && step.run.startsWith("npm test")),
+    ).toBe(false);
+  });
+});
+
 describe("frontend expansion (v0.4)", () => {
   it("scaffolds a vue client with the vue tailwind variant", () => {
     const dir = makeTempDir("vue-client");
@@ -1059,10 +1215,7 @@ describe("frontend expansion (v0.4)", () => {
 
   it("renders the frontend-only README with the chosen framework (react-js)", () => {
     const dir = makeTempDir("readme-frontend-only-js");
-    scaffoldInto(
-      dir,
-      makeAnswers({ frontend: "react", language: "javascript", fullStack: false }),
-    );
+    scaffoldInto(dir, makeAnswers({ frontend: "react", language: "javascript", fullStack: false }));
     const readme = readFileSync(join(dir, "README.md"), "utf8");
     expect(readme).toContain("React app scaffolded by");
     expect(readme).not.toContain("{{clientFramework}}");
