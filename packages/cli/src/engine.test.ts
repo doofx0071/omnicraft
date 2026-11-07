@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -9,6 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createRequire } from "node:module";
 import { afterAll, describe, expect, it } from "vitest";
 // transitive dependency (vite/tsup) used here only to validate generated YAML
 import { parse } from "yaml";
@@ -1280,6 +1282,188 @@ describe("per-composition Node requirements", () => {
       expectNodeFloor(dir, "^22.18.0 || ^24.11.0 || >=26.0.0", "22.18");
     },
   );
+});
+describe("SKIP_ENV_VALIDATION escape hatch", () => {
+  const require = createRequire(import.meta.url);
+  const tsxCli = require.resolve("tsx/cli");
+
+  /**
+   * Minimal stand-in for the zod surface the generated env.ts uses
+   * (object / coerce.number().default / string().min / string().default /
+   * prettifyError). It lets the REAL generated env.ts run in a child process
+   * without an npm install inside the scaffold target — the point under test
+   * is the escape-hatch wiring, not zod itself.
+   */
+  const ZOD_STUB = `
+function makeString(options) {
+  const s = { kind: "string", min: 0, message: "", defaultValue: undefined, ...options };
+  return {
+    __schema: s,
+    min(length, message) {
+      return makeString({ ...s, min: length, message });
+    },
+    default(value) {
+      return makeString({ ...s, defaultValue: value });
+    },
+  };
+}
+function makeNumber(options) {
+  const s = { kind: "number", defaultValue: undefined, ...options };
+  return {
+    __schema: s,
+    default(value) {
+      return makeNumber({ ...s, defaultValue: value });
+    },
+  };
+}
+export const z = {
+  string: () => makeString({}),
+  coerce: { number: () => makeNumber({}) },
+  object(shape) {
+    return {
+      safeParse(input) {
+        const data = {};
+        const issues = [];
+        for (const [key, schema] of Object.entries(shape)) {
+          const s = schema.__schema;
+          const raw = input[key];
+          if (s.kind === "number") {
+            const numeric = raw === undefined || raw === "" ? NaN : Number(raw);
+            if (Number.isNaN(numeric)) {
+              if (s.defaultValue === undefined) issues.push({ key, message: "required" });
+              else data[key] = s.defaultValue;
+            } else {
+              data[key] = numeric;
+            }
+          } else {
+            const value = typeof raw === "string" ? raw : "";
+            if (value.length < s.min) {
+              issues.push({ key, message: s.message });
+            } else if (value === "" && s.defaultValue !== undefined) {
+              data[key] = s.defaultValue;
+            } else {
+              data[key] = value;
+            }
+          }
+        }
+        return issues.length === 0 ? { success: true, data } : { success: false, error: { issues } };
+      },
+    };
+  },
+  prettifyError(error) {
+    return error.issues.map((issue) => issue.key + ": " + issue.message).join("\\n");
+  },
+};
+export default z;
+`;
+
+  /** Installs the zod stub and a runner that imports the generated env.ts and prints it. */
+  function prepareEnvRuntime(dir: string): string {
+    mkdirSync(join(dir, "node_modules", "zod"), { recursive: true });
+    writeFileSync(join(dir, "node_modules", "zod", "package.json"), JSON.stringify({
+      name: "zod",
+      version: "4.0.0-stub",
+      type: "module",
+      main: "index.js",
+    }));
+    writeFileSync(join(dir, "node_modules", "zod", "index.js"), ZOD_STUB);
+    const runner = join(dir, "env-runner.mjs");
+    writeFileSync(runner, 'import { env } from "./server/src/env.ts";\nconsole.log(JSON.stringify(env));\n');
+    return runner;
+  }
+
+  function runEnvProcess(
+    dir: string,
+    runner: string,
+    overrides: Record<string, string>,
+  ): { code: number; stdout: string; stderr: string } {
+    // The child never inherits DATABASE_URL, so "no bypass" means a genuinely
+    // missing required variable.
+    const childEnv: NodeJS.ProcessEnv = { ...process.env };
+    delete childEnv.DATABASE_URL;
+    for (const [key, value] of Object.entries(overrides)) childEnv[key] = value;
+    try {
+      const stdout = execFileSync(process.execPath, [tsxCli, runner], {
+        cwd: dir,
+        env: childEnv,
+        encoding: "utf8",
+      });
+      return { code: 0, stdout, stderr: "" };
+    } catch (error) {
+      const err = error as { status?: number; stdout?: unknown; stderr?: unknown };
+      return {
+        code: err.status ?? -1,
+        stdout: typeof err.stdout === "string" ? err.stdout : "",
+        stderr: typeof err.stderr === "string" ? err.stderr : String(err.stderr ?? ""),
+      };
+    }
+  }
+
+  it("exports placeholder env instead of exiting when SKIP_ENV_VALIDATION is set", { timeout: 30_000 }, () => {
+    for (const value of ["1", "true"]) {
+      const dir = makeTempDir(`skip-env-on-${value}`);
+      scaffoldInto(dir, makeAnswers());
+      expect(readFileSync(join(dir, "README.md"), "utf8")).toContain("SKIP_ENV_VALIDATION=1");
+      const runner = prepareEnvRuntime(dir);
+      const result = runEnvProcess(dir, runner, { SKIP_ENV_VALIDATION: value });
+      expect(result.code).toBe(0);
+      expect(result.stderr).not.toContain("Invalid environment variables");
+      expect(JSON.parse(result.stdout)).toEqual({
+        PORT: 3000,
+        CORS_ORIGIN: "http://localhost:5173",
+        DATABASE_URL: "SKIP_ENV_VALIDATION_PLACEHOLDER",
+      });
+    }
+  });
+
+  it("still exits on a missing DATABASE_URL without the escape hatch", { timeout: 30_000 }, () => {
+    const dir = makeTempDir("skip-env-off");
+    scaffoldInto(dir, makeAnswers());
+    const runner = prepareEnvRuntime(dir);
+    const result = runEnvProcess(dir, runner, {});
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("Invalid environment variables");
+  });
+
+  it("still parses real variables when the escape hatch is unset", { timeout: 30_000 }, () => {
+    const dir = makeTempDir("skip-env-real");
+    scaffoldInto(dir, makeAnswers());
+    const runner = prepareEnvRuntime(dir);
+    const result = runEnvProcess(dir, runner, {
+      DATABASE_URL: "postgres://omnicraft:omnicraft@localhost:5432/demo_app",
+    });
+    expect(result.code).toBe(0);
+    expect(JSON.parse(result.stdout).DATABASE_URL).toBe(
+      "postgres://omnicraft:omnicraft@localhost:5432/demo_app",
+    );
+  });
+
+  it("ships the guard in every node env validator template and the next.js mysql adapter", () => {
+    const nodeRoot = join(TEMPLATES_ROOT, "server", "node");
+    for (const framework of readdirSync(nodeRoot)) {
+      for (const variant of readdirSync(join(nodeRoot, framework))) {
+        const envTemplatePath = join(nodeRoot, framework, variant, "src", "env.ts");
+        expect(existsSync(envTemplatePath), envTemplatePath).toBe(true);
+        expect(readFileSync(envTemplatePath, "utf8")).toContain("SKIP_ENV_VALIDATION");
+      }
+    }
+    expect(readFileSync(join(TEMPLATES_ROOT, "web", "nextjs", "db-mysql", "index.ts"), "utf8")).toContain(
+      "SKIP_ENV_VALIDATION",
+    );
+  });
+
+  it("documents the variable in the affected generated READMEs' troubleshooting sections", () => {
+    for (const readme of [
+      "root/fullstack/postgres/README.md",
+      "root/fullstack/mysql/README.md",
+      "root/fullstack/sqlite/README.md",
+      "root/fullstack-next/mysql/README.md",
+    ]) {
+      expect(readFileSync(join(TEMPLATES_ROOT, ...readme.split("/")), "utf8")).toContain(
+        "SKIP_ENV_VALIDATION=1",
+      );
+    }
+  });
 });
 describe("layer composition edge cases", () => {
   it("throws MissingLayerError for unknown layers", async () => {
