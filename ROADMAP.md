@@ -21,7 +21,7 @@
 | v1.0.4  | Laravel Inertia React scaffolding                | 🟡 consolidated into v1.0.5 | —       |
 | v1.0.5  | Auth integrations and verified stack updates     | ✅ published                | —       |
 | v1.0.6  | Audit remediation and release-process repair     | ✅ published                | —       |
-| v1.0.7  | Gate reliability, CLI correctness, API contracts | ✅ published | —       |
+| v1.0.7  | Gate reliability, CLI correctness, API contracts | ✅ published                | —       |
 
 ---
 

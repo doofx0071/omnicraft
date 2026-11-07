@@ -115,8 +115,7 @@ all exports preserved; typecheck, unit suite, and checker passed. Matrix behavio
       54 Markdown pages/links were checked in the docs workstream.
 - [x] Hosted CI gates green on the exact heads: PR gate run 42246819578 (78 jobs, on `8e1cc1c`), main
       release-commit run 42252215088 (attempt 2 — attempt 1's single failure was the diagnosed
-      npm/cli#4828 transient, [#64](https://github.com/doofx0071/omnicraft/issues/64)), and tag run
-      42264033428.
+      npm/cli#4828 transient, [#64](https://github.com/doofx0071/omnicraft/issues/64)), and tag run 42264033428.
 - [x] v1.0.7 published: npm `latest` = 1.0.7 from `ed76478`; GitHub Release created from the CHANGELOG;
       bot snapshot commit `84ce7ad` recorded the release state in ROADMAP and the system overview.
 
