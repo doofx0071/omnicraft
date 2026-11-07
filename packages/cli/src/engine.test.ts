@@ -10,6 +10,8 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
+// transitive dependency (vite/tsup) used here only to validate generated YAML
+import { parse } from "yaml";
 import { TEMPLATES_ROOT } from "./config.js";
 import { buildManifest } from "./manifest.js";
 import { createEnvFiles } from "./scaffold/env.js";
@@ -869,6 +871,134 @@ describe("react JavaScript extras variants", () => {
     expect(readFileSync(join(dir, "client", "src", "index.css"), "utf8")).toContain(
       '@import "tailwindcss"',
     );
+  });
+});
+
+describe("eslint extra lint workflow", () => {
+  const eslintOnly = { tailwind: false, eslintPrettier: true, shadcn: false } as const;
+
+  function lintWorkflow(dir: string): {
+    on: Record<string, unknown>;
+    jobs: Record<string, { steps: Array<Record<string, unknown>> }>;
+  } {
+    const raw = readFileSync(join(dir, ".github", "workflows", "lint.yml"), "utf8");
+    return parse(raw);
+  }
+
+  function expectLintWorkflow(dir: string): void {
+    const workflow = lintWorkflow(dir);
+    // same triggers as the generated main CI
+    expect(workflow.on).toEqual({ push: { branches: ["main"] }, pull_request: null });
+    const steps = workflow.jobs.lint.steps;
+    expect(steps.some((step) => step["uses"] === "actions/checkout@v4")).toBe(true);
+    expect(steps.some((step) => step.run === "npm ci")).toBe(true);
+    // the lint script lives in the root package.json for every non-integrated
+    // composition (extras/eslint composes at dest "."), so the workflow runs
+    // it from the repository root with no working-directory override
+    const lintStep = steps.find((step) => step.run === "npm run lint");
+    expect(lintStep).toBeDefined();
+    expect(lintStep).not.toHaveProperty("working-directory");
+    expect(readJson(join(dir, "package.json")).scripts).toHaveProperty("lint");
+  }
+
+  it("ships lint.yml beside the main CI for fullstack node compositions", () => {
+    const dir = makeTempDir("lint-fullstack");
+    scaffoldInto(dir, makeAnswers({ extras: { ...eslintOnly } }));
+
+    expectLintWorkflow(dir);
+    // the extra's workflow must not displace the root variant's CI
+    const generatedCi = readFileSync(join(dir, ".github", "workflows", "ci.yml"), "utf8");
+    expect(generatedCi).toContain("tsc --noEmit -p client");
+    expect(generatedCi).not.toContain("npm run lint");
+  });
+
+  it("ships lint.yml for frontend-only compositions", () => {
+    const dir = makeTempDir("lint-frontend-only");
+    scaffoldInto(dir, makeAnswers({ fullStack: false, extras: { ...eslintOnly } }));
+
+    expectLintWorkflow(dir);
+  });
+
+  it("keeps lint.yml when the Supabase auth overlay applies to a frontend-only project", () => {
+    const dir = makeTempDir("lint-supabase");
+    scaffoldInto(
+      dir,
+      makeAnswers({
+        fullStack: false,
+        backendRuntime: null,
+        backendFramework: null,
+        orm: null,
+        database: null,
+        authentication: "supabase-auth",
+        extras: { ...eslintOnly },
+        architecture: { kind: "frontend-only" },
+      }),
+    );
+
+    expectLintWorkflow(dir);
+  });
+
+  it("ships lint.yml for the FastAPI and Laravel API compositions, still rooted", () => {
+    const pythonDir = makeTempDir("lint-fastapi");
+    scaffoldInto(
+      pythonDir,
+      makeAnswers({
+        backendRuntime: "python",
+        backendFramework: "fastapi",
+        orm: null,
+        database: "sqlite",
+        extras: { ...eslintOnly },
+      }),
+    );
+    expectLintWorkflow(pythonDir);
+
+    const phpDir = makeTempDir("lint-laravel");
+    scaffoldInto(
+      phpDir,
+      makeAnswers({
+        backendRuntime: "php",
+        backendFramework: "laravel",
+        orm: null,
+        database: "sqlite",
+        extras: { ...eslintOnly },
+      }),
+    );
+    expectLintWorkflow(phpDir);
+  });
+
+  it("ships no lint workflow on the integrated Next.js path", () => {
+    const dir = makeTempDir("lint-nextjs");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ name: "demo-app", dependencies: { next: "16.4.3" } }),
+    );
+    const nextAnswers = makeAnswers({
+      frontend: "nextjs",
+      backendRuntime: null,
+      backendFramework: null,
+      orm: "none",
+      database: "sqlite",
+      // Next.js requires the generator extras selected; composition still
+      // excludes them because create-next-app already provides both.
+      extras: { tailwind: true, eslintPrettier: true, shadcn: false },
+      architecture: { kind: "integrated-fullstack", framework: "nextjs" },
+    });
+    nextAnswers.targetDir = dir;
+    applyLayers(
+      TEMPLATES_ROOT,
+      planLayerApplication(composeLayers(nextAnswers), nextAnswers.architecture)
+        .afterOfficialGenerator,
+      templateVariables(nextAnswers),
+      dir,
+    );
+
+    // create-next-app owns ESLint (and its lint setup) on this path — the
+    // extra, its config, and its lint workflow must all stay out. The root
+    // nextjs layer keeps CNA's own `lint` script; no duplicate workflow ships.
+    expect(composeLayers(nextAnswers).map(({ src }) => src)).not.toContain("extras/eslint");
+    expect(existsSync(join(dir, "eslint.config.js"))).toBe(false);
+    expect(existsSync(join(dir, ".github", "workflows", "lint.yml"))).toBe(false);
   });
 });
 
