@@ -10,3 +10,5 @@ README.md
 AGENTS.md
 # machine-written manifest
 .omnicraft
+# machine-merged recommendations
+.vscode/extensions.json
