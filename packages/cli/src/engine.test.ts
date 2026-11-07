@@ -1620,6 +1620,38 @@ export default z;
     }
   });
 });
+
+describe("rate-limit environment documentation", () => {
+  it("ships the RATE_LIMIT_* block in every env.example the composition can end with", () => {
+    const nodeDbRoot = join(TEMPLATES_ROOT, "db");
+    for (const adapter of readdirSync(nodeDbRoot)) {
+      if (adapter === "sqlalchemy") continue; // covered below with its own block
+      for (const database of readdirSync(join(nodeDbRoot, adapter))) {
+        const envPath = join(nodeDbRoot, adapter, database, ".env.example");
+        const contents = readFileSync(envPath, "utf8");
+        expect(contents).toContain("RATE_LIMIT_MAX=");
+        expect(contents).toContain("RATE_LIMIT_WINDOW_MINUTES=");
+      }
+    }
+    for (const database of ["postgres", "sqlite"]) {
+      const envPath = join(TEMPLATES_ROOT, "db", "sqlalchemy", database, ".env.example");
+      expect(readFileSync(envPath, "utf8")).toContain("RATE_LIMIT_MAX=");
+    }
+    for (const framework of ["express", "fastify", "hono"]) {
+      const envPath = join(TEMPLATES_ROOT, "server", "node", framework, "base", ".env.example");
+      expect(readFileSync(envPath, "utf8")).toContain("RATE_LIMIT_MAX=");
+    }
+  });
+
+  it("keeps the variables documented in the composed server/.env.example of an ORM scaffold", () => {
+    const dir = makeTempDir("rate-limit-env");
+    scaffoldInto(dir, makeAnswers());
+    const contents = readFileSync(join(dir, "server", ".env.example"), "utf8");
+    expect(contents).toContain("DATABASE_URL=");
+    expect(contents).toContain("RATE_LIMIT_MAX=");
+    expect(contents).toContain("RATE_LIMIT_WINDOW_MINUTES=");
+  });
+});
 describe(".vscode/extensions.json recommendations", () => {
   function readRecommendations(dir: string): string[] {
     return (

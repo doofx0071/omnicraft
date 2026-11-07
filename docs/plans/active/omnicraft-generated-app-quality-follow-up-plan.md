@@ -90,20 +90,26 @@ Residuals for this work item:
 
 ### 2. Generated CI and test harnesses
 
-**Partially implemented (November 2026):** the ESLint extra now ships a separate
-`extras/eslint/_github/workflows/lint.yml` (a distinct file, since the engine overwrites rather than
-merges same-path workflows) that runs `npm run lint` from the repo root on push/PR for every
-non-integrated composition — the script lands in the root `package.json` on all of them. Next.js
-integrated is excluded (create-next-app owns lint there and the root CI template already lints).
-Engine tests assert placement, YAML validity, trigger parity, and the Next.js exclusion; real
-frontend-only and fullstack probes ran `npm run lint` successfully. Verified by hosted gate run
-42374012979 (all 77 jobs green).
+**Implemented (November 2026):**
 
-- Still open: decide which stack families ship a default health/API test (Vitest for Node, pytest for
-  FastAPI, framework tests for Laravel) and keep the command present only where the harness is actually
-  added.
-- Still open: Python lint/test and PHP Pint/Pest steps in generated CI, with pinned or bounded tooling
-  and a clean generated-project runtime job.
+- The ESLint extra ships a separate `extras/eslint/_github/workflows/lint.yml` (a distinct file, since
+  the engine overwrites rather than merges same-path workflows) that runs `npm run lint` from the repo
+  root on push/PR for every non-integrated composition — the script lands in the root `package.json`
+  on all of them. Next.js integrated is excluded (create-next-app owns lint there and the root CI
+  template already lints). Engine tests assert placement, YAML validity, trigger parity, and the
+  Next.js exclusion; real frontend-only and fullstack probes ran `npm run lint` successfully. Verified
+  by hosted gate run 42374012979.
+- Test-harness decision taken: every Node separate-API base ships a Vitest health harness
+  (`health.test.ts`, `"test": "vitest run"`, vitest devDependency, tsconfig test exclusion) with a
+  generated-CI "Test server" step ordered after Build; FastAPI ships a pytest dev group,
+  `tests/test_health.py`, a ruff config, and "Lint API"/"Test API" CI steps; fullstack-php CI gains
+  "Code style (Pint)" (`vendor/bin/pint --test`) and "API tests" (`php artisan test`) steps after the
+  migrate step, with phpunit.xml pinning sqlite/`:memory:` so the suite is host-independent; the
+  integrated Laravel roots keep their `php artisan test` root script; frontend-only compositions ship
+  no tests and their CI stays free of test steps. The Pint/PHPUnit runners match the Laravel 12
+  skeleton's own tooling (PHPUnit ^11.5, laravel/pint ^1.24 — not Pest). `src/engine.test.ts` asserts
+  every harness and CI step across all families with parsed YAML. Verified by hosted gate run
+  42383546799 (strict gate, all jobs green).
 
 ### 3. API response and baseline security consistency
 
@@ -139,14 +145,20 @@ Residuals for this work item:
 
 ### 4. Generated-project guidance and UX
 
-- Add optional per-stack `.vscode/extensions.json` recommendations without overwriting generator-owned
-  settings.
-- Consider a concise generated `AGENTS.md` with only exact stack commands, ports, database setup, env
-  guidance, and evidence-qualified status; make the output deterministic and test rendered tokens.
-- Add a documented `SKIP_ENV_VALIDATION` escape hatch only after its security/production semantics are
-  explicit and covered by generated CI.
-- Complete 3000/5173 port-collision troubleshooting, package descriptions, the Supabase exact-version
-  rationale, and consistent auth busy-state handling across React clients.
+**Implemented (November 2026), one residual:** the guidance slice added per-stack
+`.vscode/extensions.json` recommendations (merged into the generated root via `mergeExtensionsJson`),
+a deterministic generated `AGENTS.md` in every root variant that has one (fullstack-next excluded —
+create-next-app 16 generates its own), a documented `SKIP_ENV_VALIDATION=1|true` escape hatch with
+explicit placeholder values in all 11 Node `env.ts` variants, the 3000/5173/5432 port-collision
+troubleshooting rows in the root READMEs, the "Why these Supabase versions are pinned" rationale
+section in the Supabase Auth overlay README, and consistent auth busy-state handling through the
+shared `runBusyAction` helper with disabled controls.
+
+Residual for this work item:
+
+- Generated root `package.json` files still carry no `description` field; add a truthful
+  per-composition description (and decide whether server/client manifests need one) as a small
+  follow-up.
 
 ## Acceptance criteria
 
