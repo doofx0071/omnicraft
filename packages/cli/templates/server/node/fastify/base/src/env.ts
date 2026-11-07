@@ -3,6 +3,9 @@ import { z } from "zod";
 const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
+  // Generous defaults — a dev/CRUD baseline, not a hard guard.
+  RATE_LIMIT_MAX: z.coerce.number().default(300),
+  RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().default(15),
 });
 
 // CI/build-time escape hatch: when SKIP_ENV_VALIDATION is "1" or "true",
@@ -24,5 +27,10 @@ function parseEnv(): z.infer<typeof envSchema> {
 }
 
 export const env = skipEnvValidation
-  ? ({ PORT: 3000, CORS_ORIGIN: "http://localhost:5173" } satisfies z.infer<typeof envSchema>)
+  ? ({
+      PORT: 3000,
+      CORS_ORIGIN: "http://localhost:5173",
+      RATE_LIMIT_MAX: 300,
+      RATE_LIMIT_WINDOW_MINUTES: 15,
+    } satisfies z.infer<typeof envSchema>)
   : parseEnv();

@@ -72,6 +72,7 @@ DATABASE_URL=postgresql+asyncpg://omnicraft:omnicraft@localhost:5432/{{databaseN
 | `uv: command not found`                            | Install uv: `pip install uv` or `winget install astral-sh.uv`                                                                                  |
 | Server fails with `address already in use` (3000)  | Something holds port 3000 — stop it, or change `--port` in the root `dev:server` script and update the proxy target in `client/vite.config.ts` |
 | Client logs `Port 5173 is in use`                  | Stop the other dev server, or use the port Vite prints — the `/api` proxy still targets the API server                                         |
+| API returns 429 `Too many requests`                | The per-IP rate limit was hit — raise `RATE_LIMIT_MAX` or `RATE_LIMIT_WINDOW_MINUTES` in `server/.env`                                         |
 
 ## Useful commands
 

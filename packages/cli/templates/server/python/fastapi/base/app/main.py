@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
+from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware
 from app.routes import health, users
 
 description = """
@@ -19,6 +20,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="{{projectName}}", description=description, lifespan=lifespan)
 
+# Baseline per-IP API rate limit and security headers, then CORS outermost so
+# its headers still land on 429 responses. See app/middleware.py for the
+# deliberate in-process, dependency-free design notes.
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.cors_origin],

@@ -252,6 +252,27 @@ function assertRecord(value: unknown, label: string): Record<string, unknown> {
 }
 
 async function verifyCrud(origin: string, database: NextjsDatabase): Promise<void> {
+  for (const path of ['/api', '/api/__unknown']) {
+    const missingRoute = await request(origin, path)
+    assert.equal(missingRoute.response.status, 404, `Unknown API route ${path} should return HTTP 404.`)
+    assert.equal(
+      missingRoute.response.headers.get('content-type')?.split(';')[0],
+      'application/json',
+      `Unknown API route ${path} should return JSON.`,
+    )
+    assert.deepEqual(missingRoute.body, { error: 'Not found' })
+  }
+
+  const outsideApiResponse = await fetch(`${origin}/apix`, {
+    signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
+  })
+  assert.equal(outsideApiResponse.status, 404, 'Unknown non-API route /apix should return HTTP 404.')
+  assert.notEqual(
+    await outsideApiResponse.text(),
+    JSON.stringify({ error: 'Not found' }),
+    '/apix must not match the API fallback.',
+  )
+
   const email = `nextjs-${database}-${randomBytes(6).toString('hex')}@example.test`
   const initial = await request(origin, '/api/users')
   assert.equal(initial.response.status, 200)

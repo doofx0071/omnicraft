@@ -58,15 +58,16 @@ DATABASE_URL=postgres://omnicraft:omnicraft@localhost:5432/{{databaseName}}
 
 ## Troubleshooting
 
-| Symptom                                            | Fix                                                                                                                                |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| API returns `Database unavailable`                 | PostgreSQL isn't running — start it with `docker compose up -d`                                                                    |
-| `ECONNREFUSED` in the server logs                  | Wrong `DATABASE_URL` in `server/.env`, or the database container is down                                                           |
-| `port 5432 is already in use` when starting Docker | Another PostgreSQL owns the port — change the host port in `docker-compose.yml` **and** `server/.env`                              |
-| Prisma error `P1001` / Drizzle `ECONNREFUSED`      | Same as above — the server cannot reach PostgreSQL                                                                                 |
-| Server fails with `EADDRINUSE` (port 3000)         | Something holds port 3000 — stop it, or set another `PORT` in `server/.env` and update the proxy target in `client/vite.config.ts` |
-| Client logs `Port 5173 is in use`                  | Stop the other dev server, or use the port Vite prints — the `/api` proxy still targets the API server                             |
+| Symptom                                            | Fix                                                                                                                                                       |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API returns `Database unavailable`                 | PostgreSQL isn't running — start it with `docker compose up -d`                                                                                           |
+| `ECONNREFUSED` in the server logs                  | Wrong `DATABASE_URL` in `server/.env`, or the database container is down                                                                                  |
+| `port 5432 is already in use` when starting Docker | Another PostgreSQL owns the port — change the host port in `docker-compose.yml` **and** `server/.env`                                                     |
+| Prisma error `P1001` / Drizzle `ECONNREFUSED`      | Same as above — the server cannot reach PostgreSQL                                                                                                        |
+| Server fails with `EADDRINUSE` (port 3000)         | Something holds port 3000 — stop it, or set another `PORT` in `server/.env` and update the proxy target in `client/vite.config.ts`                        |
+| Client logs `Port 5173 is in use`                  | Stop the other dev server, or use the port Vite prints — the `/api` proxy still targets the API server                                                    |
 | Server exits with `Invalid environment variables`  | Fix the values in `server/.env` (compare `server/.env.example`). CI/build-time only: set `SKIP_ENV_VALIDATION=1` to skip validation — never in production |
+| API returns 429 `Too many requests`                | The per-IP rate limit was hit — raise `RATE_LIMIT_MAX` or `RATE_LIMIT_WINDOW_MINUTES` in `server/.env`                                                    |
 
 ## Useful commands
 

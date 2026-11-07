@@ -1564,6 +1564,8 @@ export default z;
       expect(JSON.parse(result.stdout)).toEqual({
         PORT: 3000,
         CORS_ORIGIN: "http://localhost:5173",
+        RATE_LIMIT_MAX: 300,
+        RATE_LIMIT_WINDOW_MINUTES: 15,
         DATABASE_URL: "SKIP_ENV_VALIDATION_PLACEHOLDER",
       });
     }
