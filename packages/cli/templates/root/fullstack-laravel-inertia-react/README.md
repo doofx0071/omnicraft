@@ -11,7 +11,7 @@ Integrated Laravel + Inertia React app scaffolded by [OmniCraft](https://github.
 ## Requirements
 
 - PHP 8.3 or newer and Composer
-- Node.js and npm for Vite assets
+- Node.js 22.18+ or 24.11+ and npm for Vite assets (required by the pinned starter kit's Vite Plus tooling)
 
 OmniCraft uses an official Laravel React starter kit pinned to a reviewed upstream commit. Composer
 dependencies, the application key, SQLite database, and initial migrations are prepared during
