@@ -25,9 +25,10 @@ the authoring contract. The tree layout is in the [repository structure](../arch
 ## Rules every template must follow
 
 1. **Explicit npm-hostile dotfile allowlist.** The engine restores only `_gitignore`, `_prettierignore`,
-   `_env.example`, and `_github` to `.gitignore`, `.prettierignore`, `.env.example`, and `.github/` on
-   copy. Do not treat every leading underscore as a dotfile: files such as Python `__init__.py` must keep
-   their names. Add a new name to the renderer's allowlist only when npm-hostile publication requires it.
+   `_env.example`, `_github`, and `_nvmrc` to `.gitignore`, `.prettierignore`, `.env.example`,
+   `.github/`, and `.nvmrc` on copy. Do not treat every leading underscore as a dotfile: files such as
+   Python `__init__.py` must keep their names. Add a new name to the renderer's allowlist only when
+   npm-hostile publication requires it.
 2. **Tokens only from the documented set.** Current templates use `{{projectName}}`,
    `{{clientPackageName}}`, `{{serverPackageName}}`, `{{databaseName}}`, `{{backendFramework}}`,
    `{{orm}}`, `{{clientFramework}}` (display name of the chosen frontend: React, Vue, Svelte, …),
@@ -87,9 +88,12 @@ the authoring contract. The tree layout is in the [repository structure](../arch
 - **Managed-auth overlay:** provider client/configuration, placeholder-only `.env.example`, and
   generated setup README. Any browser integration uses publishable values only; server secrets stay
   outside the client layer. Provider-specific setup and lifecycle tests define the exact tuple.
-- **Root variant:** `package.json` (workspaces, root scripts incl. `dev:server` for non-node runtimes,
-  db passthrough scripts for node), `_gitignore`, `README.md`, `docker-compose.yml` (if containerized DB),
-  `_github/workflows/ci.yml`.
+- **Root variant:** `package.json` (workspaces or engines-only fragment, root scripts incl.
+  `dev:server` for non-node runtimes, db passthrough scripts for node; the root variant is the last
+  manifest writer before managed-auth overlays, so it owns `engines.node` — the honest intersection of
+  the `engines` declared by every composition's pinned dependency graph, never the CLI's own floor),
+  `_gitignore`, `_nvmrc` (the primary supported Node line of that range), `README.md`,
+  `docker-compose.yml` (if containerized DB), `_github/workflows/ci.yml`.
 
 ## Applying a new layer kind
 
