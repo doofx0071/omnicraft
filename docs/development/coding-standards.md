@@ -93,3 +93,6 @@ Template dependency versions are chosen for peer compatibility, not recency. Bef
 - `tailwindcss`/`@tailwindcss/vite` are pinned to the exact `4.3.4` — Tailwind's 4.3.5 release did not publish the
   matching `@tailwindcss/oxide@4.3.5` platform package, so fresh installs resolving `^4.3.5` fail with
   ETARGET. Revisit only when a Tailwind release publishes a complete version pair.
+- `concurrently` is pinned to `^9.2.5` in the generated root variants — concurrently 10 declares
+  `engines: node >=22`, which would contradict the generated roots' `^20.19.0 || ...` Node floors and
+  the Node 20 generated-runtime CI job. Revisit only together with a re-scope of that floor.

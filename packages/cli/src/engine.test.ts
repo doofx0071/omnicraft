@@ -1152,6 +1152,135 @@ describe("frontend expansion (v0.4)", () => {
     expect(readFileSync(join(dir, ".gitignore"), "utf8")).toContain("/data/");
   });
 });
+describe("per-composition Node requirements", () => {
+  // The engines floors are conservative intersections of the npm `engines`
+  // declared by each composition's pinned dependency graph (verified via
+  // `npm view <pkg>@<version> engines` against the registry in November 2026):
+  //   vite@^8.3.5 and @vitejs/plugin-{react,vue}@^6: ^20.19.0 || >=22.12.0
+  //   @sveltejs/vite-plugin-svelte@^7.3.1:           ^20.19 || ^22.12 || >=24
+  //   eslint@^10.13.0 (eslint extra):                ^20.19.0 || ^22.13.0 || >=24
+  //   better-sqlite3@^13.0.3:                        >=22
+  //   @supabase/supabase-js@2.118.0:                 >=22.0.0
+  //   next@16.4.3 (create-next-app@16 ships eslint ^9): >=20.9.0
+  //   vite-plus@1.4.0 (pinned Laravel starters):     ^22.18 || ^24.11 || >=26
+  // The root variant template is shared by every composition that selects it,
+  // so its static engines field states the intersection — a range no
+  // composition sharing that root could violate.
+
+  function expectNodeFloor(dir: string, engines: string, nvmrc: string): void {
+    const packageJson = readJson(join(dir, "package.json"));
+    expect((packageJson.engines as Record<string, string>).node).toBe(engines);
+    expect(readFileSync(join(dir, ".nvmrc"), "utf8").trim()).toBe(nvmrc);
+  }
+
+  it("scaffolds fullstack postgres with the Vite/eslint-extra intersection floor", () => {
+    const dir = makeTempDir("node-floor-fullstack-pg");
+    scaffoldInto(dir, makeAnswers());
+    expectNodeFloor(dir, "^20.19.0 || ^22.13.0 || >=24.0.0", "20.19");
+    // concurrently 9 declares engines >=18 and keeps this floor satisfiable
+    // on Node 20.19 — the runtime the node20-postgres-runtime CI job installs
+    // with setup-node "20". concurrently 10 declares >=22 and would force an
+    // honest re-scope of that job; do not bump it back without one.
+    expect(
+      (readJson(join(dir, "package.json")).devDependencies as Record<string, string>).concurrently,
+    ).toBe("^9.2.5");
+  });
+
+  it("scaffolds fullstack mysql with the same floor as postgres", () => {
+    const dir = makeTempDir("node-floor-fullstack-mysql");
+    scaffoldInto(dir, makeAnswers({ database: "mysql" }));
+    expectNodeFloor(dir, "^20.19.0 || ^22.13.0 || >=24.0.0", "20.19");
+  });
+
+  it("scaffolds fullstack sqlite with better-sqlite3's >=22 floor", () => {
+    const dir = makeTempDir("node-floor-fullstack-sqlite");
+    scaffoldInto(dir, makeAnswers({ database: "sqlite" }));
+    expectNodeFloor(dir, "^22.13.0 || >=24.0.0", "22.13");
+  });
+
+  it("merges the fullstack-next sqlite floor into the create-next-app skeleton manifest", () => {
+    const dir = makeTempDir("node-floor-next-sqlite");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ name: "demo-app", dependencies: { next: "16.4.3" } }),
+    );
+    const nextAnswers = makeAnswers({
+      frontend: "nextjs",
+      backendRuntime: null,
+      backendFramework: null,
+      orm: "none",
+      database: "sqlite",
+      architecture: { kind: "integrated-fullstack", framework: "nextjs" },
+    });
+    nextAnswers.targetDir = dir;
+    const plan = planLayerApplication(composeLayers(nextAnswers), nextAnswers.architecture);
+    applyLayers(TEMPLATES_ROOT, plan.afterOfficialGenerator, templateVariables(nextAnswers), dir);
+    expectNodeFloor(dir, ">=22.0.0", "22");
+  });
+
+  it("scaffolds the fullstack-next postgres variant with next's >=20.9 floor", () => {
+    const dir = makeTempDir("node-floor-next-pg");
+    scaffoldInto(
+      dir,
+      makeAnswers({
+        frontend: "nextjs",
+        backendRuntime: null,
+        backendFramework: null,
+        orm: "none",
+        database: "postgres",
+        architecture: { kind: "integrated-fullstack", framework: "nextjs" },
+      }),
+    );
+    expectNodeFloor(dir, ">=20.9.0", "20.9");
+  });
+
+  it("scaffolds frontend-only react with the conservative supabase/eslint-extra floor", () => {
+    const dir = makeTempDir("node-floor-frontend-only");
+    scaffoldInto(dir, makeAnswers({ fullStack: false }));
+    expectNodeFloor(dir, "^22.13.0 || >=24.0.0", "22.13");
+  });
+
+  it("scaffolds fullstack python/postgres with the Vite client floor", () => {
+    const dir = makeTempDir("node-floor-python-pg");
+    scaffoldInto(
+      dir,
+      makeAnswers({
+        backendRuntime: "python",
+        backendFramework: "fastapi",
+        orm: null,
+        database: "postgres",
+      }),
+    );
+    expectNodeFloor(dir, "^20.19.0 || ^22.13.0 || >=24.0.0", "20.19");
+  });
+
+  it("scaffolds fullstack php/sqlite with the Vite client floor", () => {
+    const dir = makeTempDir("node-floor-php-sqlite");
+    scaffoldInto(
+      dir,
+      makeAnswers({
+        backendRuntime: "php",
+        backendFramework: "laravel",
+        orm: null,
+        database: "sqlite",
+      }),
+    );
+    expectNodeFloor(dir, "^20.19.0 || ^22.13.0 || >=24.0.0", "20.19");
+  });
+
+  it.each([
+    { name: "livewire", answers: makeLivewireAnswers() },
+    { name: "inertia react", answers: makeInertiaReactAnswers() },
+  ] as const)(
+    "scaffolds the integrated Laravel $name root with the Vite Plus floor",
+    ({ name, answers }) => {
+      const dir = makeTempDir(`node-floor-laravel-${name.replace(" ", "-")}`);
+      scaffoldInto(dir, answers);
+      expectNodeFloor(dir, "^22.18.0 || ^24.11.0 || >=26.0.0", "22.18");
+    },
+  );
+});
 describe("layer composition edge cases", () => {
   it("throws MissingLayerError for unknown layers", async () => {
     const dir = makeTempDir("missing-layer");

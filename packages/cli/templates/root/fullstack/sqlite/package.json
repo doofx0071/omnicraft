@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "version": "0.0.0",
+  "engines": {
+    "node": "^22.13.0 || >=24.0.0"
+  },
   "workspaces": [
     "client",
     "server"
@@ -17,6 +20,6 @@
     "db:studio": "npm run db:studio -w server"
   },
   "devDependencies": {
-    "concurrently": "^10.0.6"
+    "concurrently": "^9.2.5"
   }
 }

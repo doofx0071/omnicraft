@@ -2,6 +2,9 @@
   "name": "{{projectName}}",
   "private": true,
   "version": "0.0.0",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24.0.0"
+  },
   "workspaces": [
     "client"
   ],
@@ -13,6 +16,6 @@
     "db:seed": "cd server && php artisan db:seed --force"
   },
   "devDependencies": {
-    "concurrently": "^10.0.6"
+    "concurrently": "^9.2.5"
   }
 }

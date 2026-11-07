@@ -44,7 +44,7 @@ export function assertNoUnresolvedTokens(
  * generated FastAPI project. Extend this set only when a template needs a new
  * npm-hostile dotfile (see the template contract).
  */
-const DOTFILE_RESTORES = new Set(['_gitignore', '_prettierignore', '_env.example', '_github'])
+const DOTFILE_RESTORES = new Set(['_gitignore', '_prettierignore', '_env.example', '_github', '_nvmrc'])
 
 export function restoreDotfileName(name: string): string {
   if (DOTFILE_RESTORES.has(name)) return `.${name.slice(1)}`
