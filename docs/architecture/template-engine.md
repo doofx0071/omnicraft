@@ -71,13 +71,17 @@ For each layer, the engine lists `templatesRoot/<src>` **recursively** and, for 
 4. **Render** — text files get token substitution.
 5. **Manifest merge** — if the destination file is `package.json` **and already exists**, the rendered
    content is deep-merged into it (see §4) instead of overwriting.
+6. **Extensions merge** — fragments at the layer-relative path `.vscode/extensions.json` (from any
+   layer, any dest) are merged into the **target root's** `.vscode/extensions.json` instead of being
+   written at their own destination: `recommendations` arrays are unioned, deduplicated, and sorted
+   via `mergeExtensionsJson` (see §4), so client, extra, and db fragments produce one combined list.
 
 A missing layer directory throws `MissingLayerError` before that layer is copied. Earlier layers may
 already have written files.
 
 **Template-layer overwrite semantics (current):** same-path files from later layers silently replace
-earlier template output (except `package.json`, which merges). This is a **feature the template tree
-relies on** — e.g.
+earlier template output (except `package.json`, which merges, and `.vscode/extensions.json`
+fragments, which merge into the target root). This is a **feature the template tree relies on** — e.g.
 `src/routes/index.ts`, `src/env.ts`, `vite.config.ts`, `src/index.css`, and `.env.example` are
 intentionally provided by a base layer and _overridden_ by an ORM/db/extras layer. Do not "dedupe" them.
 
@@ -141,6 +145,13 @@ merged manifests are not thereby proven to install.
 Known sharp edge (documented, currently accepted): the generic merge means a later layer can silently
 replace a script with the same name. Template authors must pick distinct script names or intend the
 override (the db layers' `db:*` scripts are the convention).
+
+`mergeExtensionsJson(base, override)` governs the `.vscode/extensions.json` merge: `recommendations`
+arrays are unioned, deduplicated via a `Set`, and sorted lexicographically (deterministic output);
+non-array `recommendations` values are ignored; every other key follows the override-wins rule. The
+merged file is written with a trailing newline. Because the merged content is machine-generated with
+content-dependent array formatting, the ESLint extra's generated `.prettierignore` excludes
+`.vscode/extensions.json` from the generated project's own prettier check.
 
 ## 5. Failure handling
 
