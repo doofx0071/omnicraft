@@ -54,3 +54,11 @@ jobs:
         working-directory: server
         env:
           DATABASE_URL: postgresql+asyncpg://ci:ci@localhost:5432/ci
+
+      - name: Lint API
+        run: uv run ruff check .
+        working-directory: server
+
+      - name: Test API
+        run: uv run pytest
+        working-directory: server
