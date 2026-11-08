@@ -1,12 +1,83 @@
 import { describe, expect, it } from 'vitest'
 import {
   GRADLE_DOWNLOAD_MAX_ATTEMPTS,
+  GRADLE_WRAPPER_NETWORK_TIMEOUT_MS,
   isRetryableGradleDistributionDownloadError,
   runGradleBuildWithDownloadRetry,
+  withGradleWrapperNetworkTimeout,
 } from './gradle-download-retry.js'
 
 const BUILD_TIMEOUT_MS = 10_000
 const distributionUrl = 'https://services.gradle.org/distributions/gradle-9.4.1-bin.zip'
+
+describe('withGradleWrapperNetworkTimeout', () => {
+  it('raises the network timeout without changing other wrapper properties', () => {
+    const properties = [
+      'distributionBase=GRADLE_USER_HOME',
+      'distributionUrl=https\\://services.gradle.org/distributions/gradle-9.4.1-bin.zip',
+      'networkTimeout=10000',
+      '',
+    ].join('\n')
+
+    const updated = withGradleWrapperNetworkTimeout(properties)
+
+    expect(updated).toContain(`networkTimeout=${GRADLE_WRAPPER_NETWORK_TIMEOUT_MS}`)
+    expect(updated).toContain('distributionBase=GRADLE_USER_HOME')
+    expect(updated.match(/^networkTimeout=/gm)).toHaveLength(1)
+    expect(updated.endsWith('\n')).toBe(true)
+  })
+
+  it('adds the timeout when it is absent and preserves CRLF line endings', () => {
+    const properties = [
+      'distributionUrl=https\\://services.gradle.org/distributions/gradle-9.4.1-bin.zip',
+      'distributionBase=GRADLE_USER_HOME',
+      '',
+    ].join('\r\n')
+
+    const updated = withGradleWrapperNetworkTimeout(properties)
+
+    expect(updated).toContain(`networkTimeout=${GRADLE_WRAPPER_NETWORK_TIMEOUT_MS}\r\n`)
+    expect(updated.replace(/\r\n/g, '')).not.toContain('\n')
+    expect(updated.match(/^networkTimeout=/gm)).toHaveLength(1)
+  })
+
+  it('rejects unknown distribution hosts and invalid timeout values', () => {
+    expect(() =>
+      withGradleWrapperNetworkTimeout(
+        'distributionUrl=https\\://mirror.example.invalid/gradle-9.4.1-bin.zip',
+      ),
+    ).toThrow(/official Gradle distribution URL/)
+    expect(() =>
+      withGradleWrapperNetworkTimeout(
+        'distributionUrl=https\\://services.gradle.org/distributions/gradle-9.4.1-bin.zip',
+        0,
+      ),
+    ).toThrow(/positive integer/)
+  })
+
+  it('rejects duplicate distribution URL and timeout keys with Java Properties separators', () => {
+    expect(() =>
+      withGradleWrapperNetworkTimeout(
+        [
+          'distributionUrl=https\\://services.gradle.org/distributions/gradle-9.4.1-bin.zip',
+          'distributionUrl https://mirror.example.invalid/gradle-9.4.1-bin.zip',
+          'networkTimeout=10000',
+        ].join('\n'),
+      ),
+    ).toThrow(/exactly one distributionUrl/)
+
+    expect(() =>
+      withGradleWrapperNetworkTimeout(
+        [
+          'distributionUrl=https\\://services.gradle.org/distributions/gradle-9.4.1-bin.zip',
+          'networkTimeout=10000',
+          'networkTimeout: 20000',
+          'networkTimeout 30000',
+        ].join('\n'),
+      ),
+    ).toThrow(/duplicate networkTimeout/)
+  })
+})
 
 function timeoutFailure(): Error {
   return new Error('Downloading from ' + distributionUrl + ' failed: timeout (10000ms)')

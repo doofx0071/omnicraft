@@ -3,10 +3,68 @@ import { setTimeout as delay } from 'node:timers/promises'
 
 const GRADLE_DOWNLOAD_BACKOFF_MS = [1_000, 2_000] as const
 export const GRADLE_DOWNLOAD_MAX_ATTEMPTS = GRADLE_DOWNLOAD_BACKOFF_MS.length + 1
+export const GRADLE_WRAPPER_NETWORK_TIMEOUT_MS = 60_000
+
+const OFFICIAL_GRADLE_DISTRIBUTION_URL =
+  /^https:\/\/services\.gradle\.org\/distributions\/gradle-[0-9]+(?:\.[0-9]+)+-(?:bin|all)\.zip$/
+
+function propertyEntries(
+  lines: string[],
+  propertyName: string,
+): Array<{ index: number; value: string }> {
+  return lines.flatMap((line, index) => {
+    const content = line.trimStart()
+    if (!content || content.startsWith('#') || content.startsWith('!')) return []
+
+    const property = content.match(/^([^\\\s:=]+)(?:\s*[:=]\s*|\s+)(.*)$/)
+    if (property?.[1] === propertyName) return [{ index, value: property[2] }]
+
+    const keyWithoutValue = content.match(/^([^\\\s:=]+)$/)?.[1]
+    return keyWithoutValue === propertyName ? [{ index, value: '' }] : []
+  })
+}
+
+/** Set a longer download timeout only for the official distribution in this CI fixture. */
+export function withGradleWrapperNetworkTimeout(
+  properties: string,
+  timeoutMs = GRADLE_WRAPPER_NETWORK_TIMEOUT_MS,
+): string {
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0) {
+    throw new RangeError('The Gradle Wrapper network timeout must be a positive integer.')
+  }
+
+  const lines = properties.split(/\r?\n/)
+  const hasTrailingNewline = /(?:\r\n|\n)$/.test(properties)
+  if (hasTrailingNewline) lines.pop()
+
+  const distributionUrlEntries = propertyEntries(lines, 'distributionUrl')
+  if (distributionUrlEntries.length !== 1) {
+    throw new Error('The generated Gradle Wrapper must contain exactly one distributionUrl.')
+  }
+  const distributionUrl = distributionUrlEntries[0].value.replace(/\\:/g, ':')
+  if (!distributionUrl || !OFFICIAL_GRADLE_DISTRIBUTION_URL.test(distributionUrl)) {
+    throw new Error('The generated Gradle Wrapper does not use the official Gradle distribution URL.')
+  }
+
+  const lineEnding = properties.includes('\r\n') ? '\r\n' : '\n'
+  const timeoutLines = propertyEntries(lines, 'networkTimeout').map(({ index }) => index)
+  if (timeoutLines.length > 1) {
+    throw new Error('The generated Gradle Wrapper properties contain duplicate networkTimeout values.')
+  }
+
+  const timeoutLine = `networkTimeout=${timeoutMs}`
+  if (timeoutLines.length === 1) {
+    lines[timeoutLines[0]] = timeoutLine
+  } else {
+    lines.push(timeoutLine)
+  }
+
+  return lines.join(lineEnding) + (hasTrailingNewline ? lineEnding : '')
+}
 
 /**
  * Expo generated Gradle 9.4.1 at the failing baseline. Wrapper-native retries
- * arrived in Gradle 9.5.1, so match only the observed official distribution errors here.
+ * arrived in Gradle 9.5.0, so match only the observed official distribution errors here.
  */
 const GRADLE_DISTRIBUTION_URL_PATTERN =
   'https://services\\.gradle\\.org/distributions/gradle-[0-9]+(?:\\.[0-9]+)+-(?:bin|all)\\.zip'

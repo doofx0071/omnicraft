@@ -1,5 +1,14 @@
 import { randomBytes } from 'node:crypto'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -7,7 +16,9 @@ import { setTimeout as delay } from 'node:timers/promises'
 import { runCommand, startCommand } from '../src/exec.js'
 import {
   GRADLE_DOWNLOAD_MAX_ATTEMPTS,
+  GRADLE_WRAPPER_NETWORK_TIMEOUT_MS,
   runGradleBuildWithDownloadRetry,
+  withGradleWrapperNetworkTimeout,
 } from '../src/gradle-download-retry.js'
 import { composeLayers, templateVariables } from '../src/scaffold/compose.js'
 import { createEnvFiles } from '../src/scaffold/env.js'
@@ -930,6 +941,22 @@ async function runExpoAndroidEmulator(): Promise<void> {
     const androidRoot = join(projectRoot, 'android')
     const gradleWrapper = join(androidRoot, 'gradlew')
     requirePath(gradleWrapper, 'Generated Expo Android Gradle wrapper')
+    const gradleWrapperPropertiesPath = join(
+      androidRoot,
+      'gradle',
+      'wrapper',
+      'gradle-wrapper.properties',
+    )
+    requirePath(gradleWrapperPropertiesPath, 'Generated Expo Android Gradle wrapper properties')
+    const wrapperProperties = readFileSync(gradleWrapperPropertiesPath, 'utf8')
+    const wrapperPropertiesWithTimeout = withGradleWrapperNetworkTimeout(wrapperProperties)
+    if (wrapperPropertiesWithTimeout !== wrapperProperties) {
+      // This only changes the temporary Android project created for the CI integration test.
+      writeFileSync(gradleWrapperPropertiesPath, wrapperPropertiesWithTimeout)
+    }
+    console.log(
+      `[native] Gradle distribution download timeout: ${GRADLE_WRAPPER_NETWORK_TIMEOUT_MS}ms.`,
+    )
     await runGradleBuildWithDownloadRetry(
       (remainingTimeoutMs) =>
         runRequiredAsync(
