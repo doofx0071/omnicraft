@@ -23,6 +23,7 @@
 | v1.0.6  | Audit remediation and release-process repair     | ✅ published                | —       |
 | v1.0.7  | Gate reliability, CLI correctness, API contracts | ✅ published                | —       |
 | v1.0.8  | Generated-app quality                            | ✅ published                | —       |
+| v1.0.9  | Descriptions, action SHA pins, and floor truth   | 🟡 release candidate        | —       |
 
 ---
 
@@ -169,6 +170,19 @@ pre-existing Windows double-quoting bug in the Laravel e2e script.
 The release prep and the tag workflow each passed the `supported-stack-release-gate` on their exact
 commits. The tag workflow published through npm Trusted Publishing and updated the release snapshot
 in the [system overview](docs/architecture/system-overview.md).
+
+## v1.0.9 — Descriptions, action SHA pins, and floor truth (release candidate)
+
+Prepares a release from the [post-v1.0.8 residuals plan](docs/plans/completed/omnicraft-post-v108-residuals-plan.md)
+and the [Laravel API security baseline plan](docs/plans/completed/omnicraft-laravel-api-security-baseline-plan.md):
+truthful `description` fields in every generated root, `actions/checkout` and `actions/setup-node`
+pinned to verified SHAs in the repo's and every generated project's CI, the Laravel 12 API joining
+the shared security-header/429 baseline, and the SQLite floors corrected to Node 22.14 after
+hosted floor evidence caught the `better-sqlite3@13` prebuilt binary segfaulting on Node 22.13.0.
+The exact-minimum floor evidence now runs weekly in a separate `node-floor-evidence` workflow.
+
+The release prep must pass the `supported-stack-release-gate` on its exact versioned commit before
+the `v1.0.9` tag is pushed. Pushing the tag triggers the npm publishing workflow.
 
 ## v1.0.3 and v1.0.4 — candidate scopes consolidated into v1.0.5
 

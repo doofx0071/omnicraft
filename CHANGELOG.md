@@ -6,6 +6,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [1.0.9] — 2026-11-08
+
+### Added
+
+- Generated root `package.json` files carry a truthful per-composition `description` that stays
+  accurate for every stack sharing the root variant.
+- Generated projects' CI workflows (and the repo's own) pin `actions/checkout` and
+  `actions/setup-node` to verified commit SHAs (v7.0.1 / v7.1.0) instead of mutable major tags.
+- The Laravel 12 API overlays join the security baseline: global security-headers middleware and a
+  per-IP API rate limit (`RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MINUTES` via `throttleApi()` and
+  `RateLimiter::for('api')`) whose 429s share the JSON body and numeric `Retry-After`; the feature
+  tests assert headers and the 429 contract on both the None and Sanctum paths.
+
+### Fixed
+
+- The SQLite-bearing roots' `engines.node` floors rise from `^22.13.0` / `>=22.0.0` to
+  `^22.14.0` / `>=22.14.0` (`.nvmrc` `22.14`): hosted floor evidence caught the
+  `better-sqlite3@13` prebuilt binary segfaulting at first use on Node 22.13.0 despite the
+  package declaring `engines: >=22`.
+
 ## [1.0.8] — 2026-11-08
 
 ### Added
@@ -28,12 +48,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   security headers on every response and a per-IP API rate limit configured by `RATE_LIMIT_MAX` /
   `RATE_LIMIT_WINDOW_MINUTES`, with 429 responses returning JSON
   `{ "error": "Too many requests" }` and a numeric `Retry-After`. Runtime integrations assert the
-  headers and the 429 contract.
-- The Laravel 12 API overlays join the security baseline: global security-headers middleware and a
-  per-IP API rate limit (`RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MINUTES` via `throttleApi()` and
-  `RateLimiter::for('api')`) whose 429s share the JSON body and numeric `Retry-After`; the feature
-  tests assert headers and the 429 contract on both the None and Sanctum paths.
-- The Laravel 12 API php-e2e suite asserts the shared 404 contract for `/api` and `/api/*`.
+  headers and the 429 contract, and the Laravel 12 API php-e2e suite asserts the shared 404
+  contract for `/api` and `/api/*`.
 
 ### Fixed
 
