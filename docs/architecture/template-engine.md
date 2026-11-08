@@ -85,7 +85,16 @@ fragments, which merge into the target root). This is a **feature the template t
 `src/routes/index.ts`, `src/env.ts`, `vite.config.ts`, `src/index.css`, and `.env.example` are
 intentionally provided by a base layer and _overridden_ by an ORM/db/extras layer. Do not "dedupe" them.
 
-The current destination safeguards are limited:
+Before writing selected layers, the engine maps their output paths, including the root
+`package.json` and `.vscode/extensions.json` merge destinations, and rejects existing filesystem
+entries whose type blocks a generated file or required parent directory. `applyLayers` checks the
+entire selected layer list before writing its first layer; `applyLayer` checks its one layer before
+writing any files. This prevents a known type conflict in a later selected layer from leaving earlier
+selected-layer output behind. It does not make generation generally atomic: unrelated I/O, rendering,
+external-generator, or post-scaffold failures can still occur after writes, and the filesystem can
+change between preflight and writing.
+
+The other current destination safeguards are limited:
 
 1. **Protected names** — the engine skips files whose basename is `.env`, `.env.*` (except
    `.env.example`), or exactly `.git`. The guard is not a recursive `.git` directory boundary; current
@@ -97,10 +106,10 @@ The current destination safeguards are limited:
 3. **Unresolved-token failure** — after rendering, remaining `{{token}}` expressions in non-`.vue`
    files throw `UnresolvedTokenError` instead of being written to the generated project.
 
-Generation writes directly into the target. It has no staging directory or rollback if a later layer,
-external generator, or post-scaffold step fails. Destination symlinks are not resolved or rejected, so
-the engine does not guarantee that writes stay within the apparent target directory. These limits mean
-the current collision/protected-file behavior is not a filesystem sandbox.
+Generation writes directly into the target. It has no staging directory or rollback if an unrelated
+later layer error, external generator, or post-scaffold step fails. Destination symlinks are not
+resolved or rejected, so the engine does not guarantee that writes stay within the apparent target
+directory. These limits mean the current collision/protected-file behavior is not a filesystem sandbox.
 
 Per-file collision strategies, a complete write plan, path/symlink containment, and rollback remain
 future safety work.
@@ -155,6 +164,9 @@ content-dependent array formatting, the ESLint extra's generated `.prettierignor
 
 ## 5. Failure handling
 
+- `LayerTypeConflictError` — selected-layer preflight found an existing filesystem entry whose type
+  blocks a generated file or required parent directory; the error lists target-relative paths and
+  asks the user to remove or rename the blocking entry.
 - `MissingLayerError` — composition referenced a template that doesn't exist (broken compatibility
   choice or renamed directory). Surfaces with the layer name; earlier layers may already be on disk.
 - `UnresolvedTokenError` — a template referenced a token with no variable; generation fails with the

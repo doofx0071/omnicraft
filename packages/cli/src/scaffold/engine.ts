@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'n
 import { basename, dirname, join, relative } from 'node:path'
 import { isProtectedPath } from '../validators.js'
 import { deepMergePackageJson, mergeExtensionsJson } from './merge.js'
+import { assertNoLayerTypeConflicts } from './preflight.js'
 import { assertNoUnresolvedTokens, isBinaryFile, renderString, restoreDotfileName } from './renderer.js'
 
 /**
@@ -37,6 +38,16 @@ export class MissingLayerError extends Error {
 
 /** Copies one layer into the target directory, rendering tokens and merging package.json manifests. */
 export function applyLayer(
+  templatesRoot: string,
+  layer: Layer,
+  variables: Record<string, string>,
+  targetDir: string,
+): void {
+  assertNoLayerTypeConflicts(templatesRoot, [layer], targetDir)
+  writeLayerFiles(templatesRoot, layer, variables, targetDir)
+}
+
+function writeLayerFiles(
   templatesRoot: string,
   layer: Layer,
   variables: Record<string, string>,
@@ -139,7 +150,6 @@ export function applyLayers(
   variables: Record<string, string>,
   targetDir: string,
 ): void {
-  for (const layer of layers) {
-    applyLayer(templatesRoot, layer, variables, targetDir)
-  }
+  assertNoLayerTypeConflicts(templatesRoot, layers, targetDir)
+  for (const layer of layers) writeLayerFiles(templatesRoot, layer, variables, targetDir)
 }
