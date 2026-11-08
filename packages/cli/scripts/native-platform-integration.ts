@@ -5,6 +5,10 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as delay } from 'node:timers/promises'
 import { runCommand, startCommand } from '../src/exec.js'
+import {
+  GRADLE_DOWNLOAD_MAX_ATTEMPTS,
+  runGradleBuildWithDownloadRetry,
+} from '../src/gradle-download-retry.js'
 import { composeLayers, templateVariables } from '../src/scaffold/compose.js'
 import { createEnvFiles } from '../src/scaffold/env.js'
 import { applyLayers } from '../src/scaffold/engine.js'
@@ -926,12 +930,31 @@ async function runExpoAndroidEmulator(): Promise<void> {
     const androidRoot = join(projectRoot, 'android')
     const gradleWrapper = join(androidRoot, 'gradlew')
     requirePath(gradleWrapper, 'Generated Expo Android Gradle wrapper')
-    await runRequiredAsync(
-      'Build the generated Expo Android Debug APK',
-      gradleWrapper,
-      ['assembleDebug'],
-      androidRoot,
+    await runGradleBuildWithDownloadRetry(
+      (remainingTimeoutMs) =>
+        runRequiredAsync(
+          'Build the generated Expo Android Debug APK',
+          gradleWrapper,
+          ['assembleDebug'],
+          androidRoot,
+          remainingTimeoutMs,
+        ),
       EXPO_BUILD_TIMEOUT_MS,
+      {
+        onRetry: (failedAttempt, delayMs, error) => {
+          const diagnostic = error instanceof Error ? error.message : String(error)
+          console.warn(
+            '[native] Gradle distribution download failed on attempt ' +
+              failedAttempt +
+              '/' +
+              GRADLE_DOWNLOAD_MAX_ATTEMPTS +
+              '; retrying in ' +
+              delayMs +
+              'ms.\n' +
+              diagnostic,
+          )
+        },
+      },
     )
     const apkPath = join(androidRoot, 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk')
     requirePath(apkPath, 'Generated Expo Android Debug APK')
