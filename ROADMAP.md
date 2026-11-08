@@ -1,6 +1,6 @@
 # 🗺️ OmniCraft Roadmap
 
-> **Versioning model:** `v1.0.0` is the first stable release. As checked on 2026-11-08, npm `latest` is `1.0.8`, published from Git commit `fb6a990`, and GitHub tag `v1.0.8` points to that same commit. Future releases follow semver; release versions do not mean every selectable stack combination is fully verified.
+> **Versioning model:** `v1.0.0` is the first stable release. As checked on 2026-11-08, npm `latest` is `1.0.9`, published from Git commit `8b718d9`, and GitHub tag `v1.0.9` points to that same commit. Future releases follow semver; release versions do not mean every selectable stack combination is fully verified.
 >
 > Progress is tracked with GitHub issues — this file is the big picture, the issues are the work. Check off here when the linked issue closes.
 
@@ -23,7 +23,7 @@
 | v1.0.6  | Audit remediation and release-process repair     | ✅ published                | —       |
 | v1.0.7  | Gate reliability, CLI correctness, API contracts | ✅ published                | —       |
 | v1.0.8  | Generated-app quality                            | ✅ published                | —       |
-| v1.0.9  | Descriptions, action SHA pins, and floor truth   | 🟡 release candidate        | —       |
+| v1.0.9  | Descriptions, action SHA pins, and floor truth   | ✅ published | —       |
 
 ---
 
