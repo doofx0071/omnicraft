@@ -47,6 +47,18 @@ responses share the JSON contract (`{ "error": "Too many requests" }` with a num
 - `.env.example`: the `RATE_LIMIT_*` block, matching the Node stacks' wording.
 - New `Rate-limit` troubleshooting rows in the three `fullstack-php` root READMEs.
 
+### Framework-ordering finding (hosted gate, first run)
+
+Laravel sorts the merged group+route middleware stack by its priority list, and `Authenticate` is
+priority-listed while `ThrottleRequests` is not — so in the Sanctum overlay `auth:sanctum` runs
+before the api throttle and unauthenticated requests are rejected before the limiter counts. The
+per-IP api limit therefore protects authenticated traffic; the anonymous abuse vector stays
+covered by the auth routes' own `throttle:10,15`. The Sanctum feature tests authenticate exactly
+like a real SPA session before bursting. The None overlay has no route middleware, so its throttle
+counts every request (both fixtures assert the same 429 contract). The same ordering also means
+the global `SecurityHeaders` middleware (Kernel global stack, outside any sort) lands on every
+response, including 401s and 404s.
+
 ### 2. Generated-project evidence
 
 - `tests/php/OmniCraftDatabaseApiTest.php` (None path) and

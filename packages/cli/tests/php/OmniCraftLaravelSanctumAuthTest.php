@@ -90,9 +90,11 @@ class OmniCraftLaravelSanctumAuthTest extends TestCase
 
     public function test_api_responses_carry_baseline_security_headers(): void
     {
-        $response = $this->spaGet('/api/users');
+        // The middleware registers globally, so even the unmatched-route 404
+        // carries the baseline — no authentication needed to prove it.
+        $response = $this->spaGet('/api/__unknown');
 
-        $response->assertOk();
+        $response->assertNotFound();
         $this->assertNotNull($response->headers->get('X-Content-Type-Options'));
         $this->assertNotNull($response->headers->get('X-Frame-Options'));
         $this->assertNotNull($response->headers->get('Referrer-Policy'));
@@ -100,11 +102,22 @@ class OmniCraftLaravelSanctumAuthTest extends TestCase
 
     public function test_api_rate_limit_returns_the_shared_429_contract(): void
     {
-        // Self-contained burst: every test boots a fresh application with a
-        // fresh rate-limiter bucket, and the array cache keeps it that way
-        // regardless of the generated CACHE_STORE. The Sanctum login throttle
-        // has its own limiter and is unaffected.
+        // Laravel sorts route middleware (auth:sanctum) ahead of the api
+        // group's throttle on merged stacks, so the per-IP limit counts
+        // authenticated traffic — authenticate first, exactly like a real
+        // SPA session. The anonymous abuse vector stays covered by the auth
+        // routes' own throttle:10,15. Every test boots a fresh application
+        // with a fresh limiter bucket (array cache); the distinct
+        // REMOTE_ADDR keeps the bucket independent of other tests.
         config(['cache.default' => 'array', 'rate-limit.max' => 5, 'rate-limit.window_minutes' => 15]);
+        $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.88']);
+
+        $this->spaPost('/api/auth/register', [
+            'name' => 'Rate Limit User',
+            'email' => 'rate-limit@example.test',
+            'password' => 'generated-test-password',
+            'password_confirmation' => 'generated-test-password',
+        ])->assertCreated();
 
         $limited = null;
         for ($i = 0; $i < 10 && $limited === null; $i++) {
