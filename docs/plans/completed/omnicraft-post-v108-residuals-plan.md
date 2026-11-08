@@ -1,8 +1,12 @@
 # OmniCraft Post-v1.0.8 Residuals
 
-**Status:** Implemented — all three items landed (local: 410 tests, checker 49 rows, build; hosted
-gate evidence pending the next main run)<br>
+**Status:** Complete — all three items landed with hosted evidence: strict gate
+[42440036692](https://github.com/doofx0071/omnicraft/actions/runs/42440036692) on `ae552c7` and
+[42442912081](https://github.com/doofx0071/omnicraft/actions/runs/42442912081) on `f8df2cf`; all three
+floor jobs green in node-floor-evidence run
+[42444517954](https://github.com/doofx0071/omnicraft/actions/runs/42444517954) on `f8df2cf`<br>
 **Opened:** 8 November 2026<br>
+**Closed:** 8 November 2026<br>
 **Repository:** <https://github.com/doofx0071/omnicraft><br>
 **Basis:** residuals recorded by the [generated-app quality follow-up](../completed/omnicraft-generated-app-quality-follow-up-plan.md)
 and the [v1.0.7 polish plan](../completed/omnicraft-v107-polish-plan.md).
@@ -54,6 +58,13 @@ Node 22.13.0 (exit 139 in `db:migrate`), matching upstream reports that place th
 `^22.14.0 || >=24.0.0` (nvmrc `22.14`) and `root/fullstack-next/sqlite` to `>=22.14.0` (nvmrc
 `22.14`) — and the floor job now runs `22.14.0`. This is exactly the hazard class the floor work
 was meant to catch: `better-sqlite3` declares `engines: >=22`, which npm accepts silently.
+
+Second dispatch ([42444517954](https://github.com/doofx0071/omnicraft/actions/runs/42444517954) on
+`f8df2cf`): all three floor jobs green — Node 20.19.0 (install, Vite client build, typechecks,
+migrate, boot, PostgreSQL CRUD), Node 22.14.0 (same against SQLite with the better-sqlite3
+native build), and Node 22.18.0 (production CLI Livewire scaffold with Composer/npm installs and
+a required Vite asset build). The floors are now boot/build-proven on their exact minimum lines,
+and the weekly schedule keeps the evidence fresh.
 
 ## Non-goals
 
