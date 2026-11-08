@@ -87,4 +87,36 @@ class OmniCraftLaravelSanctumAuthTest extends TestCase
             'password' => 'incorrect-password',
         ])->assertTooManyRequests();
     }
+
+    public function test_api_responses_carry_baseline_security_headers(): void
+    {
+        $response = $this->spaGet('/api/users');
+
+        $response->assertOk();
+        $this->assertNotNull($response->headers->get('X-Content-Type-Options'));
+        $this->assertNotNull($response->headers->get('X-Frame-Options'));
+        $this->assertNotNull($response->headers->get('Referrer-Policy'));
+    }
+
+    public function test_api_rate_limit_returns_the_shared_429_contract(): void
+    {
+        // Self-contained burst: every test boots a fresh application with a
+        // fresh rate-limiter bucket, and the array cache keeps it that way
+        // regardless of the generated CACHE_STORE. The Sanctum login throttle
+        // has its own limiter and is unaffected.
+        config(['cache.default' => 'array', 'rate-limit.max' => 5, 'rate-limit.window_minutes' => 15]);
+
+        $limited = null;
+        for ($i = 0; $i < 10 && $limited === null; $i++) {
+            $response = $this->spaGet('/api/users');
+            if ($response->status() === 429) {
+                $limited = $response;
+            }
+        }
+
+        $this->assertNotNull($limited, 'The API never returned 429 within 10 requests.');
+        $this->assertSame('application/json', $limited->headers->get('Content-Type'));
+        $limited->assertExactJson(['error' => 'Too many requests']);
+        $this->assertIsNumeric($limited->headers->get('Retry-After'));
+    }
 }

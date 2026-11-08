@@ -186,8 +186,10 @@ case. Examples include:
   FastAPI scenarios assert the same security-header and 429 contract as the Node scenarios.
 - Laravel: install through Composer, migrate/seed, boot Artisan, and exercise API/database behavior.
   The Laravel 12 API feature tests assert the shared unmatched-API 404 JSON contract for `/api` and
-  `/api/*` on every verb while known-resource 404s keep Laravel's exception body. Laravel has no
-  OmniCraft security-header/rate-limit baseline yet.
+  `/api/*` on every verb while known-resource 404s keep Laravel's exception body, and assert the
+  security baseline: headers on API responses and a bounded burst returning 429 JSON
+  `{ "error": "Too many requests" }` with a numeric `Retry-After` (fresh per-test limiter state via
+  the array cache). Integrated Laravel 13 keeps framework semantics only.
 - Frontend-only React/Vite: database operations do not apply; install and build the generated app, boot
   its preview server, load the emitted JavaScript bundle, and verify that a missing asset fails.
 - Native apps: record the scaffold, web build (when applicable), native build, and launch as separate

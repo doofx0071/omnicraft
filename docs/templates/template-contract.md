@@ -52,12 +52,13 @@ the authoring contract. The tree layout is in the [repository structure](../arch
    (`/api/health`, `/api/users` GET/POST/DELETE), the same response shapes (camelCase `createdAt`),
    the same behavior (duplicate email → 409 JSON), and the same unmatched-route fallback
    (404 JSON `{ "error": "Not found" }`, method-agnostic) across Express, Fastify, Hono, FastAPI,
-   the Next.js integrated overlay, and the Laravel 12 API. The four JSON API runtimes (Express,
-   Fastify, Hono, FastAPI) additionally share a baseline security layer: security headers on every
-   response and a per-IP API rate limit (env-configurable `RATE_LIMIT_MAX` /
-   `RATE_LIMIT_WINDOW_MINUTES`) whose 429 responses are JSON
-   `{ "error": "Too many requests" }` with a numeric `Retry-After`; the integrated Next.js overlay
-   and Laravel have no OmniCraft security baseline yet. See the
+   the Next.js integrated overlay, and the Laravel 12 API. Those four JSON API runtimes plus the
+   Laravel 12 API overlays share a baseline security layer: security headers on every response and
+   a per-IP API rate limit (env-configurable `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MINUTES`) whose
+   429 responses are JSON `{ "error": "Too many requests" }` with a numeric `Retry-After`
+   (Laravel registers it through `throttleApi()` and `RateLimiter::for('api')`). The integrated
+   Next.js overlay and integrated Laravel 13 (Livewire/Inertia) have no OmniCraft security baseline
+   yet — HTML/page routing and edge-runtime middleware need their own design decisions. See the
    [testing strategy](../development/testing-strategy.md) Level 3.
 7. **Prettier-clean.** All template files pass prettier (`printWidth 100`); generated YAML avoids
    single quotes; generated READMEs are excluded from the _generated project's_ prettier check

@@ -1482,6 +1482,51 @@ describe("generated root descriptions", () => {
   });
 });
 
+describe("Laravel 12 API security baseline", () => {
+  // Both PHP overlays (None + Sanctum) ship the same baseline: global
+  // security-headers middleware, a per-IP api rate limiter registered in the
+  // AppServiceProvider with the shared 429 JSON contract, a config-cache-safe
+  // config/rate-limit.php, and the documented env entries. Verified against
+  // laravel/framework 12.x sources (throttleApi, Limit::response headers).
+  const overlays = ["server/php/laravel", "server/php/laravel-sanctum-spa"];
+
+  it("ships the middleware, provider, config, wiring, and env entries in both overlays", () => {
+    for (const overlay of overlays) {
+      const root = join(TEMPLATES_ROOT, ...overlay.split("/"));
+      const middleware = readFileSync(join(root, "app", "Http", "Middleware", "SecurityHeaders.php"), "utf8");
+      expect(middleware).toContain("X-Content-Type-Options");
+      expect(middleware).toContain("X-Frame-Options");
+      expect(middleware).toContain("Referrer-Policy");
+
+      const provider = readFileSync(join(root, "app", "Providers", "AppServiceProvider.php"), "utf8");
+      expect(provider).toContain("RateLimiter::for('api'");
+      expect(provider).toContain("Limit::perMinutes");
+      expect(provider).toContain("Too many requests");
+
+      expect(readFileSync(join(root, "config", "rate-limit.php"), "utf8")).toContain(
+        "env('RATE_LIMIT_MAX', 300)",
+      );
+
+      const boot = readFileSync(join(root, "bootstrap", "app.php"), "utf8");
+      expect(boot).toContain("SecurityHeaders::class");
+      expect(boot).toContain("$middleware->throttleApi()");
+
+      const env = readFileSync(join(root, ".env.example"), "utf8");
+      expect(env).toContain("RATE_LIMIT_MAX=300");
+      expect(env).toContain("RATE_LIMIT_WINDOW_MINUTES=15");
+    }
+  });
+
+  it("keeps the Sanctum overlay's stateful API ordering ahead of the baseline", () => {
+    const boot = readFileSync(
+      join(TEMPLATES_ROOT, "server", "php", "laravel-sanctum-spa", "bootstrap", "app.php"),
+      "utf8",
+    );
+    expect(boot.indexOf("statefulApi")).toBeGreaterThan(-1);
+    expect(boot.indexOf("statefulApi")).toBeLessThan(boot.indexOf("SecurityHeaders::class"));
+  });
+});
+
 describe("SKIP_ENV_VALIDATION escape hatch", () => {
   const require = createRequire(import.meta.url);
   const tsxCli = require.resolve("tsx/cli");

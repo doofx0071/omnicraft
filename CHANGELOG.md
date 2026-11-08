@@ -29,6 +29,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   `RATE_LIMIT_WINDOW_MINUTES`, with 429 responses returning JSON
   `{ "error": "Too many requests" }` and a numeric `Retry-After`. Runtime integrations assert the
   headers and the 429 contract.
+- The Laravel 12 API overlays join the security baseline: global security-headers middleware and a
+  per-IP API rate limit (`RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MINUTES` via `throttleApi()` and
+  `RateLimiter::for('api')`) whose 429s share the JSON body and numeric `Retry-After`; the feature
+  tests assert headers and the 429 contract on both the None and Sanctum paths.
 - The Laravel 12 API php-e2e suite asserts the shared 404 contract for `/api` and `/api/*`.
 
 ### Fixed
