@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ### Added
 
+- Scaffolding now preflights the exact write plan and rejects filesystem type conflicts before
+  writing anything: a target path that exists as a different filesystem type (file where a
+  directory is needed, directory where a file is needed, or another filesystem entry type) fails
+  generation with a per-path `LayerTypeConflictError` listing every blocking entry.
 - The Next.js integrated overlay applies the shared baseline security headers
   (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`) through header-setting
   middleware on every response; the runtime integration asserts them. Its rate-limit half stays
