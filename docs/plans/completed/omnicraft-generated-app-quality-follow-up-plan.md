@@ -44,9 +44,11 @@ not covered (they have no OmniCraft root variant; the official generators own th
   (root variants apply after extras, so extras cannot carry engines; the intersection is the only
   claim that is true for all of them). Each root also ships an `_nvmrc` (restored to `.nvmrc` via a
   new renderer allowlist entry) holding the primary floor line. Floors: fullstack/{postgres,mysql}
-  `^20.19.0 || ^22.13.0 || >=24.0.0` (nvmrc 20.19); fullstack/sqlite `^22.13.0 || >=24.0.0`
-  (nvmrc 22.13); fullstack-next/{postgres,mysql} `>=20.9.0` (nvmrc 20.9); fullstack-next/sqlite
-  `>=22.0.0` (nvmrc 22); frontend-only `^22.13.0 || >=24.0.0` (nvmrc 22.13, dominated by the
+  `^20.19.0 || ^22.13.0 || >=24.0.0` (nvmrc 20.19); fullstack/sqlite `^22.14.0 || >=24.0.0`
+  (nvmrc 22.14); fullstack-next/{postgres,mysql} `>=20.9.0` (nvmrc 20.9); fullstack-next/sqlite
+  `>=22.14.0` (nvmrc 22.14); the two sqlite floors were corrected on 8 November 2026 after hosted
+  floor evidence caught better-sqlite3@13 segfaulting on Node 22.13.0 despite its declared
+  `>=22` engines range; frontend-only `^22.13.0 || >=24.0.0` (nvmrc 22.13, dominated by the
   supabase-js and eslint-extra floors); fullstack-python/* and fullstack-php/*
   `^20.19.0 || ^22.13.0 || >=24.0.0` (nvmrc 20.19); fullstack-laravel-{livewire,inertia-react}
   `^22.18.0 || ^24.11.0 || >=26.0.0` (nvmrc 22.18 — the pinned starters' vite-plus@1.4.0 floor; the

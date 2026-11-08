@@ -34,17 +34,26 @@ node24-action minimum, so the self-hosted job is compatible. `shivammathur/setup
 
 ### 3. Exact-minimum Node floor evidence
 
-The generated `engines.node` floors claim Node 20.19 / 22.13 / 22.18 minimums without boot/build
+The generated `engines.node` floors claim Node 20.19 / 22.14 / 22.18 minimums without boot/build
 proof on those exact lines. Add `.github/workflows/node-floor-evidence.yml`: a scheduled (weekly,
 plus `workflow_dispatch`) evidence workflow, separate from `ci.yml` so it neither joins the
 serialized push queue nor the strict release gate, with three exact-version jobs:
 
 - Node `20.19.0` — Express + Drizzle + PostgreSQL fullstack floor: install, client build, API
   typecheck, boot, CRUD against a disposable PostgreSQL.
-- Node `22.13.0` — Express + raw SQL + SQLite fullstack floor: install (better-sqlite3 build),
+- Node `22.14.0` — Express + raw SQL + SQLite fullstack floor: install (better-sqlite3 build),
   typecheck, boot, CRUD.
 - Node `22.18.0` — Laravel 13 + Livewire (Vite Plus) floor: production CLI scaffold, Composer
   install, npm install, asset build.
+
+First hosted evidence (workflow dispatch run 42442045084 on `ae552c7`, 8 November 2026): the Node
+20.19.0 PostgreSQL job and the Node 22.18.0 Laravel job passed. The Node 22.13.0 SQLite job
+**caught a real floor bug**: the `better-sqlite3@13` prebuilt binary segfaults at first use on
+Node 22.13.0 (exit 139 in `db:migrate`), matching upstream reports that place the boundary at
+22.14.0. The sqlite-bearing floors were therefore corrected — `root/fullstack/sqlite` to
+`^22.14.0 || >=24.0.0` (nvmrc `22.14`) and `root/fullstack-next/sqlite` to `>=22.14.0` (nvmrc
+`22.14`) — and the floor job now runs `22.14.0`. This is exactly the hazard class the floor work
+was meant to catch: `better-sqlite3` declares `engines: >=22`, which npm accepts silently.
 
 ## Non-goals
 

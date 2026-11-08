@@ -311,7 +311,7 @@ The current workflow:
 The separate scheduled `node-floor-evidence` workflow (weekly plus `workflow_dispatch`, not part of
 `ci.yml` and not required by the aggregate gate) proves the generated `engines.node` floors on their
 exact minimum lines: Node `20.19.0` installs, Vite-builds, typechecks, migrates, boots, and CRUDs
-Express + raw SQL + PostgreSQL; Node `22.13.0` does the same for Express + raw SQL + SQLite; Node
+Express + raw SQL + PostgreSQL; Node `22.14.0` does the same for Express + raw SQL + SQLite; Node
 `22.18.0` scaffolds the Laravel 13 + Livewire starter with full Composer/npm installs and a required
 Vite asset build. The script refuses to run on any other Node line, so a runner bump cannot silently
 void the claim. It registers no support-matrix row.

@@ -1320,7 +1320,8 @@ describe("per-composition Node requirements", () => {
   //   vite@^8.3.5 and @vitejs/plugin-{react,vue}@^6: ^20.19.0 || >=22.12.0
   //   @sveltejs/vite-plugin-svelte@^7.3.1:           ^20.19 || ^22.12 || >=24
   //   eslint@^10.13.0 (eslint extra):                ^20.19.0 || ^22.13.0 || >=24
-  //   better-sqlite3@^13.0.3:                        >=22
+  //   better-sqlite3@^13.0.3:                        >=22 (raised to 22.14 by
+  //     hosted floor evidence: the prebuild segfaults on Node <22.14)
   //   @supabase/supabase-js@2.118.0:                 >=22.0.0
   //   next@16.4.3 (create-next-app@16 ships eslint ^9): >=20.9.0
   //   vite-plus@1.4.0 (pinned Laravel starters):     ^22.18 || ^24.11 || >=26
@@ -1353,10 +1354,14 @@ describe("per-composition Node requirements", () => {
     expectNodeFloor(dir, "^20.19.0 || ^22.13.0 || >=24.0.0", "20.19");
   });
 
-  it("scaffolds fullstack sqlite with better-sqlite3's >=22 floor", () => {
+  it("scaffolds fullstack sqlite with better-sqlite3's 22.14 floor", () => {
     const dir = makeTempDir("node-floor-fullstack-sqlite");
     scaffoldInto(dir, makeAnswers({ database: "sqlite" }));
-    expectNodeFloor(dir, "^22.13.0 || >=24.0.0", "22.13");
+    // better-sqlite3 declares engines >=22, but hosted floor evidence
+    // (node-floor-evidence, 8 November 2026) caught the prebuilt binary
+    // segfaulting on Node 22.13.0; upstream reports put the boundary at
+    // 22.14.0, so the sqlite roots claim that line instead.
+    expectNodeFloor(dir, "^22.14.0 || >=24.0.0", "22.14");
   });
 
   it("merges the fullstack-next sqlite floor into the create-next-app skeleton manifest", () => {
@@ -1377,7 +1382,7 @@ describe("per-composition Node requirements", () => {
     nextAnswers.targetDir = dir;
     const plan = planLayerApplication(composeLayers(nextAnswers), nextAnswers.architecture);
     applyLayers(TEMPLATES_ROOT, plan.afterOfficialGenerator, templateVariables(nextAnswers), dir);
-    expectNodeFloor(dir, ">=22.0.0", "22");
+    expectNodeFloor(dir, ">=22.14.0", "22.14");
   });
 
   it("scaffolds the fullstack-next postgres variant with next's >=20.9 floor", () => {

@@ -2,7 +2,7 @@
  * Exact-minimum Node floor evidence for the generated `engines.node` claims.
  *
  * The generated root variants declare per-composition floors (Node 20.19,
- * 22.13, 22.18) derived from the pinned dependency graph. The hosted runtime
+ * 22.14, 22.18) derived from the pinned dependency graph. The hosted runtime
  * jobs all run on the latest Node of their major, so nothing proves the
  * generated apps actually install/build on the declared minimums. This script
  * scaffolds the floor-governed operation for each family through the BUILT
@@ -42,7 +42,7 @@ type Scenario = "node20-postgres" | "node22-sqlite" | "node22-laravel";
 
 const FLOOR_PREFIXES: Record<Scenario, string> = {
   "node20-postgres": "v20.19.",
-  "node22-sqlite": "v22.13.",
+  "node22-sqlite": "v22.14.",
   "node22-laravel": "v22.18.",
 };
 

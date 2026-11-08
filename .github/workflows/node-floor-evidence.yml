@@ -60,7 +60,7 @@ jobs:
         working-directory: packages/cli
 
   floor-node22-sqlite:
-    name: Node 22.13 — Express raw SQL + SQLite (better-sqlite3 floor)
+    name: Node 22.14 — Express raw SQL + SQLite (better-sqlite3 floor)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -68,7 +68,7 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22.13.0
+          node-version: 22.14.0
           cache: npm
 
       - name: Install workspace dependencies
@@ -78,7 +78,7 @@ jobs:
         run: npx tsup
         working-directory: packages/cli
 
-      - name: Install, build, migrate, boot, and CRUD on the 22.13 floor
+      - name: Install, build, migrate, boot, and CRUD on the 22.14 floor
         env:
           DATABASE_URL: file:./data/app.db
         run: npx tsx scripts/lib/node-floor-evidence.ts --scenario node22-sqlite
