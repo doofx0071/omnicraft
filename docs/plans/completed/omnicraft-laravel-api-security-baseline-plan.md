@@ -1,7 +1,12 @@
 # OmniCraft Laravel API Security Baseline
 
-**Status:** In progress — owner: OmniCraft maintainer<br>
+**Status:** Complete — strict gate
+[42452309157](https://github.com/doofx0071/omnicraft/actions/runs/42452309157) green on `70786fc`;
+the None-path fixture passed in the first run
+([42451055454](https://github.com/doofx0071/omnicraft/actions/runs/42451055454)) and the corrected
+Sanctum fixture in the second<br>
 **Opened:** 8 November 2026<br>
+**Closed:** 8 November 2026<br>
 **Repository:** <https://github.com/doofx0071/omnicraft><br>
 **Basis:** the Laravel residual recorded by the
 [generated-app quality follow-up](../completed/omnicraft-generated-app-quality-follow-up-plan.md)
@@ -74,6 +79,18 @@ response, including 401s and 404s.
 - `template-contract.md` rule 6: the Laravel 12 API joins the baseline list; only the Next.js
   integrated overlay and integrated Laravel 13 remain without one, with the reason recorded.
 - `testing-strategy.md` Level 3 Laravel row; CHANGELOG `Unreleased`.
+
+## Hosted evidence
+
+- `php-laravel-integration` (None overlay, SQLite/PostgreSQL/MySQL): migrations, feature tests with
+  the security-headers and 429-contract assertions — passed in both gate runs.
+- `php-laravel-sanctum-spa-auth-integration` (Sanctum overlay, three databases): the first run
+  caught the auth-before-throttle ordering (documented above, fixture corrected in `70786fc`);
+  the second run passed the full auth lifecycle plus the baseline assertions.
+- Local probes were partially blocked by a Packagist CDN outage from the dev network
+  (`repo.packagist.org` unreachable, diagnosed via DoH cross-checks); the smoke scaffold verified
+  the generated wiring (22/22 paths, both overlays carry the middleware, provider, config, and
+  env entries) and the hosted gate ran the real feature tests.
 
 ## Explicit non-goals
 
