@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 import { afterAll, describe, expect, it } from "vitest";
 // transitive dependency (vite/tsup) used here only to validate generated YAML
@@ -18,7 +18,7 @@ import { parse } from "yaml";
 import { TEMPLATES_ROOT } from "./config.js";
 import { buildManifest } from "./manifest.js";
 import { createEnvFiles } from "./scaffold/env.js";
-import { applyLayers } from "./scaffold/engine.js";
+import { applyLayer, applyLayers } from "./scaffold/engine.js";
 import { composeLayers, planLayerApplication, templateVariables } from "./scaffold/compose.js";
 import type { Answers } from "./types.js";
 
@@ -786,6 +786,62 @@ describe("safety: protected paths and collisions", () => {
     const env = readFileSync(join(dir, "server", ".env"), "utf8");
     expect(env).toContain("5432/demo_app");
     expect(env).not.toContain("{{");
+  });
+});
+
+describe("selected layer filesystem type preflight", () => {
+  function writeLayerFile(templatesRoot: string, layer: string, relativePath: string): void {
+    const path = join(templatesRoot, layer, relativePath);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, "fixture");
+  }
+
+  it("rejects a direct exact-file directory conflict before writing any layer file", () => {
+    const templatesRoot = makeTempDir("preflight-exact-templates");
+    const dir = makeTempDir("preflight-exact-target");
+    writeLayerFile(templatesRoot, "layer", "first.txt");
+    writeLayerFile(templatesRoot, "layer", "package.json");
+    mkdirSync(join(dir, "package.json"));
+
+    expect(() => applyLayer(templatesRoot, { src: "layer", dest: "." }, {}, dir)).toThrow(
+      /package\.json is an existing directory.*Remove or rename/s,
+    );
+    expect(existsSync(join(dir, "first.txt"))).toBe(false);
+  });
+
+  it("rejects a single-layer parent-file conflict before writing any file from that layer", () => {
+    const templatesRoot = makeTempDir("preflight-single-templates");
+    const dir = makeTempDir("preflight-single-target");
+    writeLayerFile(templatesRoot, "layer", "first.txt");
+    writeLayerFile(templatesRoot, "layer", join("blocked", "later.txt"));
+    writeFileSync(join(dir, "blocked"), "blocking file");
+
+    expect(() => applyLayer(templatesRoot, { src: "layer", dest: "." }, {}, dir)).toThrow(
+      /blocked is an existing file.*directory is required/s,
+    );
+    expect(existsSync(join(dir, "first.txt"))).toBe(false);
+  });
+
+  it("rejects a later-layer conflict before an earlier selected layer writes", () => {
+    const templatesRoot = makeTempDir("preflight-batch-templates");
+    const dir = makeTempDir("preflight-batch-target");
+    writeLayerFile(templatesRoot, "first", "earlier.txt");
+    writeLayerFile(templatesRoot, "later", "package.json");
+    mkdirSync(join(dir, "package.json"));
+
+    expect(() =>
+      applyLayers(
+        templatesRoot,
+        [
+          { src: "first", dest: "." },
+          { src: "later", dest: "." },
+        ],
+        {},
+        dir,
+      ),
+    ).toThrow(/package\.json is an existing directory.*Remove or rename/s);
+    expect(existsSync(join(dir, "earlier.txt"))).toBe(false);
+    expect(statSync(join(dir, "package.json")).isDirectory()).toBe(true);
   });
 });
 describe("shadcn extra layer", () => {
