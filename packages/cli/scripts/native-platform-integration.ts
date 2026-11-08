@@ -1,10 +1,25 @@
 import { randomBytes } from 'node:crypto'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as delay } from 'node:timers/promises'
 import { runCommand, startCommand } from '../src/exec.js'
+import {
+  GRADLE_DOWNLOAD_MAX_ATTEMPTS,
+  GRADLE_WRAPPER_NETWORK_TIMEOUT_MS,
+  runGradleBuildWithDownloadRetry,
+  withGradleWrapperNetworkTimeout,
+} from '../src/gradle-download-retry.js'
 import { composeLayers, templateVariables } from '../src/scaffold/compose.js'
 import { createEnvFiles } from '../src/scaffold/env.js'
 import { applyLayers } from '../src/scaffold/engine.js'
@@ -128,34 +143,53 @@ async function runRequiredAsync(
 }
 
 /**
- * ONE bounded retry for the Gradle build: the wrapper downloads the pinned
- * distribution from services.gradle.org, and that CDN has had sustained
- * timeouts and 504s that fail the whole hosted job (see #67). Retrying the
- * build once re-attempts the download and reuses whatever cache the first
- * attempt warmed. Any other failure propagates immediately.
+ * Re-run the generated Expo Android build only for transient distribution-download
+ * failures, with a longer wrapper timeout and a small bounded attempt count.
  */
 async function buildExpoApkWithBoundedRetry(gradleWrapper: string, androidRoot: string): Promise<void> {
-  const transientDownload = /services\.gradle\.org|timed? ?out|504|read timed out/i
-  try {
-    await runRequiredAsync(
-      'Build the generated Expo Android Debug APK',
-      gradleWrapper,
-      ['assembleDebug'],
-      androidRoot,
-      EXPO_BUILD_TIMEOUT_MS,
-    )
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    if (!transientDownload.test(message)) throw error
-    console.log('[native] Gradle build failed on a transient distribution-download error; retrying the build once.')
-    await runRequiredAsync(
-      'Build the generated Expo Android Debug APK (retry after transient download failure)',
-      gradleWrapper,
-      ['assembleDebug'],
-      androidRoot,
-      EXPO_BUILD_TIMEOUT_MS,
-    )
+  const gradleWrapperPropertiesPath = join(
+    androidRoot,
+    'gradle',
+    'wrapper',
+    'gradle-wrapper.properties',
+  )
+  requirePath(gradleWrapperPropertiesPath, 'Generated Expo Android Gradle wrapper properties')
+  const wrapperProperties = readFileSync(gradleWrapperPropertiesPath, 'utf8')
+  const wrapperPropertiesWithTimeout = withGradleWrapperNetworkTimeout(wrapperProperties)
+  if (wrapperPropertiesWithTimeout !== wrapperProperties) {
+    // This only changes the temporary Android project created for the CI integration test.
+    writeFileSync(gradleWrapperPropertiesPath, wrapperPropertiesWithTimeout)
   }
+  console.log(
+    `[native] Gradle distribution download timeout: ${GRADLE_WRAPPER_NETWORK_TIMEOUT_MS}ms.`,
+  )
+
+  await runGradleBuildWithDownloadRetry(
+    (remainingTimeoutMs) =>
+      runRequiredAsync(
+        'Build the generated Expo Android Debug APK',
+        gradleWrapper,
+        ['assembleDebug'],
+        androidRoot,
+        remainingTimeoutMs,
+      ),
+    EXPO_BUILD_TIMEOUT_MS,
+    {
+      onRetry: (failedAttempt, delayMs, error) => {
+        const diagnostic = error instanceof Error ? error.message : String(error)
+        console.warn(
+          '[native] Gradle distribution download failed on attempt ' +
+            failedAttempt +
+            '/' +
+            GRADLE_DOWNLOAD_MAX_ATTEMPTS +
+            '; retrying in ' +
+            delayMs +
+            'ms.\n' +
+            diagnostic,
+        )
+      },
+    },
+  )
 }
 
 function requirePath(path: string, label: string): void {

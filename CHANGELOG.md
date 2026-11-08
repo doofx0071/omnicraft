@@ -8,8 +8,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ### Added
 
-- The Expo Android hosted check retries its Gradle APK build once on transient distribution-download
-  failures (timeouts/504s from services.gradle.org) instead of failing the whole required job.
+- The Expo Android hosted check gives the Gradle distribution download a 60-second timeout and retries
+  transient failures up to three attempts before failing the required job.
 - Scaffolding now preflights the exact write plan and rejects filesystem type conflicts before
   writing anything: a target path that exists as a different filesystem type (file where a
   directory is needed, directory where a file is needed, or another filesystem entry type) fails
