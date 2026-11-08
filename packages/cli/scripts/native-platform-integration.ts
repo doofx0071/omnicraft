@@ -127,6 +127,37 @@ async function runRequiredAsync(
   return output
 }
 
+/**
+ * ONE bounded retry for the Gradle build: the wrapper downloads the pinned
+ * distribution from services.gradle.org, and that CDN has had sustained
+ * timeouts and 504s that fail the whole hosted job (see #67). Retrying the
+ * build once re-attempts the download and reuses whatever cache the first
+ * attempt warmed. Any other failure propagates immediately.
+ */
+async function buildExpoApkWithBoundedRetry(gradleWrapper: string, androidRoot: string): Promise<void> {
+  const transientDownload = /services\.gradle\.org|timed? ?out|504|read timed out/i
+  try {
+    await runRequiredAsync(
+      'Build the generated Expo Android Debug APK',
+      gradleWrapper,
+      ['assembleDebug'],
+      androidRoot,
+      EXPO_BUILD_TIMEOUT_MS,
+    )
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    if (!transientDownload.test(message)) throw error
+    console.log('[native] Gradle build failed on a transient distribution-download error; retrying the build once.')
+    await runRequiredAsync(
+      'Build the generated Expo Android Debug APK (retry after transient download failure)',
+      gradleWrapper,
+      ['assembleDebug'],
+      androidRoot,
+      EXPO_BUILD_TIMEOUT_MS,
+    )
+  }
+}
+
 function requirePath(path: string, label: string): void {
   if (!existsSync(path)) throw new Error(`${label} is missing: ${path}`)
 }
@@ -926,13 +957,7 @@ async function runExpoAndroidEmulator(): Promise<void> {
     const androidRoot = join(projectRoot, 'android')
     const gradleWrapper = join(androidRoot, 'gradlew')
     requirePath(gradleWrapper, 'Generated Expo Android Gradle wrapper')
-    await runRequiredAsync(
-      'Build the generated Expo Android Debug APK',
-      gradleWrapper,
-      ['assembleDebug'],
-      androidRoot,
-      EXPO_BUILD_TIMEOUT_MS,
-    )
+    await buildExpoApkWithBoundedRetry(gradleWrapper, androidRoot)
     const apkPath = join(androidRoot, 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk')
     requirePath(apkPath, 'Generated Expo Android Debug APK')
     const applicationId = expoAndroidApplicationId(projectRoot)
