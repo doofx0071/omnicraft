@@ -1,5 +1,6 @@
 {
   "name": "{{projectName}}",
+  "description": "Full-stack workspace: Express, Fastify, or Hono API with a React, Vue, or Svelte Vite client, wired to MySQL",
   "private": true,
   "type": "module",
   "version": "0.0.0",

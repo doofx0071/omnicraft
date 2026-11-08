@@ -1,5 +1,6 @@
 {
   "name": "{{projectName}}",
+  "description": "Integrated Laravel 13 + Inertia React project on SQLite",
   "private": true,
   "version": "0.0.0",
   "engines": {

@@ -1,5 +1,6 @@
 {
   "name": "{{projectName}}",
+  "description": "Full-stack workspace: Laravel 12 API with a React or Vue Vite client, wired to SQLite",
   "private": true,
   "version": "0.0.0",
   "engines": {

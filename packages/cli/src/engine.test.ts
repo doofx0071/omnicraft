@@ -6,6 +6,7 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -906,7 +907,12 @@ describe("eslint extra lint workflow", () => {
     // same triggers as the generated main CI
     expect(workflow.on).toEqual({ push: { branches: ["main"] }, pull_request: null });
     const steps = workflow.jobs.lint.steps;
-    expect(steps.some((step) => step["uses"] === "actions/checkout@v4")).toBe(true);
+    expect(
+      steps.some(
+        (step) => step["uses"] ===
+          "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+      ),
+    ).toBe(true);
     expect(steps.some((step) => step.run === "npm ci")).toBe(true);
     // the lint script lives in the root package.json for every non-integrated
     // composition (extras/eslint composes at dest "."), so the workflow runs
@@ -1436,6 +1442,41 @@ describe("per-composition Node requirements", () => {
     },
   );
 });
+describe("generated root descriptions", () => {
+  // Every root variant ships a static one-line description that stays true
+  // for every composition sharing the file (framework/ORM options named
+  // explicitly, no token rendering). Server/client workspace manifests
+  // intentionally have none — they are private workspace packages.
+  it("gives every root package.json a non-empty description", () => {
+    const rootDir = join(TEMPLATES_ROOT, "root");
+    const found: string[] = [];
+    const walk = (dir: string, depth: number): void => {
+      for (const entry of readdirSync(dir)) {
+        const path = join(dir, entry);
+        if (entry === "package.json") {
+          const description = readJson(path).description;
+          expect(typeof description).toBe("string");
+          expect(description as string).not.toHaveLength(0);
+          expect(description as string).not.toContain("{{");
+          found.push(path);
+        } else if (depth > 0 && statSync(path).isDirectory()) {
+          walk(path, depth - 1);
+        }
+      }
+    };
+    walk(rootDir, 2); // root/<variant>/package.json and root/<variant>/<database>/package.json
+    expect(found.length).toBeGreaterThanOrEqual(14);
+  });
+
+  it("scaffolds a composed root with its description intact", () => {
+    const dir = makeTempDir("root-description");
+    scaffoldInto(dir, makeAnswers());
+    expect(readJson(join(dir, "package.json")).description).toBe(
+      "Full-stack workspace: Express, Fastify, or Hono API with a React, Vue, or Svelte Vite client, wired to PostgreSQL",
+    );
+  });
+});
+
 describe("SKIP_ENV_VALIDATION escape hatch", () => {
   const require = createRequire(import.meta.url);
   const tsxCli = require.resolve("tsx/cli");

@@ -1,4 +1,5 @@
 {
+  "description": "Frontend-only workspace: React, Vue, or Svelte client on Vite with shared OmniCraft tooling",
   "engines": {
     "node": "^22.13.0 || >=24.0.0"
   }

@@ -1,5 +1,6 @@
 {
   "name": "{{projectName}}",
+  "description": "Full-stack Next.js project with a raw-SQL PostgreSQL data layer",
   "private": true,
   "type": "module",
   "version": "0.0.0",

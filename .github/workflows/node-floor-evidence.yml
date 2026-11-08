@@ -1,0 +1,116 @@
+# Exact-minimum Node floor evidence for the generated engines.node claims.
+#
+# Supplementary evidence only: no job here is required by
+# supported-stack-release-gate and none registers a support-matrix row. It
+# lives outside ci.yml so scheduled/dispatch runs never join the serialized
+# push queue. The runtime assertions live in
+# packages/cli/scripts/lib/node-floor-evidence.ts.
+name: node-floor-evidence
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: omnicraft-node-floors
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  floor-node20-postgres:
+    name: Node 20.19 — Express raw SQL + PostgreSQL (Vite build floor)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:17.11-alpine3.24
+        env:
+          POSTGRES_DB: omnicraft
+          POSTGRES_USER: omnicraft
+          POSTGRES_PASSWORD: omnicraft
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U omnicraft -d omnicraft"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 20.19.0
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Build the production CLI
+        run: npx tsup
+        working-directory: packages/cli
+
+      - name: Install, build, migrate, boot, and CRUD on the 20.19 floor
+        env:
+          DATABASE_URL: postgres://omnicraft:omnicraft@127.0.0.1:5432/omnicraft
+        run: npx tsx scripts/lib/node-floor-evidence.ts --scenario node20-postgres
+        working-directory: packages/cli
+
+  floor-node22-sqlite:
+    name: Node 22.13 — Express raw SQL + SQLite (better-sqlite3 floor)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.13.0
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Build the production CLI
+        run: npx tsup
+        working-directory: packages/cli
+
+      - name: Install, build, migrate, boot, and CRUD on the 22.13 floor
+        env:
+          DATABASE_URL: file:./data/app.db
+        run: npx tsx scripts/lib/node-floor-evidence.ts --scenario node22-sqlite
+        working-directory: packages/cli
+
+  floor-node22-laravel:
+    name: Node 22.18 — Laravel 13 + Livewire (Vite Plus floor)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.18.0
+          cache: npm
+
+      - name: Set up PHP and Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, pdo_sqlite, sqlite3, xml, zip
+          tools: composer:2.10.3
+          coverage: none
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Build the production CLI
+        run: npx tsup
+        working-directory: packages/cli
+
+      - name: Scaffold, install, and build the Livewire starter on the 22.18 floor
+        run: npx tsx scripts/lib/node-floor-evidence.ts --scenario node22-laravel
+        working-directory: packages/cli

@@ -308,6 +308,14 @@ The current workflow:
     section, and updates the release snapshots in `ROADMAP.md` and `docs/architecture/system-overview.md`.
     The self-hosted Windows job runs only for main-branch pushes and same-repository pull requests.
 
+The separate scheduled `node-floor-evidence` workflow (weekly plus `workflow_dispatch`, not part of
+`ci.yml` and not required by the aggregate gate) proves the generated `engines.node` floors on their
+exact minimum lines: Node `20.19.0` installs, Vite-builds, typechecks, migrates, boots, and CRUDs
+Express + raw SQL + PostgreSQL; Node `22.13.0` does the same for Express + raw SQL + SQLite; Node
+`22.18.0` scaffolds the Laravel 13 + Livewire starter with full Composer/npm installs and a required
+Vite asset build. The script refuses to run on any other Node line, so a runner bump cannot silently
+void the claim. It registers no support-matrix row.
+
 These hosted runtime jobs add real database and API checks for those exact combinations; they do not
 verify other framework/database combinations. The matrix marks a stack Supported only when its row
 links to a concrete scenario in `src/support-evidence.ts` and the corresponding CI target passes. The
