@@ -142,6 +142,56 @@ async function runRequiredAsync(
   return output
 }
 
+/**
+ * Re-run the generated Expo Android build only for transient distribution-download
+ * failures, with a longer wrapper timeout and a small bounded attempt count.
+ */
+async function buildExpoApkWithBoundedRetry(gradleWrapper: string, androidRoot: string): Promise<void> {
+  const gradleWrapperPropertiesPath = join(
+    androidRoot,
+    'gradle',
+    'wrapper',
+    'gradle-wrapper.properties',
+  )
+  requirePath(gradleWrapperPropertiesPath, 'Generated Expo Android Gradle wrapper properties')
+  const wrapperProperties = readFileSync(gradleWrapperPropertiesPath, 'utf8')
+  const wrapperPropertiesWithTimeout = withGradleWrapperNetworkTimeout(wrapperProperties)
+  if (wrapperPropertiesWithTimeout !== wrapperProperties) {
+    // This only changes the temporary Android project created for the CI integration test.
+    writeFileSync(gradleWrapperPropertiesPath, wrapperPropertiesWithTimeout)
+  }
+  console.log(
+    `[native] Gradle distribution download timeout: ${GRADLE_WRAPPER_NETWORK_TIMEOUT_MS}ms.`,
+  )
+
+  await runGradleBuildWithDownloadRetry(
+    (remainingTimeoutMs) =>
+      runRequiredAsync(
+        'Build the generated Expo Android Debug APK',
+        gradleWrapper,
+        ['assembleDebug'],
+        androidRoot,
+        remainingTimeoutMs,
+      ),
+    EXPO_BUILD_TIMEOUT_MS,
+    {
+      onRetry: (failedAttempt, delayMs, error) => {
+        const diagnostic = error instanceof Error ? error.message : String(error)
+        console.warn(
+          '[native] Gradle distribution download failed on attempt ' +
+            failedAttempt +
+            '/' +
+            GRADLE_DOWNLOAD_MAX_ATTEMPTS +
+            '; retrying in ' +
+            delayMs +
+            'ms.\n' +
+            diagnostic,
+        )
+      },
+    },
+  )
+}
+
 function requirePath(path: string, label: string): void {
   if (!existsSync(path)) throw new Error(`${label} is missing: ${path}`)
 }
@@ -941,48 +991,7 @@ async function runExpoAndroidEmulator(): Promise<void> {
     const androidRoot = join(projectRoot, 'android')
     const gradleWrapper = join(androidRoot, 'gradlew')
     requirePath(gradleWrapper, 'Generated Expo Android Gradle wrapper')
-    const gradleWrapperPropertiesPath = join(
-      androidRoot,
-      'gradle',
-      'wrapper',
-      'gradle-wrapper.properties',
-    )
-    requirePath(gradleWrapperPropertiesPath, 'Generated Expo Android Gradle wrapper properties')
-    const wrapperProperties = readFileSync(gradleWrapperPropertiesPath, 'utf8')
-    const wrapperPropertiesWithTimeout = withGradleWrapperNetworkTimeout(wrapperProperties)
-    if (wrapperPropertiesWithTimeout !== wrapperProperties) {
-      // This only changes the temporary Android project created for the CI integration test.
-      writeFileSync(gradleWrapperPropertiesPath, wrapperPropertiesWithTimeout)
-    }
-    console.log(
-      `[native] Gradle distribution download timeout: ${GRADLE_WRAPPER_NETWORK_TIMEOUT_MS}ms.`,
-    )
-    await runGradleBuildWithDownloadRetry(
-      (remainingTimeoutMs) =>
-        runRequiredAsync(
-          'Build the generated Expo Android Debug APK',
-          gradleWrapper,
-          ['assembleDebug'],
-          androidRoot,
-          remainingTimeoutMs,
-        ),
-      EXPO_BUILD_TIMEOUT_MS,
-      {
-        onRetry: (failedAttempt, delayMs, error) => {
-          const diagnostic = error instanceof Error ? error.message : String(error)
-          console.warn(
-            '[native] Gradle distribution download failed on attempt ' +
-              failedAttempt +
-              '/' +
-              GRADLE_DOWNLOAD_MAX_ATTEMPTS +
-              '; retrying in ' +
-              delayMs +
-              'ms.\n' +
-              diagnostic,
-          )
-        },
-      },
-    )
+    await buildExpoApkWithBoundedRetry(gradleWrapper, androidRoot)
     const apkPath = join(androidRoot, 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk')
     requirePath(apkPath, 'Generated Expo Android Debug APK')
     const applicationId = expoAndroidApplicationId(projectRoot)
