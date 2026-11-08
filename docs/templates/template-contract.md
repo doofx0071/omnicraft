@@ -57,8 +57,10 @@ the authoring contract. The tree layout is in the [repository structure](../arch
    a per-IP API rate limit (env-configurable `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MINUTES`) whose
    429 responses are JSON `{ "error": "Too many requests" }` with a numeric `Retry-After`
    (Laravel registers it through `throttleApi()` and `RateLimiter::for('api')`). The integrated
-   Next.js overlay and integrated Laravel 13 (Livewire/Inertia) have no OmniCraft security baseline
-   yet — HTML/page routing and edge-runtime middleware need their own design decisions. See the
+   Next.js overlay ships the security-header half of the baseline through header-setting
+   middleware (runtime-agnostic) but not the rate-limit half — per-process limiter state is not
+   honest in middleware runtimes. Integrated Laravel 13 (Livewire/Inertia) has no OmniCraft
+   security baseline yet — page-routing semantics need their own design decision. See the
    [testing strategy](../development/testing-strategy.md) Level 3.
 7. **Prettier-clean.** All template files pass prettier (`printWidth 100`); generated YAML avoids
    single quotes; generated READMEs are excluded from the _generated project's_ prettier check

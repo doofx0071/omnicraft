@@ -231,9 +231,9 @@ The current workflow:
    PostgreSQL, and MySQL. It runs the pinned-major `create-next-app@16`, applies OmniCraft's exact
    production layers, installs, builds and typechecks the project, runs SQL migrations, boots the
    production server, and verifies CRUD and failure cases. The CRUD pass also asserts the
-   method-agnostic unmatched-API 404 JSON contract against the Next.js integrated overlay. All three
-   database scenarios passed hosted run #40614408163 on commit `336622e`; Next.js hosted runtime
-   evidence is not pending.
+   method-agnostic unmatched-API 404 JSON contract against the Next.js integrated overlay and the
+   baseline security headers the overlay's middleware applies. All three database scenarios passed
+   hosted run #40614408163 on commit `336622e`; Next.js hosted runtime evidence is not pending.
 7. Runs hosted Ubuntu `frontend-runtime-integration` for React/Vite JavaScript frontend-only. It
    installs, builds, boots Vite preview, fetches the generated bundle, and checks missing-asset
    behavior; database operations do not apply. The generated-project check passed hosted run

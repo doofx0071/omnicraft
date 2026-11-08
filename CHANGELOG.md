@@ -6,6 +6,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added
+
+- The Next.js integrated overlay applies the shared baseline security headers
+  (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`) through header-setting
+  middleware on every response; the runtime integration asserts them. Its rate-limit half stays
+  deferred — per-process limiter state is not honest in middleware runtimes.
+
 ## [1.0.9] — 2026-11-08
 
 ### Added

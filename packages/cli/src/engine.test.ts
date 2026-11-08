@@ -909,8 +909,7 @@ describe("eslint extra lint workflow", () => {
     const steps = workflow.jobs.lint.steps;
     expect(
       steps.some(
-        (step) => step["uses"] ===
-          "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+        (step) => step["uses"] === "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
       ),
     ).toBe(true);
     expect(steps.some((step) => step.run === "npm ci")).toBe(true);
@@ -1447,6 +1446,24 @@ describe("per-composition Node requirements", () => {
     },
   );
 });
+describe("Next.js integrated security-header middleware", () => {
+  // Header-setting middleware is runtime-agnostic, so the overlay ships the
+  // security-header half of the shared baseline. The rate-limit half needs
+  // per-process state middleware runtimes do not guarantee — deliberately
+  // deferred, and stated in the template comment.
+  it("ships the baseline middleware with the shared headers in the overlay", () => {
+    const middleware = readFileSync(
+      join(TEMPLATES_ROOT, "web", "nextjs", "overlay", "middleware.ts"),
+      "utf8",
+    );
+    expect(middleware).toContain("X-Content-Type-Options");
+    expect(middleware).toContain("X-Frame-Options");
+    expect(middleware).toContain("Referrer-Policy");
+    expect(middleware).toContain("export const config");
+    expect(middleware).toContain("no rate limiting");
+  });
+});
+
 describe("generated root descriptions", () => {
   // Every root variant ships a static one-line description that stays true
   // for every composition sharing the file (framework/ORM options named
@@ -1493,12 +1510,18 @@ describe("Laravel 12 API security baseline", () => {
   it("ships the middleware, provider, config, wiring, and env entries in both overlays", () => {
     for (const overlay of overlays) {
       const root = join(TEMPLATES_ROOT, ...overlay.split("/"));
-      const middleware = readFileSync(join(root, "app", "Http", "Middleware", "SecurityHeaders.php"), "utf8");
+      const middleware = readFileSync(
+        join(root, "app", "Http", "Middleware", "SecurityHeaders.php"),
+        "utf8",
+      );
       expect(middleware).toContain("X-Content-Type-Options");
       expect(middleware).toContain("X-Frame-Options");
       expect(middleware).toContain("Referrer-Policy");
 
-      const provider = readFileSync(join(root, "app", "Providers", "AppServiceProvider.php"), "utf8");
+      const provider = readFileSync(
+        join(root, "app", "Providers", "AppServiceProvider.php"),
+        "utf8",
+      );
       expect(provider).toContain("RateLimiter::for('api'");
       expect(provider).toContain("Limit::perMinutes");
       expect(provider).toContain("Too many requests");
@@ -1604,15 +1627,21 @@ export default z;
   /** Installs the zod stub and a runner that imports the generated env.ts and prints it. */
   function prepareEnvRuntime(dir: string): string {
     mkdirSync(join(dir, "node_modules", "zod"), { recursive: true });
-    writeFileSync(join(dir, "node_modules", "zod", "package.json"), JSON.stringify({
-      name: "zod",
-      version: "4.0.0-stub",
-      type: "module",
-      main: "index.js",
-    }));
+    writeFileSync(
+      join(dir, "node_modules", "zod", "package.json"),
+      JSON.stringify({
+        name: "zod",
+        version: "4.0.0-stub",
+        type: "module",
+        main: "index.js",
+      }),
+    );
     writeFileSync(join(dir, "node_modules", "zod", "index.js"), ZOD_STUB);
     const runner = join(dir, "env-runner.mjs");
-    writeFileSync(runner, 'import { env } from "./server/src/env.ts";\nconsole.log(JSON.stringify(env));\n');
+    writeFileSync(
+      runner,
+      'import { env } from "./server/src/env.ts";\nconsole.log(JSON.stringify(env));\n',
+    );
     return runner;
   }
 
@@ -1643,24 +1672,28 @@ export default z;
     }
   }
 
-  it("exports placeholder env instead of exiting when SKIP_ENV_VALIDATION is set", { timeout: 30_000 }, () => {
-    for (const value of ["1", "true"]) {
-      const dir = makeTempDir(`skip-env-on-${value}`);
-      scaffoldInto(dir, makeAnswers());
-      expect(readFileSync(join(dir, "README.md"), "utf8")).toContain("SKIP_ENV_VALIDATION=1");
-      const runner = prepareEnvRuntime(dir);
-      const result = runEnvProcess(dir, runner, { SKIP_ENV_VALIDATION: value });
-      expect(result.code).toBe(0);
-      expect(result.stderr).not.toContain("Invalid environment variables");
-      expect(JSON.parse(result.stdout)).toEqual({
-        PORT: 3000,
-        CORS_ORIGIN: "http://localhost:5173",
-        RATE_LIMIT_MAX: 300,
-        RATE_LIMIT_WINDOW_MINUTES: 15,
-        DATABASE_URL: "SKIP_ENV_VALIDATION_PLACEHOLDER",
-      });
-    }
-  });
+  it(
+    "exports placeholder env instead of exiting when SKIP_ENV_VALIDATION is set",
+    { timeout: 30_000 },
+    () => {
+      for (const value of ["1", "true"]) {
+        const dir = makeTempDir(`skip-env-on-${value}`);
+        scaffoldInto(dir, makeAnswers());
+        expect(readFileSync(join(dir, "README.md"), "utf8")).toContain("SKIP_ENV_VALIDATION=1");
+        const runner = prepareEnvRuntime(dir);
+        const result = runEnvProcess(dir, runner, { SKIP_ENV_VALIDATION: value });
+        expect(result.code).toBe(0);
+        expect(result.stderr).not.toContain("Invalid environment variables");
+        expect(JSON.parse(result.stdout)).toEqual({
+          PORT: 3000,
+          CORS_ORIGIN: "http://localhost:5173",
+          RATE_LIMIT_MAX: 300,
+          RATE_LIMIT_WINDOW_MINUTES: 15,
+          DATABASE_URL: "SKIP_ENV_VALIDATION_PLACEHOLDER",
+        });
+      }
+    },
+  );
 
   it("still exits on a missing DATABASE_URL without the escape hatch", { timeout: 30_000 }, () => {
     const dir = makeTempDir("skip-env-off");
@@ -1693,9 +1726,9 @@ export default z;
         expect(readFileSync(envTemplatePath, "utf8")).toContain("SKIP_ENV_VALIDATION");
       }
     }
-    expect(readFileSync(join(TEMPLATES_ROOT, "web", "nextjs", "db-mysql", "index.ts"), "utf8")).toContain(
-      "SKIP_ENV_VALIDATION",
-    );
+    expect(
+      readFileSync(join(TEMPLATES_ROOT, "web", "nextjs", "db-mysql", "index.ts"), "utf8"),
+    ).toContain("SKIP_ENV_VALIDATION");
   });
 
   it("documents the variable in the affected generated READMEs' troubleshooting sections", () => {
@@ -1971,9 +2004,9 @@ describe("generated AGENTS.md", () => {
     }
     // create-next-app (16.2+) generates AGENTS.md and `next dev` actively
     // manages it — the fullstack-next overlay must not clobber that file.
-    expect(existsSync(join(TEMPLATES_ROOT, "root", "fullstack-next", "postgres", "AGENTS.md"))).toBe(
-      false,
-    );
+    expect(
+      existsSync(join(TEMPLATES_ROOT, "root", "fullstack-next", "postgres", "AGENTS.md")),
+    ).toBe(false);
   });
 
   it("ships no AGENTS.md on the integrated next.js path", () => {
